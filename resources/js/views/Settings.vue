@@ -17,7 +17,7 @@
           <div class="row g-4">
             <!-- Left Column: Academic Period -->
             <div class="col-lg-7">
-              <div class="card h-100 shadow-sm border-0 bg-white rounded-4 overflow-visible">
+              <div class="card h-100 bg-white rounded-4 overflow-visible border">
                 <div class="card-header bg-transparent border-0 pt-4 px-4">
                   <div class="d-flex align-items-center gap-2">
                     <div class="icon-box bg-primary-soft rounded-3">
@@ -68,7 +68,7 @@
 
             <!-- Right Column: Evaluation Control -->
             <div class="col-lg-5">
-              <div class="card h-100 shadow-sm border-0 bg-white rounded-4 overflow-visible">
+              <div class="card h-100 bg-white rounded-4 overflow-visible border">
                 <div class="card-header bg-transparent border-0 pt-4 px-4">
                   <div class="d-flex align-items-center gap-2">
                     <div class="icon-box bg-warning-soft rounded-3">
@@ -134,7 +134,7 @@
 
           <!-- Action Bar -->
           <div
-            class="mt-5 d-flex flex-column flex-md-row align-items-center justify-content-between p-4 bg-white rounded-4 shadow-sm border-0"
+            class="mt-5 d-flex flex-column flex-md-row align-items-center justify-content-between p-4 bg-white rounded-4 border"
           >
             <div class="mb-3 mb-md-0">
               <h6 v-if="successMsg" class="text-success fw-bold mb-0 animate__animated animate__fadeIn">

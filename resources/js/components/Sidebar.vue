@@ -3,7 +3,6 @@
   <aside
     class="sidebar"
     :class="{ collapsed: isCollapsed }"
-    :style="{ '--sidebar-bg-image': `url('${basePath}/assets/img/sidebar-bg.png')` }"
     v-bind="$attrs"
   >
     <div class="mobile-header d-md-none">

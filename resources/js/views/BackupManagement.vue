@@ -61,7 +61,7 @@
         </div>
 
         <!-- Main Actions & History -->
-        <div class="card border-0 shadow-sm overflow-hidden">
+        <div class="card overflow-hidden border">
           <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
             <div>
               <h5 class="fw-bold mb-0">Backup History</h5>
@@ -147,7 +147,7 @@
         </div>
 
         <!-- Alerts -->
-        <div v-if="isBackupOld" class="alert alert-warning mt-4 border-0 shadow-sm d-flex align-items-center gap-3 recommendation-alert">
+        <div v-if="isBackupOld" class="alert alert-warning mt-4 d-flex align-items-center gap-3 recommendation-alert border">
           <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
           <div>
             <h6 class="alert-heading fw-bold mb-1 text-dark">Backup Recommendation</h6>
@@ -364,8 +364,7 @@ function formatTime(dateString) {
   background: white;
   padding: 1.5rem;
   border-radius: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
   transition: all 0.3s ease;
 }
 

@@ -983,4 +983,59 @@ function initCharts() {
     padding: 0.75rem;
   }
 }
+
+/* ── Animated gradient border for dashboard type selector ── */
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.dashboard-type-select {
+  position: relative;
+  border-radius: 50px;
+  padding: 1px;
+  overflow: hidden;
+}
+
+.dashboard-type-select::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  background: conic-gradient(
+    from var(--border-angle),
+    #ffc107,
+    #ff7b00,
+    #0a278a,
+    #1e40af,
+    #2563eb,
+    #0a278a,
+    #ffc107
+  );
+  animation: spin-border 2s linear infinite;
+  z-index: 0;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  padding: 1px;
+}
+
+.dashboard-type-select > * {
+  position: relative;
+  z-index: 1;
+  border-radius: 49px;
+}
+
+.dashboard-type-select :deep(.custom-select-trigger) {
+  background: var(--bg-card) !important;
+  border: none !important;
+}
+
+@keyframes spin-border {
+  to {
+    --border-angle: 360deg;
+  }
+}
 </style>

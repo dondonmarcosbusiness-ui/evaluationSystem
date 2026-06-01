@@ -506,11 +506,12 @@ async function fetchMeta() {
       api.get("/settings")
     ]);
     
-    facultyList.value = listRes.data;
+    const data = Array.isArray(listRes.data) ? listRes.data : (listRes.data?.data || []);
+    facultyList.value = data;
     
     // Extract unique departments (faculty only)
     if (evaluateeType.value === "faculty") {
-      const depts = listRes.data.map(f => f.department).filter(d => d);
+      const depts = data.map(f => f.department).filter(d => d);
       departments.value = [...new Set(depts)].sort();
     } else {
       departments.value = [];
