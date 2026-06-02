@@ -191,19 +191,15 @@
 
       <!-- Feedback Details Modal -->
       <Transition name="slide-up">
-        <div v-if="showDetailModal" class="custom-modal feedback-detail">
-          <div class="card modal-card">
-            <div class="modal-header-custom primary">
-              <div class="d-flex align-items-center gap-3">
-                <div class="profile-avatar-icon bg-primary bg-opacity-10 text-primary">
-                  <i class="fas fa-comment-alt"></i>
-                </div>
-                <div>
-                  <h5 class="fw-800 mb-0">Evaluation Detail</h5>
-                  <p class="text-muted small mb-0">Full feedback and quantitative breakdown</p>
-                </div>
-              </div>
-              <button class="btn-close-custom" @click="showDetailModal = false">
+        <div v-if="showDetailModal" class="custom-modal feedback-detail" :class="{ 'is-fullscreen': isFullscreen }">
+          <div class="modal-card">
+            <div class="modal-header-custom primary text-center d-flex flex-column align-items-center justify-content-center position-relative w-100">
+              <h4 class="fw-800 text-white mb-1">Evaluation Detail</h4>
+              <p class="text-white opacity-75 small mb-0">Full feedback and quantitative breakdown</p>
+              <button class="btn-close-custom position-absolute" style="right: 4rem; top: 1.5rem;" @click="isFullscreen = !isFullscreen" :title="isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'">
+                <i :class="isFullscreen ? 'fas fa-compress' : 'fas fa-expand'"></i>
+              </button>
+              <button class="btn-close-custom position-absolute" style="right: 1.5rem; top: 1.5rem;" @click="showDetailModal = false; isFullscreen = false">
                 <i class="fas fa-times"></i>
               </button>
             </div>
@@ -214,108 +210,109 @@
                 <p class="mt-2 text-muted">Fetching details...</p>
               </div>
               <div v-else-if="currentDetail">
-                <div class="row g-4">
-                  <div class="col-md-6">
-                    <div class="form-section-modern p-3 bg-light rounded-4 h-100">
-                      <div class="section-label mb-3">
-                        <i class="fas fa-user-tie me-2 opacity-50"></i> {{ evaluateeType === 'faculty' ? 'Faculty Information' : 'Staff Information' }}
-                      </div>
+                <div class="row g-3 align-items-start">
+                  <!-- Left Column -->
+                  <div class="col-md-3 d-flex flex-column gap-3">
+                    <!-- Faculty/Staff Information Fieldset -->
+                    <fieldset class="legend-border">
+                      <legend class="legend-title">{{ evaluateeType === 'faculty' ? 'Faculty Information' : 'Staff Information' }}</legend>
                       <div class="mb-2">
-                        <label class="text-muted smallest text-uppercase fw-bold d-block">Name</label>
-                        <div class="fw-bold">{{ currentDetail.faculty?.user?.name }}</div>
+                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Name:</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">{{ currentDetail.faculty?.user?.name }}</div>
                       </div>
                       <div v-if="evaluateeType === 'faculty'" class="mb-2">
-                        <label class="text-muted smallest text-uppercase fw-bold d-block">Department</label>
-                        <div>{{ currentDetail.faculty?.department }}</div>
+                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Department:</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">{{ currentDetail.faculty?.department }}</div>
+                      </div>
+                      <div class="mb-0">
+                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">{{ evaluateeType === 'faculty' ? 'Position:' : 'Designation:' }}</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">{{ evaluateeType === 'faculty' ? currentDetail.faculty?.position : currentDetail.faculty?.designation }}</div>
+                      </div>
+                    </fieldset>
+
+                    <!-- Evaluation Information Fieldset -->
+                    <fieldset class="legend-border">
+                      <legend class="legend-title">Evaluation Information</legend>
+                      <div v-if="evaluateeType === 'faculty'" class="mb-2">
+                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Subjects Included:</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">{{ uniqueSubjects }}</div>
                       </div>
                       <div class="mb-2">
-                        <label class="text-muted smallest text-uppercase fw-bold d-block">{{ evaluateeType === 'faculty' ? 'Position' : 'Designation' }}</label>
-                        <div>{{ evaluateeType === 'faculty' ? currentDetail.faculty?.position : currentDetail.faculty?.designation }}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="form-section-modern p-3 bg-light rounded-4 h-100">
-                      <div class="section-label mb-3">
-                        <i class="fas fa-info-circle me-2 opacity-50"></i> Evaluation Info
-                      </div>
-                      <div class="mb-2" v-if="evaluateeType === 'faculty'">
-                        <label class="text-muted smallest text-uppercase fw-bold d-block">Subjects Included</label>
-                        <div class="fw-bold">
-                          <span v-for="subj in [...new Set(currentDetail.evaluations.map(e => e.subject_code))]" :key="subj" class="badge bg-light text-dark border me-1">{{ subj }}</span>
+                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Period Filters:</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">
+                          {{ filters.semester !== 'all' ? filters.semester : 'All Semesters' }}, {{ filters.academic_year !== 'all' ? filters.academic_year : 'All Years' }}
                         </div>
                       </div>
-                      <div class="mb-2">
-                        <label class="text-muted smallest text-uppercase fw-bold d-block">Period Filters</label>
-                        <div>{{ filters.semester !== 'all' ? filters.semester : 'All Semesters' }}, {{ filters.academic_year !== 'all' ? filters.academic_year : 'All Years' }}</div>
+                      <div class="mb-0">
+                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Total Feedbacks:</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">{{ currentDetail.evaluations?.length || 0 }} comments</div>
                       </div>
-                      <div class="mb-2">
-                        <label class="text-muted smallest text-uppercase fw-bold d-block">Total Feedbacks</label>
-                        <div>{{ currentDetail.evaluations.length }} comments</div>
-                      </div>
-                    </div>
+                    </fieldset>
                   </div>
 
-                  <div class="col-12">
-                    <div class="card shadow-none border rounded-4">
-                      <div class="card-header bg-transparent border-bottom py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                          <h6 class="mb-0 fw-bold">Quantitative Breakdown</h6>
-                          <div class="badge rounded-pill shadow-none" :class="getRatingBadgeClass(currentDetail.overall_rating)">
-                            Overall: {{ currentDetail.overall_rating }} / 5.0
-                          </div>
-                        </div>
+                  <!-- Right Column: Quantitative Breakdown + All Qualitative Feedback -->
+                  <div class="col-md-9 d-flex flex-column gap-3">
+                    <fieldset class="legend-border">
+                      <legend class="legend-title">Quantitative Breakdown</legend>
+                      <div class="table-responsive">
+                        <table class="table table-sm table-borderless align-middle mb-0">
+                          <thead>
+                            <tr class="border-bottom text-muted small">
+                              <th class="ps-0 py-2 fw-bold text-dark" style="width: 50%;">Category</th>
+                              <th class="text-center py-2 fw-bold text-dark" style="width: 25%;">Average Rating</th>
+                              <th class="text-end pe-0 py-2 fw-bold text-dark" style="width: 25%;">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="cat in currentDetail.category_scores" :key="cat.category_name" class="border-bottom-light">
+                              <td class="ps-0 py-2 text-dark small">{{ cat.category_name }}</td>
+                              <td class="text-center py-2 fw-bold text-dark small">{{ parseFloat(cat.average_rating).toFixed(2) }}</td>
+                              <td class="text-end pe-0 py-2">
+                                <span class="badge rounded-pill" :class="getRatingBadgeClass(cat.average_rating)">
+                                  {{ getRatingLabel(cat.average_rating) }} ({{ parseFloat(cat.average_rating).toFixed(2) }})
+                                </span>
+                              </td>
+                            </tr>
+                            <tr v-if="!currentDetail.category_scores || currentDetail.category_scores.length === 0">
+                              <td colspan="3" class="text-center py-3 text-muted small">No quantitative scores available.</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
-                      <div class="card-body p-0">
-                        <div class="table-responsive">
-                          <table class="table table-sm mb-0">
-                            <thead class="bg-light smallest text-uppercase">
-                              <tr>
-                                <th class="ps-3">Category</th>
-                                <th class="text-center">Average Rating</th>
-                                <th class="pe-3 text-end">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr v-for="cat in currentDetail.category_scores" :key="cat.category_name">
-                                <td class="ps-3 py-2 small">{{ cat.category_name }}</td>
-                                <td class="text-center py-2 fw-bold">{{ parseFloat(cat.average_rating).toFixed(2) }}</td>
-                                <td class="pe-3 py-2 text-end">
-                                  <span class="badge rounded-pill" :class="getRatingBadgeClass(cat.average_rating)">
-                                    {{ getRatingLabel(cat.average_rating) }}
-                                  </span>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    </fieldset>
 
-                  <div class="col-12">
-                    <div class="form-section-modern p-4 bg-primary bg-opacity-10 border-primary border-opacity-10 border rounded-4">
-                      <div class="section-label mb-3 text-primary d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-quote-left me-2"></i> All Qualitative Feedback</span>
-                        <span class="badge bg-primary rounded-pill">{{ currentDetail.evaluations.length }} comments</span>
+                    <!-- All Qualitative Feedback -->
+                    <fieldset class="legend-border">
+                      <legend class="legend-title">All Qualitative Feedback</legend>
+                      <div class="feedbacks-table-container" style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-sm table-borderless align-middle mb-0 w-100">
+                          <thead>
+                            <tr class="border-bottom text-muted small position-sticky top-0 bg-white z-1" style="background-color: var(--bg-card) !important;">
+                              <th class="ps-0 py-2 fw-bold text-dark">Feedback</th>
+                              <th class="text-end pe-0 py-2 fw-bold text-dark" style="width: 150px;">Date Submitted</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="evalItem in currentDetail.evaluations" :key="evalItem.id" class="border-bottom-light">
+                              <td class="ps-0 py-2 text-secondary small text-wrap text-break" style="max-width: 800px;">
+                                {{ evalItem.comments }}
+                              </td>
+                              <td class="text-end pe-0 py-2 text-muted small whitespace-nowrap">
+                                {{ formatDate(evalItem.created_at) }}
+                              </td>
+                            </tr>
+                            <tr v-if="!currentDetail.evaluations || currentDetail.evaluations.length === 0">
+                              <td colspan="2" class="text-center py-4 text-muted small">
+                                No written feedback available matching current filters.
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
-                      <div class="feedbacks-container pe-2" style="max-height: 400px; overflow-y: auto;">
-                        <div v-for="evalItem in currentDetail.evaluations" :key="evalItem.id" class="feedback-item mb-3 pb-3 border-bottom border-primary border-opacity-10">
-                          <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-light text-dark border" v-if="evaluateeType === 'faculty'">{{ evalItem.subject_code }} - {{ evalItem.year_section }}</span>
-                            <small class="text-muted">{{ new Date(evalItem.created_at).toLocaleString() }}</small>
-                          </div>
-                          <div class="feedback-full-text fst-italic lead" style="font-size: 1.05rem;">
-                            "{{ evalItem.comments }}"
-                          </div>
-                        </div>
-                        <div v-if="currentDetail.evaluations.length === 0" class="text-center text-muted py-3">
-                            No written feedback available matching current filters.
-                        </div>
-                      </div>
-                    </div>
+                    </fieldset>
                   </div>
                 </div>
+
               </div>
             </div>
 
@@ -385,6 +382,7 @@ const loading = ref(false);
 const detailLoading = ref(false);
 const showAdvanced = ref(false);
 const showDetailModal = ref(false);
+const isFullscreen = ref(false);
 const currentDetail = ref(null);
 const facultyList = ref([]);
 const departments = ref([]);
@@ -658,6 +656,25 @@ function printCurrentFeedback() {
   if (!currentDetail.value) return;
   window.print();
 }
+
+const uniqueSubjects = computed(() => {
+  if (!currentDetail.value || !currentDetail.value.evaluations) return "N/A";
+  const subjs = currentDetail.value.evaluations
+    .map(e => e.subject_code)
+    .filter(Boolean);
+  const unique = [...new Set(subjs)];
+  return unique.length > 0 ? unique.join(", ") : "N/A";
+});
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 </script>
 
 <style scoped>
@@ -677,22 +694,44 @@ function printCurrentFeedback() {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  z-index: 2001;
+  z-index: 10001;
   pointer-events: none;
   overflow-y: auto;
   padding: 3rem 1rem;
 }
 
-.custom-modal .card.modal-card {
+.custom-modal .modal-card {
   margin: auto;
   pointer-events: all;
   background: var(--bg-card);
   border: 1px solid var(--border-light);
-  border-radius: 2rem;
+  border-radius: 0 !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  width: 800px;
+  width: 1100px;
+  max-width: 95vw;
+  overflow: hidden;
+  transition: width 0.25s ease, max-width 0.25s ease, height 0.25s ease;
+}
+
+/* Fullscreen state */
+.custom-modal.is-fullscreen {
+  padding: 0;
+  align-items: stretch;
+}
+
+.custom-modal.is-fullscreen .modal-card {
+  width: 100%;
   max-width: 100%;
-  overflow: visible;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+  border: none;
+}
+
+.custom-modal.is-fullscreen .modal-body-custom {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .modal-backdrop-custom {
@@ -700,7 +739,7 @@ function printCurrentFeedback() {
   inset: 0;
   background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(8px);
-  z-index: 2000;
+  z-index: 10000;
 }
 
 .modal-header-custom {
@@ -709,6 +748,11 @@ function printCurrentFeedback() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.modal-header-custom.primary {
+  background: #0a278a;
+  padding: 1.5rem 2rem;
 }
 
 .modal-body-custom {
@@ -734,17 +778,57 @@ function printCurrentFeedback() {
 }
 
 .btn-close-custom {
-  background: none;
+  background: rgba(255, 255, 255, 0.1);
   border: none;
-  color: var(--text-muted);
-  font-size: 1.25rem;
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-close-custom:hover {
-  color: var(--danger);
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
   transform: rotate(90deg);
+}
+
+fieldset.legend-border {
+  border: 1px solid var(--border-color, #e2e8f0) !important;
+  padding: 1.25rem !important;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+fieldset.legend-border legend.legend-title {
+  float: none;
+  width: auto;
+  padding: 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-dark, #0a0b0d);
+  margin-bottom: 0;
+}
+
+.border-bottom-light {
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+
+.feedbacks-table-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.feedbacks-table-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+[data-theme="dark"] legend.legend-title {
+  color: #ffffff !important;
 }
 
 .feedback-full-text {
@@ -778,6 +862,6 @@ function printCurrentFeedback() {
   .card { border: none !important; box-shadow: none !important; }
   .d-none { display: block !important; }
   .custom-modal { position: static !important; display: block !important; padding: 0 !important; }
-  .custom-modal .card.modal-card { width: 100% !important; border: none !important; box-shadow: none !important; }
+  .custom-modal .modal-card { width: 100% !important; border: none !important; box-shadow: none !important; }
 }
 </style>
