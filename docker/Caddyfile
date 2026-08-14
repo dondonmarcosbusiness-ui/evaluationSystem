@@ -1,6 +1,0 @@
-# Free automatic HTTPS (Let's Encrypt) for the demo domain.
-# The domain is injected via the CADDY_DOMAIN env var, e.g. evaluation-<server-ip>.sslip.io
-{$CADDY_DOMAIN} {
-    encode gzip zstd
-    reverse_proxy nginx:80
-}
