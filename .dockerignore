@@ -1,0 +1,39 @@
+# Environment
+.env
+.env.backup
+.env.production
+.env.production.*
+!.env.production.example
+
+# Dependencies (built inside the image)
+/vendor
+/node_modules
+
+# Build output (rebuilt in the node stage)
+/public/build
+/public/hot
+/public/storage
+
+# Storage / logs / cache
+/storage
+*.log
+
+# VCS / IDE / OS noise
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+.fleet
+.fleet-run
+.phpactor.json
+.phpunit.result.cache
+/.phpunit.cache
+Thumbs.db
+.DS_Store
+
+# Misc
+Homestead.json
+Homestead.yaml
+ngrok.exe
+.ngrok.exe.old
