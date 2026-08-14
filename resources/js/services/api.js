@@ -36,13 +36,18 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      const basePath = window.location.pathname.startsWith("/evaluation_system/public")
-        ? "/evaluation_system/public"
-        : "";
-      window.location.href = `${basePath}/login`;
+      const currentPath = window.location.pathname;
+      const isPublicPage = currentPath.includes("/qr/") || currentPath.endsWith("/qr");
+      // Do not redirect visitors on public QR pages to login
+      if (!isPublicPage) {
+        // Token expired or invalid
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        const basePath = currentPath.startsWith("/evaluation_system/public")
+          ? "/evaluation_system/public"
+          : "";
+        window.location.href = `${basePath}/login`;
+      }
     }
     return Promise.reject(error);
   },

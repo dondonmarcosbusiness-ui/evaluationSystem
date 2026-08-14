@@ -1,12 +1,8 @@
 export const translations = {
     en: {
         evaluate_faculty: "Evaluate Faculty",
-        evaluate_staff: "Evaluate Staff",
         select_faculty_desc: "Select the faculty and your section to begin the evaluation.",
-        select_staff_desc: "Select the staff member to begin the evaluation.",
         faculty_member: "Faculty Member",
-        staff_member: "Staff Member",
-        faculty_staff: "Faculty / Staff",
         semester: "Semester",
         academic_year: "Academic Year",
         subject_code: "Subject Code",
@@ -63,12 +59,8 @@ export const translations = {
     },
     tl: {
         evaluate_faculty: "Suriin ang Guro",
-        evaluate_staff: "Suriin ang Staff",
         select_faculty_desc: "Pumili ng guro at iyong seksyon upang simulan ang pagsusuri.",
-        select_staff_desc: "Pumili ng miyembro ng staff upang simulan ang pagsusuri.",
         faculty_member: "Guro",
-        staff_member: "Staff",
-        faculty_staff: "Guro / Staff",
         semester: "Semestre",
         academic_year: "Taong Akademiko",
         subject_code: "Code ng Paksa",

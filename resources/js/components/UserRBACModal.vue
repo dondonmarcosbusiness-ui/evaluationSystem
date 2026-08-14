@@ -23,8 +23,8 @@
       </div>
 
       <div class="card-body overflow-auto p-4">
-        <div v-if="loading" class="text-center py-5">
-          <i class="fas fa-spinner fa-spin fa-2x text-primary opacity-50"></i>
+        <div v-if="loading" class="py-3">
+          <SkeletonLoader variant="list" :rows="5" />
         </div>
 
         <div v-else>
@@ -111,6 +111,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from "vue";
+import SkeletonLoader from "./SkeletonLoader.vue";
 import api from "../services/api";
 import Swal from "sweetalert2";
 

@@ -13,7 +13,7 @@ class QuestionnaireController extends Controller
 {
     public function index(Request $request)
     {
-        $settings = \App\Models\Setting::all()->pluck('value', 'key');
+        $settings = \App\Models\Setting::cachedAll();
         $activeSemester = $settings->get('active_semester');
         $activeAcademicYear = $settings->get('active_academic_year');
 
@@ -40,7 +40,7 @@ class QuestionnaireController extends Controller
 
     public function stats(Request $request)
     {
-        $settings = \App\Models\Setting::all()->pluck('value', 'key');
+        $settings = \App\Models\Setting::cachedAll();
         $activeSemester = $settings->get('active_semester');
         $activeAcademicYear = $settings->get('active_academic_year');
 
@@ -78,7 +78,7 @@ class QuestionnaireController extends Controller
             'evaluatee_type' => ['required', new ValidEvaluateeType()],
         ]);
 
-        $settings = \App\Models\Setting::all()->pluck('value', 'key');
+        $settings = \App\Models\Setting::cachedAll();
         $data = $request->all();
         $data['semester'] = $settings->get('active_semester');
         $data['academic_year'] = $settings->get('active_academic_year');
@@ -98,28 +98,6 @@ class QuestionnaireController extends Controller
         $category = Category::findOrFail($id);
         $category->update($request->only(['category_name', 'category_name_tl', 'weight', 'evaluatee_type']));
         return response()->json($category);
-    }
-
-    public function activate($id)
-    {
-        $category = Category::findOrFail($id);
-        // Mark as active by updating semester/year - implement based on your activation logic
-        // For now, just return success
-        return response()->json([
-            'message' => 'Questionnaire activated successfully',
-            'data' => $category
-        ]);
-    }
-
-    public function deactivate($id)
-    {
-        $category = Category::findOrFail($id);
-        // Mark as inactive - implement based on your deactivation logic
-        // For now, just return success
-        return response()->json([
-            'message' => 'Questionnaire deactivated successfully',
-            'data' => $category
-        ]);
     }
 
     public function questions(Request $request, $categoryId)

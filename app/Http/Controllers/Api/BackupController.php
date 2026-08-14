@@ -43,12 +43,12 @@ class BackupController extends Controller
         // Sort by newest first
         usort($backups, fn($a, $b) => $b['timestamp'] <=> $a['timestamp']);
 
-        $autoBackup = Setting::where('key', 'auto_backup')->first();
+        $autoBackup = Setting::cachedAll()->get('auto_backup');
         $lastBackup = count($backups) > 0 ? $backups[0]['created_at'] : null;
 
         return response()->json([
             'backups' => $backups,
-            'auto_backup' => $autoBackup ? filter_var($autoBackup->value, FILTER_VALIDATE_BOOLEAN) : false,
+            'auto_backup' => $autoBackup ? filter_var($autoBackup, FILTER_VALIDATE_BOOLEAN) : false,
             'last_backup' => $lastBackup
         ]);
     }
@@ -227,6 +227,8 @@ class BackupController extends Controller
             ['key' => 'auto_backup'],
             ['value' => $request->enabled ? '1' : '0']
         );
+
+        Setting::forgetCache();
 
         return response()->json(['message' => 'Auto-backup setting updated']);
     }

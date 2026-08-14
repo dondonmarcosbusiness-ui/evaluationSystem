@@ -36,11 +36,6 @@ class Evaluation extends Model
         return $this->belongsTo(Faculty::class);
     }
 
-    public function staff()
-    {
-        return $this->belongsTo(Staff::class, 'evaluatee_id');
-    }
-
     public function answers()
     {
         return $this->hasMany(Answer::class);
@@ -69,7 +64,6 @@ class Evaluation extends Model
     {
         return match ($this->evaluatee_type) {
             'faculty' => Faculty::find($this->evaluatee_id) ?? Faculty::find($this->faculty_id),
-            'staff' => Staff::find($this->evaluatee_id),
             default => null,
         };
     }

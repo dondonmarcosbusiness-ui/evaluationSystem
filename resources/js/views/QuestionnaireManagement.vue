@@ -45,9 +45,8 @@
           </div>
         </div>
 
-        <div v-if="loading" class="text-center py-5">
-          <div class="spinner-border text-primary" role="status"></div>
-          <p class="mt-3 text-muted fw-bold ls-1">Organizing Matrix...</p>
+        <div v-if="loading" class="py-4">
+          <SkeletonLoader variant="cards" :rows="6" />
         </div>
 
         <!-- Grid of Sectors -->
@@ -166,8 +165,8 @@
                 </button>
               </div>
 
-              <div v-if="loadingQuestions" class="text-center py-5">
-                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+              <div v-if="loadingQuestions" class="py-3">
+                <SkeletonLoader variant="list" :rows="3" />
               </div>
 
               <div v-else class="metrics-list d-flex flex-column gap-3">
@@ -313,14 +312,14 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import Pagination from "../components/Pagination.vue";
+import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
 
-const router = useRouter();
 const route = useRoute();
 const categories = ref([]);
 const questions = ref([]);
@@ -353,12 +352,6 @@ const primaryColor = "#0A278A";
 const activeCategoryColor = computed(() => primaryColor);
 
 onMounted(() => {
-  // Set evaluatee type from route
-  if (route.path.includes('/questionnaire/faculty')) {
-    evaluateeType.value = 'faculty';
-  } else if (route.path.includes('/questionnaire/staff')) {
-    evaluateeType.value = 'staff';
-  }
   fetchCategories();
   fetchStats();
 });
@@ -367,20 +360,11 @@ onMounted(() => {
 watch(
   () => route.path,
   () => {
-    if (route.path.includes('/questionnaire/faculty')) {
-      setEvaluateeType('faculty');
-    } else if (route.path.includes('/questionnaire/staff')) {
-      setEvaluateeType('staff');
-    }
+    showDrawer.value = false;
+    fetchStats();
+    fetchCategories();
   }
 );
-
-function setEvaluateeType(type) {
-  evaluateeType.value = type;
-  showDrawer.value = false;
-  fetchStats();
-  fetchCategories();
-}
 
 async function fetchStats() {
   try {
@@ -605,7 +589,7 @@ async function deleteQuestion(catId, qId) {
 /* Sector Grid Card */
 .sector-card-premium {
   background: var(--bg-card);
-  border-radius: 2rem;
+  border-radius: var(--card-radius);
   border: 1px solid var(--border-light);
   position: relative;
   overflow: hidden;
@@ -743,7 +727,7 @@ async function deleteQuestion(catId, qId) {
 .drawer-metric-card {
   background: var(--bg-light);
   padding: 1.25rem;
-  border-radius: 1.25rem;
+  border-radius: var(--card-radius);
   border: 1px solid var(--border-light);
   transition: all 0.2s;
 }
@@ -813,7 +797,7 @@ async function deleteQuestion(catId, qId) {
 .glass-modal-inner {
   margin: auto;
   width: 100%;
-  border-radius: 2.5rem;
+  border-radius: var(--card-radius);
   background: var(--bg-card);
   overflow: visible !important;
 }

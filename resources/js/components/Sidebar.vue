@@ -66,19 +66,9 @@
         </router-link>
       </li>
 
-      <!-- Course List (Direct Link) -->
-      <li v-if="$can('manage_courses')">
-        <router-link to="/courses" class="nav-link">
-          <i class="fas fa-book"></i>
-          <span>Course List</span>
-          <span class="nav-tooltip">Course List</span>
-        </router-link>
-      </li>
-
       <!-- Accounts Management -->
       <li v-if="canSeeAccountsSection" class="sidebar-nav-section">
-        <span class="sidebar-section-label">Accounts Management</span>
-        <hr class="sidebar-section-divider" />
+        <span class="sidebar-section-label">Accounts</span>
       </li>
 
       <!-- Faculty Management -->
@@ -111,25 +101,25 @@
         </ul>
       </li>
 
-      <!-- Staff Management -->
-      <li v-if="$can('manage_faculty') || $can('manage_users')" class="nav-item-dropdown" :class="{ open: isStaffOpen }">
-        <div class="nav-link" @click="toggleStaff">
-          <i class="fas fa-user-tie"></i>
-          <span>Staff Management</span>
+      <!-- Office Management -->
+      <li v-if="$can('manage_offices') || $can('manage_faculty')" class="nav-item-dropdown" :class="{ open: isOfficeOpen }">
+        <div class="nav-link" @click="toggleOffice">
+          <i class="fas fa-building"></i>
+          <span>Office Management</span>
           <i class="fas fa-chevron-right ms-auto arrow"></i>
-          <span class="nav-tooltip">Staff Management</span>
+          <span class="nav-tooltip">Office Management</span>
         </div>
         <ul class="sidebar-submenu">
           <li>
-            <router-link to="/staff">
-              <i class="fas fa-users"></i>
-              <span>Staff Accounts</span>
+            <router-link to="/offices">
+              <i class="fas fa-building"></i>
+              <span>Office Directory</span>
             </router-link>
           </li>
-          <li v-if="$can('manage_categories') || $can('manage_questions')">
-            <router-link to="/questionnaire/staff">
-              <i class="fas fa-list-alt"></i>
-              <span>Staff Questionnaires</span>
+          <li v-if="$can('view_reports') || $can('manage_offices')">
+            <router-link to="/office-reports">
+              <i class="fas fa-chart-bar"></i>
+              <span>Office Reports</span>
             </router-link>
           </li>
         </ul>
@@ -162,8 +152,7 @@
       <!-- Reports Management -->
       <template v-if="canSeeReportsSection">
         <li class="sidebar-nav-section">
-          <span class="sidebar-section-label">Reports Management</span>
-          <hr class="sidebar-section-divider" />
+          <span class="sidebar-section-label">Reports</span>
         </li>
 
         <!-- Faculty Reports -->
@@ -195,37 +184,16 @@
             </li>
           </ul>
         </li>
-
-        <!-- Staff Reports -->
-        <li v-if="canSeeStaffReports" class="nav-item-dropdown" :class="{ open: isStaffReportsOpen }">
-          <div class="nav-link" @click="toggleStaffReports">
-            <i class="fas fa-user-tie"></i>
-            <span>Staff Reports</span>
-            <i class="fas fa-chevron-right ms-auto arrow"></i>
-            <span class="nav-tooltip">Staff Reports</span>
-          </div>
-          <ul class="sidebar-submenu">
-            <li>
-              <router-link :to="reportLink('/reports', 'staff')" active-class="" exact-active-class="" :class="{ 'router-link-active': isReportNavActive('/reports', 'staff') }">
-                <i class="fas fa-chart-bar"></i>
-                <span>{{ user.role === 'staff' ? 'My Ratings Overview' : 'Ratings Overview' }}</span>
-              </router-link>
-            </li>
-            <li>
-              <router-link :to="reportLink('/set-report', 'staff')" active-class="" exact-active-class="" :class="{ 'router-link-active': isReportNavActive('/set-report', 'staff') }">
-                <i class="fas fa-file-invoice"></i>
-                <span>{{ user.role === 'staff' ? 'My SET Report' : 'Detailed SET Report' }}</span>
-              </router-link>
-            </li>
-            <li v-if="$can('view_reports')">
-              <router-link :to="reportLink('/feedbacks', 'staff')" active-class="" exact-active-class="" :class="{ 'router-link-active': isReportNavActive('/feedbacks', 'staff') }">
-                <i class="fas fa-comments"></i>
-                <span>Feedback Management</span>
-              </router-link>
-            </li>
-          </ul>
-        </li>
       </template>
+
+      <!-- Course List -->
+      <li v-if="$can('manage_courses')">
+        <router-link to="/courses" class="nav-link">
+          <i class="fas fa-book"></i>
+          <span>Course List</span>
+          <span class="nav-tooltip">Course List</span>
+        </router-link>
+      </li>
 
       <!-- System settings -->
       <li v-if="$can('manage_rbac')">
@@ -245,11 +213,82 @@
     </ul>
 
     <div class="sidebar-footer">
-      <button class="btn-logout-sidebar d-none d-md-flex" @click="logout">
-        <i class="fas fa-sign-out-alt"></i>
-        <span v-show="!isCollapsed" class="ms-2">Logout</span>
-      </button>
+      <div class="dropup w-100 position-relative">
+        <div class="d-flex align-items-center justify-content-between gap-2 p-1 rounded-3 sidebar-user-card">
+          <!-- Theme Toggle Button -->
+          <button
+            v-if="user.role === 'admin'"
+            type="button"
+            class="btn-theme-toggle flex-shrink-0"
+            @click.stop="toggleTheme"
+            :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+          >
+            <Transition name="theme-icon" mode="out-in">
+              <i v-if="isDark" key="sun" class="fas fa-sun text-warning"></i>
+              <i v-else key="moon" class="fas fa-moon text-secondary"></i>
+            </Transition>
+          </button>
+
+          <!-- User Badge (Dropdown Trigger) -->
+          <div
+            class="user-badge-trigger d-flex align-items-center gap-2 flex-grow-1 cursor-pointer overflow-hidden rounded-3 p-1"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            title="Account Options"
+          >
+            <div class="sidebar-avatar shadow-sm flex-shrink-0">
+              {{ initials }}
+            </div>
+            <div v-show="!isCollapsed" class="user-details text-start overflow-hidden flex-grow-1">
+              <div class="user-name text-truncate d-flex align-items-center justify-content-between fw-bold">
+                <span class="text-truncate me-1">{{ user.name }}</span>
+                <i class="fas fa-caret-down ms-1 text-muted small flex-shrink-0"></i>
+              </div>
+              <div class="user-role text-capitalize text-truncate text-muted">
+                {{ user.role }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Dropup Menu -->
+          <ul class="dropdown-menu shadow-lg rounded-4 border-0 mb-2 p-3 overflow-hidden" style="width: 250px">
+            <li class="px-2 py-1">
+              <div class="fw-bold text-dark text-truncate" :title="user.name">
+                {{ user.name }}
+              </div>
+              <div class="text-muted small mb-2 text-truncate" :title="user.email">
+                {{ user.email }}
+              </div>
+            </li>
+            <li><hr class="dropdown-divider" /></li>
+
+            <li v-if="canChangePassword" class="px-2 mb-2">
+              <button
+                type="button"
+                class="btn btn-light btn-sm w-100 py-2 rounded-3 border-0 d-flex align-items-center justify-content-center gap-2"
+                @click="openChangePassword"
+              >
+                <i class="fas fa-key text-primary"></i>
+                Change Password
+              </button>
+            </li>
+
+            <li class="px-2">
+              <button
+                type="button"
+                class="btn btn-light btn-sm w-100 py-2 rounded-3 text-danger border-0 d-flex align-items-center justify-content-center gap-2"
+                @click="logout"
+              >
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
+
+    <ChangePasswordModal :show="showChangePassword" @close="showChangePassword = false" />
   </aside>
 </template>
 
@@ -258,7 +297,8 @@ import { ref, computed, onMounted, watch, getCurrentInstance } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
-import { syncThemeForUser } from "../helpers/theme.js";
+import ChangePasswordModal from "./ChangePasswordModal.vue";
+import { syncThemeForUser, setAdminTheme } from "../helpers/theme.js";
 
 const router = useRouter();
 const route = useRoute();
@@ -268,10 +308,9 @@ const isCollapsed = ref(localStorage.getItem("sidebarCollapsed") === "true");
 const basePath = window.location.pathname.startsWith("/evaluation_system/public") ? "/evaluation_system/public" : "";
 
 const isFacultyOpen = ref(false);
-const isStaffOpen = ref(false);
+const isOfficeOpen = ref(false);
 const isStudentsOpen = ref(false);
 const isFacultyReportsOpen = ref(false);
-const isStaffReportsOpen = ref(false);
 
 const reportPaths = ["/reports", "/set-report", "/feedbacks"];
 
@@ -282,17 +321,12 @@ const canSeeAccountsSection = computed(() => {
 
 const canSeeReportsSection = computed(() => {
   const can = instance?.appContext.config.globalProperties.$can;
-  return can?.("view_reports") || user.value.role === "faculty" || user.value.role === "staff";
+  return can?.("view_reports") || user.value.role === "faculty";
 });
 
 const canSeeFacultyReports = computed(() => {
   const can = instance?.appContext.config.globalProperties.$can;
   return can?.("view_reports") || user.value.role === "faculty";
-});
-
-const canSeeStaffReports = computed(() => {
-  const can = instance?.appContext.config.globalProperties.$can;
-  return can?.("view_reports") || user.value.role === "staff";
 });
 
 function reportLink(path, type) {
@@ -301,13 +335,35 @@ function reportLink(path, type) {
 
 function isReportNavActive(path, type) {
   if (route.path !== path) return false;
-  const queryType = route.query.type === "staff" ? "staff" : "faculty";
-  return queryType === type;
+  return type === "faculty";
+}
+
+const showChangePassword = ref(false);
+const isDark = ref(false);
+
+const canChangePassword = computed(() => ["student", "faculty"].includes(user.value.role));
+const initials = computed(() =>
+  (user.value.name || "U")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2),
+);
+
+function toggleTheme() {
+  isDark.value = !isDark.value;
+  setAdminTheme(isDark.value);
+}
+
+function openChangePassword() {
+  showChangePassword.value = true;
 }
 
 onMounted(() => {
   updateLayout();
   checkActiveDropdowns();
+  isDark.value = syncThemeForUser(user.value) === "dark";
 });
 
 // Watch for route changes to keep dropdowns open if needed
@@ -320,34 +376,29 @@ watch(
 
 function checkActiveDropdowns() {
   const facultyRoutes = ["/faculty", "/assignments", "/questionnaire/faculty"];
-  const staffMgmtRoutes = ["/staff", "/questionnaire/staff"];
+  const officeMgmtRoutes = ["/offices", "/office-reports"];
   const studentsRoutes = ["/students/regular", "/students/irregular"];
 
   if (facultyRoutes.some((path) => route.path.startsWith(path))) {
     isFacultyOpen.value = true;
   }
-  if (staffMgmtRoutes.some((path) => route.path.startsWith(path))) {
-    isStaffOpen.value = true;
+  if (officeMgmtRoutes.some((path) => route.path.startsWith(path))) {
+    isOfficeOpen.value = true;
   }
   if (studentsRoutes.some((path) => route.path.startsWith(path))) {
     isStudentsOpen.value = true;
   }
   if (reportPaths.includes(route.path)) {
-    const queryType = route.query.type === "staff" ? "staff" : "faculty";
-    if (queryType === "staff") {
-      isStaffReportsOpen.value = true;
-    } else {
-      isFacultyReportsOpen.value = true;
-    }
+    // Only faculty reports are supported now
+    isFacultyReportsOpen.value = true;
   }
 }
 
 function closeAllDropdowns() {
   isFacultyOpen.value = false;
-  isStaffOpen.value = false;
+  isOfficeOpen.value = false;
   isStudentsOpen.value = false;
   isFacultyReportsOpen.value = false;
-  isStaffReportsOpen.value = false;
 }
 
 function toggleFaculty() {
@@ -362,15 +413,15 @@ function toggleFaculty() {
   }
 }
 
-function toggleStaff() {
+function toggleOffice() {
   if (isCollapsed.value) {
     toggleSidebar();
     closeAllDropdowns();
-    isStaffOpen.value = true;
+    isOfficeOpen.value = true;
   } else {
-    const next = !isStaffOpen.value;
+    const next = !isOfficeOpen.value;
     closeAllDropdowns();
-    isStaffOpen.value = next;
+    isOfficeOpen.value = next;
   }
 }
 
@@ -395,18 +446,6 @@ function toggleFacultyReports() {
     const next = !isFacultyReportsOpen.value;
     closeAllDropdowns();
     isFacultyReportsOpen.value = next;
-  }
-}
-
-function toggleStaffReports() {
-  if (isCollapsed.value) {
-    toggleSidebar();
-    closeAllDropdowns();
-    isStaffReportsOpen.value = true;
-  } else {
-    const next = !isStaffReportsOpen.value;
-    closeAllDropdowns();
-    isStaffReportsOpen.value = next;
   }
 }
 
@@ -465,3 +504,98 @@ async function logout() {
   }
 }
 </script>
+
+<style scoped>
+.sidebar-footer {
+  padding: 0.85rem;
+  margin-top: auto;
+  border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.sidebar-user-card {
+  transition: background 0.2s ease;
+}
+
+.user-badge-trigger {
+  user-select: none;
+  transition: background 0.2s ease;
+}
+
+.user-badge-trigger:hover {
+  background: var(--bg-light, rgba(0, 0, 0, 0.04));
+}
+
+.sidebar-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #0052ff;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+
+.user-name {
+  font-size: 0.88rem;
+  color: var(--text-dark, #1e293b);
+  line-height: 1.25;
+}
+
+[data-theme="dark"] .user-name {
+  color: #f8fafc;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+}
+
+.btn-theme-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  font-size: 1.15rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-theme-toggle:hover {
+  background: var(--border-color, rgba(0, 0, 0, 0.06));
+  color: var(--text-dark, #0f172a);
+  transform: rotate(15deg);
+}
+
+.theme-icon-enter-active,
+.theme-icon-leave-active {
+  transition: all 0.2s ease;
+}
+.theme-icon-enter-from {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+}
+.theme-icon-leave-to {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.5);
+}
+
+.sidebar.collapsed .sidebar-footer {
+  padding: 0.75rem 0.25rem;
+}
+
+.sidebar.collapsed .sidebar-user-card {
+  flex-direction: column;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+}
+</style>

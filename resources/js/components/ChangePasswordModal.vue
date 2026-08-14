@@ -4,7 +4,7 @@
     class="change-password-overlay d-flex"
     @click.self="$emit('close')"
   >
-    <div class="change-password-card card border-0 shadow-lg rounded-4">
+    <div class="change-password-card card border-0 shadow-lg">
       <div class="card-header border-0 py-3 bg-transparent">
         <div class="d-flex justify-content-between align-items-center w-100">
           <h5 class="mb-0 fw-bold text-primary">
@@ -238,6 +238,7 @@ watch(
 .change-password-card {
   width: 440px;
   max-width: 95vw;
+  border-radius: var(--card-radius);
 }
 
 .change-password-form {

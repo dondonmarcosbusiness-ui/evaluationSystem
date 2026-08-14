@@ -29,7 +29,7 @@
                     v-model="filters.search"
                     type="text"
                     class="input-custom with-icon"
-                    :placeholder="evaluateeType === 'faculty' ? 'Search faculty, subject, feedback...' : 'Search staff, feedback...'"
+                    placeholder="Search faculty, subject, feedback..."
                     @input="handleSearch"
                   />
                 </div>
@@ -40,7 +40,7 @@
                 <CustomSelect
                   v-model="filters.faculty_id"
                   :options="facultyOptions"
-                  :placeholder="evaluateeType === 'faculty' ? 'All Faculty' : 'All Staff'"
+                  placeholder="All Faculty"
                   @change="fetchFeedbacks(1)"
                 />
               </div>
@@ -116,10 +116,11 @@
           <!-- Table Content -->
           <div class="card-body p-0">
             <div class="table-responsive">
+              <div class="table-scroll" @scroll="onTableScroll">
               <table class="table table-hover mb-0">
-                <thead class="bg-light">
+                <thead :class="{ 'glass-header': tableScrolled }" class="bg-light">
                   <tr>
-                    <th class="ps-4">{{ evaluateeType === 'faculty' ? 'Faculty Member' : 'Staff Member' }}</th>
+                    <th class="ps-4">Faculty Member</th>
                     <th v-if="evaluateeType === 'faculty'">Subject</th>
                     <th v-if="evaluateeType === 'faculty'">Department</th>
                     <th>Rating</th>
@@ -130,12 +131,15 @@
                 </thead>
                 <tbody>
                   <template v-if="loading">
-                    <tr>
-                      <td :colspan="evaluateeType === 'faculty' ? 7 : 5" class="py-5 text-center">
-                        <div class="spinner-border text-primary opacity-50" role="status">
-                          <span class="visually-hidden">Loading...</span>
+                    <tr v-for="r in 6" :key="r">
+                      <td colspan="7" class="ps-4 py-3">
+                        <div class="d-flex align-items-center gap-4">
+                          <div class="sk-shimmer" style="width: 22%; height: 14px"></div>
+                          <div class="sk-shimmer" style="width: 14%; height: 14px"></div>
+                          <div class="sk-shimmer" style="width: 12%; height: 14px"></div>
+                          <div class="sk-shimmer" style="width: 26%; height: 14px"></div>
+                          <div class="sk-shimmer" style="width: 16%; height: 14px"></div>
                         </div>
-                        <p class="mt-2 text-muted small">Loading feedback analytics...</p>
                       </td>
                     </tr>
                   </template>
@@ -143,8 +147,7 @@
                     <tr v-for="feedback in feedbacks" :key="feedback.id" class="feedback-row" @click="viewDetails(feedback)">
                       <td class="ps-4 py-3">
                         <div class="fw-bold">{{ feedback.faculty_name }}</div>
-                        <div class="text-muted smallest" v-if="evaluateeType === 'staff'">{{ feedback.designation }}</div>
-                        <div class="text-muted smallest" v-else>{{ feedback.department }}</div>
+                        <div class="text-muted smallest">{{ feedback.department }}</div>
                       </td>
                       <td v-if="evaluateeType === 'faculty'">
                         <span class="badge bg-light text-dark border">{{ feedback.subject_code || 'General' }}</span>
@@ -171,7 +174,7 @@
                     </tr>
                   </template>
                   <tr v-else>
-                    <td :colspan="evaluateeType === 'faculty' ? 7 : 5" class="text-center py-5">
+                    <td colspan="7" class="text-center py-5">
                       <div class="mb-3 opacity-25">
                         <i class="fas fa-comments fa-4x"></i>
                       </div>
@@ -181,6 +184,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
             
             <!-- Pagination -->
@@ -205,17 +209,16 @@
             </div>
 
             <div class="modal-body-custom p-4">
-              <div v-if="detailLoading" class="text-center py-5">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p class="mt-2 text-muted">Fetching details...</p>
+              <div v-if="detailLoading" class="py-4">
+                <SkeletonLoader variant="list" :rows="4" />
               </div>
               <div v-else-if="currentDetail">
                 <div class="row g-3 align-items-start">
                   <!-- Left Column -->
                   <div class="col-md-3 d-flex flex-column gap-3">
-                    <!-- Faculty/Staff Information Fieldset -->
+                    <!-- Faculty Information Fieldset -->
                     <fieldset class="legend-border">
-                      <legend class="legend-title">{{ evaluateeType === 'faculty' ? 'Faculty Information' : 'Staff Information' }}</legend>
+                      <legend class="legend-title">Faculty Information</legend>
                       <div class="mb-2">
                         <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Name:</div>
                         <div class="text-muted" style="font-size: 0.72rem;">{{ currentDetail.faculty?.user?.name }}</div>
@@ -225,8 +228,8 @@
                         <div class="text-muted" style="font-size: 0.72rem;">{{ currentDetail.faculty?.department }}</div>
                       </div>
                       <div class="mb-0">
-                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">{{ evaluateeType === 'faculty' ? 'Position:' : 'Designation:' }}</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">{{ evaluateeType === 'faculty' ? currentDetail.faculty?.position : currentDetail.faculty?.designation }}</div>
+                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Position:</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">{{ currentDetail.faculty?.position }}</div>
                       </div>
                     </fieldset>
 
@@ -338,7 +341,7 @@
         <table class="table table-bordered w-100">
           <thead>
             <tr>
-              <th>{{ evaluateeType === 'faculty' ? 'Faculty' : 'Staff' }}</th>
+              <th>Faculty</th>
               <th v-if="evaluateeType === 'faculty'">Subject</th>
               <th>Rating</th>
               <th>Feedback</th>
@@ -367,6 +370,7 @@ import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
 import Pagination from "../components/Pagination.vue";
+import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
 
@@ -375,7 +379,7 @@ const route = useRoute();
 
 // State
 const user = ref(JSON.parse(localStorage.getItem("user") || "{}") || {});
-const evaluateeType = ref(user.value.role === 'staff' ? 'staff' : 'faculty');
+const evaluateeType = ref('faculty');
 const feedbacks = ref([]);
 const pagination = ref({});
 const loading = ref(false);
@@ -387,6 +391,11 @@ const currentDetail = ref(null);
 const facultyList = ref([]);
 const departments = ref([]);
 const years = ref([]);
+const tableScrolled = ref(false);
+
+function onTableScroll(e) {
+  tableScrolled.value = e.target.scrollTop > 0;
+}
 
 const activePeriod = { semester: "all", academic_year: "all" };
 
@@ -404,13 +413,12 @@ let searchTimeout = null;
 
 // Options
 const facultyOptions = computed(() => {
-  const prefix = evaluateeType.value === 'faculty' ? 'All Faculty' : 'All Staff';
+  const prefix = "All Faculty";
   return [
     { label: prefix, value: "all" },
     ...facultyList.value.map(f => {
-      const designationText = evaluateeType.value === 'staff' && f.designation ? ` - ${f.designation}` : '';
       return { 
-        label: `${f.user?.name || ''}${designationText}`, 
+        label: `${f.user?.name || ''}`, 
         value: f.id 
       };
     })
@@ -444,11 +452,11 @@ const yearOptions = computed(() => [
 ]);
 
 function getTypeFromRoute() {
-  return route.query.type === "staff" ? "staff" : "faculty";
+  return "faculty";
 }
 
 async function applyEvaluateeTypeFromRoute() {
-  if (can("view_reports") && user.value.role !== "faculty" && user.value.role !== "staff") {
+  if (can("view_reports") && user.value.role !== "faculty") {
     const type = getTypeFromRoute();
     if (evaluateeType.value !== type) {
       await switchTab(type);
@@ -465,7 +473,7 @@ watch(
 
 // Lifecycle
 onMounted(() => {
-  if (can("view_reports") && user.value.role !== "faculty" && user.value.role !== "staff") {
+  if (can("view_reports") && user.value.role !== "faculty") {
     evaluateeType.value = getTypeFromRoute();
   }
   fetchMeta();
@@ -481,10 +489,6 @@ async function fetchFeedbacks(page = 1) {
       evaluatee_type: evaluateeType.value,
       ...filters.value
     };
-    if (evaluateeType.value === "staff") {
-      params.evaluatee_id = filters.value.faculty_id;
-      delete params.department;
-    }
     const res = await api.get("/reports/feedbacks", { params });
     feedbacks.value = res.data.data;
     pagination.value = res.data;
@@ -498,7 +502,7 @@ async function fetchFeedbacks(page = 1) {
 
 async function fetchMeta() {
   try {
-    const listUrl = evaluateeType.value === "faculty" ? "/faculty/all" : "/staff";
+    const listUrl = "/faculty/all";
     const [listRes, setRes] = await Promise.all([
       api.get(listUrl),
       api.get("/settings")
@@ -508,12 +512,8 @@ async function fetchMeta() {
     facultyList.value = data;
     
     // Extract unique departments (faculty only)
-    if (evaluateeType.value === "faculty") {
-      const depts = data.map(f => f.department).filter(d => d);
-      departments.value = [...new Set(depts)].sort();
-    } else {
-      departments.value = [];
-    }
+    const depts = data.map(f => f.department).filter(d => d);
+    departments.value = [...new Set(depts)].sort();
     
     // Setup years
     const currentYear = new Date().getFullYear();
@@ -583,9 +583,6 @@ async function viewDetails(feedback) {
       ...filters.value,
       evaluatee_type: evaluateeType.value
     };
-    if (evaluateeType.value === 'staff') {
-      params.evaluatee_id = filters.value.faculty_id;
-    }
     const res = await api.get(`/reports/feedbacks/${feedback.id}`, { params });
     currentDetail.value = res.data;
   } catch (e) {
@@ -616,15 +613,13 @@ function getRatingLabel(rating) {
 function exportToCSV() {
   if (feedbacks.value.length === 0) return;
   
-  const isFac = evaluateeType.value === 'faculty';
-  const headers = isFac
-    ? ["Faculty", "Subject", "Department", "Rating", "Feedback", "Date Submitted"]
-    : ["Staff", "Designation", "Rating", "Feedback", "Date Submitted"];
+  const headers = ["Faculty", "Subject", "Department", "Rating", "Feedback", "Date Submitted"];
 
   const rows = feedbacks.value.map(f => {
     const row = [
       f.faculty_name,
-      ...(isFac ? [f.subject_code, f.department] : [f.designation || ""]),
+      f.subject_code,
+      f.department,
       f.rating,
       f.text.replace(/"/g, '""'),
       new Date(f.created_at).toLocaleDateString()
@@ -705,7 +700,7 @@ function formatDate(dateStr) {
   pointer-events: all;
   background: var(--bg-card);
   border: 1px solid var(--border-light);
-  border-radius: 0 !important;
+  border-radius: var(--card-radius) !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
   width: 1100px;
   max-width: 95vw;
@@ -863,5 +858,30 @@ fieldset.legend-border legend.legend-title {
   .d-none { display: block !important; }
   .custom-modal { position: static !important; display: block !important; padding: 0 !important; }
   .custom-modal .modal-card { width: 100% !important; border: none !important; box-shadow: none !important; }
+}
+
+/* Sticky Table Header with Glassmorphism */
+.table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
+table { border-collapse: separate; border-spacing: 0; }
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
+  transition: all 0.2s ease;
+  box-shadow: none;
+  border-right: 1px solid var(--border-light);
+}
+thead th:last-child { border-right: none; }
+.glass-header th {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+[data-theme="dark"] .glass-header th {
+  background: rgba(30, 41, 59, 0.6);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 </style>

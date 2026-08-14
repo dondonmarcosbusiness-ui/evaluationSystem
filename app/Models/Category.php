@@ -31,7 +31,7 @@ class Category extends Model
 
     public function scopeActive($query)
     {
-        $settings = Setting::all()->pluck('value', 'key');
+        $settings = Setting::cachedAll();
         $activeSemester = $settings->get('active_semester');
         $activeAcademicYear = $settings->get('active_academic_year');
 

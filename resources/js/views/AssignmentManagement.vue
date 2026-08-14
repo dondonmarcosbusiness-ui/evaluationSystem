@@ -46,9 +46,8 @@
           </div>
         </div>
 
-        <div v-if="loading" class="text-center py-5">
-          <div class="spinner-border text-primary" role="status"></div>
-          <p class="mt-3 text-muted fw-bold ls-1">Organizing Load Matrix...</p>
+        <div v-if="loading" class="py-4">
+          <SkeletonLoader variant="cards" :rows="8" />
         </div>
 
         <!-- Faculty Assignment Grid -->
@@ -200,6 +199,7 @@
                       v-model="form.faculty_id"
                       :options="facultyOptions"
                       placeholder="Select a Faculty Member"
+                      searchable
                       @change="onFacultyChange"
                     />
                   </div>
@@ -250,6 +250,7 @@ import { ref, onMounted, computed, watch } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
+import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
 
@@ -741,7 +742,7 @@ async function deleteAssignment(id) {
 .glass-modal-inner {
   margin: auto;
   width: 100%;
-  border-radius: 2.5rem;
+  border-radius: var(--card-radius);
   background: var(--bg-card);
   overflow: visible !important;
 }

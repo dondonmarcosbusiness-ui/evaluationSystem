@@ -1,19 +1,23 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { syncThemeForUser } from "../helpers/theme.js";
-import Login from "../views/Login.vue";
-import Dashboard from "../views/Dashboard.vue";
-import FacultyManagement from "../views/FacultyManagement.vue";
-import StudentManagement from "../views/StudentManagement.vue";
-import EvaluationForm from "../views/EvaluationForm.vue";
-import Reports from "../views/Reports.vue";
-import SetReport from "../views/SetReport.vue";
-import QuestionnaireManagement from "../views/QuestionnaireManagement.vue";
-import Settings from "../views/Settings.vue";
-import CourseManagement from "../views/CourseManagement.vue";
-import AssignmentManagement from "../views/AssignmentManagement.vue";
-import BackupManagement from "../views/BackupManagement.vue";
-import FeedbackManagement from "../views/FeedbackManagement.vue";
-import StaffManagement from "../views/StaffManagement.vue";
+
+const Login = () => import("../views/Login.vue");
+const Dashboard = () => import("../views/Dashboard.vue");
+const FacultyManagement = () => import("../views/FacultyManagement.vue");
+const StudentManagement = () => import("../views/StudentManagement.vue");
+const EvaluationForm = () => import("../views/EvaluationForm.vue");
+const Reports = () => import("../views/Reports.vue");
+const SetReport = () => import("../views/SetReport.vue");
+const QuestionnaireManagement = () => import("../views/QuestionnaireManagement.vue");
+const Settings = () => import("../views/Settings.vue");
+const CourseManagement = () => import("../views/CourseManagement.vue");
+const AssignmentManagement = () => import("../views/AssignmentManagement.vue");
+const BackupManagement = () => import("../views/BackupManagement.vue");
+const FeedbackManagement = () => import("../views/FeedbackManagement.vue");
+const OfficeManagement = () => import("../views/OfficeManagement.vue");
+const OfficeEvaluationForm = () => import("../views/OfficeEvaluationForm.vue");
+const OfficeReports = () => import("../views/OfficeReports.vue");
+const QrFeedback = () => import("../views/QrFeedback.vue");
 
 const routes = [
   { path: "/", redirect: "/login" },
@@ -31,10 +35,27 @@ const routes = [
     meta: { requiresAuth: true, permission: "manage_faculty" },
   },
   {
-    path: "/staff",
-    name: "StaffManagement",
-    component: StaffManagement,
-    meta: { requiresAuth: true, permission: ["manage_faculty", "manage_users"] },
+    path: "/offices",
+    name: "OfficeManagement",
+    component: OfficeManagement,
+    meta: { requiresAuth: true, permission: ["manage_offices", "manage_faculty"] },
+  },
+  {
+    path: "/evaluate-office/:officeId",
+    name: "OfficeEvaluationForm",
+    component: OfficeEvaluationForm,
+    meta: { requiresAuth: true, permission: "give_evaluations" },
+  },
+  {
+    path: "/qr/:token",
+    name: "QrFeedback",
+    component: QrFeedback,
+  },
+  {
+    path: "/office-reports",
+    name: "OfficeReports",
+    component: OfficeReports,
+    meta: { requiresAuth: true, permission: ["manage_offices", "manage_faculty"] },
   },
   {
     path: "/students/regular",
@@ -69,12 +90,6 @@ const routes = [
   {
     path: "/questionnaire/faculty",
     name: "QuestionnaireManagementFaculty",
-    component: QuestionnaireManagement,
-    meta: { requiresAuth: true, permission: ["manage_categories", "manage_questions"] },
-  },
-  {
-    path: "/questionnaire/staff",
-    name: "QuestionnaireManagementStaff",
     component: QuestionnaireManagement,
     meta: { requiresAuth: true, permission: ["manage_categories", "manage_questions"] },
   },
@@ -145,7 +160,6 @@ router.beforeEach((to, from, next) => {
 
   const reportPaths = ["/reports", "/set-report", "/feedbacks"];
   const isReportRoute = reportPaths.includes(to.path);
-  const queryType = to.query.type === "staff" ? "staff" : "faculty";
 
   const applyTheme = () => {
     if (to.path === "/login" || !isAuthenticated) {
@@ -164,12 +178,7 @@ router.beforeEach((to, from, next) => {
   } else if (to.meta.permission && !can(to.meta.permission)) {
     applyTheme();
     next("/dashboard");
-  } else if (isReportRoute && user.role === "faculty" && queryType === "staff") {
-    applyTheme();
-    next({ path: to.path, query: { ...to.query, type: "faculty" } });
-  } else if (isReportRoute && user.role === "staff" && queryType === "faculty") {
-    applyTheme();
-    next({ path: to.path, query: { ...to.query, type: "staff" } });
+
   } else {
     applyTheme();
     next();

@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('evaluations', function (Blueprint $table) {
-            $table->enum('evaluatee_type', ['faculty', 'staff'])->default('faculty')->after('ai_analysis');
+            $table->enum('evaluatee_type', ['faculty'])->default('faculty')->after('ai_analysis');
             $table->uuid('evaluatee_id')->nullable()->after('evaluatee_type');
             $table->index(['evaluatee_id', 'evaluatee_type']);
 

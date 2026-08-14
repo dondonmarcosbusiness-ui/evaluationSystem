@@ -65,7 +65,7 @@ class AuthController extends Controller
                 'message' => 'Login successful',
                 'access_token' => $token,
                 'token_type' => 'Bearer',
-                'user' => $this->formatUser($user->load('roles', 'permissions', 'student', 'faculty', 'staff')),
+                'user' => $this->formatUser($user->load('roles', 'permissions', 'student', 'faculty')),
                 'permissions' => $user->getAllPermissions()->pluck('name')
             ]);
         } catch (\Exception $e) {
@@ -98,7 +98,7 @@ class AuthController extends Controller
         $user = $request->user();
 
         return response()->json([
-            'user' => $this->formatUser($user->load('roles', 'permissions', 'student', 'faculty', 'staff')),
+            'user' => $this->formatUser($user->load('roles', 'permissions', 'student', 'faculty')),
             'permissions' => $user->getAllPermissions()->pluck('name'),
         ]);
     }
@@ -107,7 +107,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (! in_array($user->role, ['student', 'faculty', 'staff'], true)) {
+        if (! in_array($user->role, ['student', 'faculty'], true)) {
             return response()->json(['message' => 'You are not allowed to change your password.'], 403);
         }
 

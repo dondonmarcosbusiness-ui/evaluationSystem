@@ -8,7 +8,7 @@
         <!-- Admin Faculty Selector -->
         <div
           class="card shadow-none mb-4 no-print mx-3 mx-md-0"
-          v-if="$can('view_reports') && user.role !== 'faculty' && user.role !== 'staff'"
+          v-if="$can('view_reports') && user.role !== 'faculty'"
           style="position: relative; z-index: 900; overflow: visible !important"
         >
           <div
@@ -22,7 +22,7 @@
                 type="text" 
                 v-model="searchQuery" 
                 class="search-input-field" 
-                :placeholder="evaluateeType === 'faculty' ? 'Search faculty...' : 'Search staff...'"
+                placeholder="Search faculty..."
               />
             </div>
 
@@ -41,7 +41,7 @@
               <CustomSelect
                 v-model="selectedFacultyId"
                 :options="facultyOptions"
-                :placeholder="evaluateeType === 'faculty' ? 'Select Faculty:' : 'Select Staff:'"
+                placeholder="Select Faculty:"
                 @change="loadResults"
               />
             </div>
@@ -54,11 +54,8 @@
         </div>
 
         <!-- Results Section -->
-        <div v-if="loading" class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <p class="mt-2 text-muted">Analyzing evaluation data...</p>
+        <div v-if="loading" class="py-4">
+          <SkeletonLoader variant="table" :rows="6" :cols="4" />
         </div>
 
         <div v-else-if="results" class="reports-results">
@@ -136,9 +133,9 @@
           <!-- Frequency Grid (desktop table) -->
           <div class="card shadow-none mb-4 overflow-hidden reports-table-card d-none d-md-block">
             <div class="card-body p-0">
-              <div class="table-responsive reports-table-scroll">
+              <div class="reports-table-scroll" @scroll="onTableScroll">
                 <table class="table table-borderless table-hover mb-0 align-middle text-center">
-                  <thead class="bg-light small">
+                  <thead :class="{ 'glass-header': tableScrolled }" class="bg-light small">
                     <tr class="text-uppercase text-muted">
                       <th rowspan="2" class="py-3 text-start ps-4" style="min-width: 250px">Category</th>
                       <th colspan="5" class="py-2 border-0">Frequency Distribution</th>
@@ -206,7 +203,7 @@
             </div>
           </div>
 
-          <!-- Floating AI Button (FAB) — admins only, not faculty/staff dashboards -->
+          <!-- Floating AI Button (FAB) — admins only, not faculty dashboards -->
           <div v-if="canUseAiInsights" class="ai-fab-container no-print">
             <button
               class="ai-fab"
@@ -535,15 +532,15 @@
 
         <!-- Empty State -->
         <div
-          v-else-if="!loading && selectedFacultyId === '' && $can('view_reports') && user.role !== 'faculty' && user.role !== 'staff'"
+          v-else-if="!loading && selectedFacultyId === '' && $can('view_reports') && user.role !== 'faculty'"
           class="card border-0 shadow-sm"
         >
           <div class="card-body text-center py-5 text-muted">
             <div class="mb-3">
               <i class="fas fa-chart-line fa-4x opacity-25"></i>
             </div>
-            <h5 class="fw-bold mb-1">Select {{ evaluateeType === 'faculty' ? 'Faculty' : 'Staff' }} to View Overview</h5>
-            <p class="mb-0">Please choose a {{ evaluateeType === 'faculty' ? 'faculty member' : 'staff member' }} to see their ratings breakdown.</p>
+            <h5 class="fw-bold mb-1">Select Faculty to View Overview</h5>
+            <p class="mb-0">Please choose a faculty member to see their ratings breakdown.</p>
           </div>
         </div>
       </div>
@@ -558,22 +555,28 @@ import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
 import AiSparkleIcon from "../components/AiSparkleIcon.vue";
+import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 
 const can = inject("can");
 const route = useRoute();
 
 const user = ref(JSON.parse(localStorage.getItem("user") || "{}") || {});
-const evaluateeType = ref(user.value.role === 'staff' ? 'staff' : 'faculty');
+const evaluateeType = ref('faculty');
 const facultyList = ref([]);
 const selectedFacultyId = ref("");
 const results = ref(null);
 const aiInsights = ref(null);
 const loading = ref(false);
 const loadingAi = ref(false);
+const tableScrolled = ref(false);
 const showAiOverlay = ref(false);
 const isAiFullScreen = ref(false);
 const aiError = ref(null);
+
+function onTableScroll(e) {
+  tableScrolled.value = e.target.scrollTop > 0;
+}
 
 // New Filters
 const searchQuery = ref("");
@@ -624,10 +627,6 @@ const filteredFacultyList = computed(() => {
   if (q) {
     list = list.filter(f => {
       const name = f.user?.name?.toLowerCase() || "";
-      if (evaluateeType.value === "staff") {
-        const designation = f.designation?.toLowerCase() || "";
-        return name.includes(q) || designation.includes(q);
-      }
       const dept = f.department?.toLowerCase() || "";
       return name.includes(q) || dept.includes(q);
     });
@@ -637,21 +636,14 @@ const filteredFacultyList = computed(() => {
 });
 
 const canUseAiInsights = computed(
-  () => user.value.role !== "faculty" && user.value.role !== "staff",
+  () => user.value.role !== "faculty",
 );
 
 const facultyOptions = computed(() => {
-  const allLabel = evaluateeType.value === 'faculty' ? "All Faculty" : "All Staff";
+  const allLabel = "All Faculty";
   return [
     { label: allLabel, value: "all" },
     ...filteredFacultyList.value.map((f) => {
-      if (evaluateeType.value === "staff") {
-        const designationText = f.designation ? ` - ${f.designation}` : "";
-        return {
-          label: `${f.user?.name}${designationText}`,
-          value: f.id,
-        };
-      }
       return {
         label: `${f.user?.name} (${f.department || "N/A"})`,
         value: f.id,
@@ -662,30 +654,20 @@ const facultyOptions = computed(() => {
 
 async function fetchEvaluateesList() {
   try {
-    if (evaluateeType.value === 'faculty') {
-      const res = await api.get("/faculty/all");
-      facultyList.value = res.data;
-    } else {
-      const res = await api.get("/reports/staff-list");
-      facultyList.value = (res.data || []).map(s => ({
-        id: s.id,
-        user_id: s.user_id,
-        user: { name: s.name },
-        department: s.department,
-        designation: s.designation,
-      }));
-    }
+    // Only faculty lists are supported now (staff reports removed)
+    const res = await api.get("/faculty/all");
+    facultyList.value = res.data;
   } catch (e) {
     console.error("Error fetching evaluatees list:", e);
   }
 }
 
 function getTypeFromRoute() {
-  return route.query.type === "staff" ? "staff" : "faculty";
+  return "faculty";
 }
 
 async function applyEvaluateeTypeFromRoute() {
-  if (can("view_reports") && user.value.role !== "faculty" && user.value.role !== "staff") {
+  if (can("view_reports") && user.value.role !== "faculty") {
     const type = getTypeFromRoute();
     if (evaluateeType.value !== type) {
       evaluateeType.value = type;
@@ -705,7 +687,7 @@ watch(
 );
 
 onMounted(async () => {
-  if (can("view_reports") && user.value.role !== "faculty" && user.value.role !== "staff") {
+  if (can("view_reports") && user.value.role !== "faculty") {
     evaluateeType.value = getTypeFromRoute();
     selectedFacultyId.value = "all";
     await fetchEvaluateesList();
@@ -716,17 +698,6 @@ onMounted(async () => {
     if (mine) {
       selectedFacultyId.value = mine.id;
       evaluateeType.value = 'faculty';
-      await loadResults();
-    }
-  } else if (user.value.role === "staff") {
-    const res = await api.get("/reports/staff-list");
-    const list = res.data || [];
-    const mine =
-      list.find((s) => s?.user_id === user.value?.id || s?.user?.id === user.value?.id) ||
-      list.find((s) => s?.name && user.value?.name && s.name.trim() === user.value.name.trim());
-    if (mine) {
-      selectedFacultyId.value = mine.id;
-      evaluateeType.value = "staff";
       await loadResults();
     }
   }
@@ -990,8 +961,9 @@ function badgeClass(interpretation) {
 .search-icon {
   color: #3b82f6; /* Vibrant Blue from reference */
   margin-right: 0.75rem;
-  font-size: 1rem;
-  font-weight: 900;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 [data-theme="dark"] .search-icon {
@@ -1143,7 +1115,7 @@ function badgeClass(interpretation) {
   max-width: 1200px;
   height: 90vh;
   max-height: 90vh;
-  border-radius: 8px;
+  border-radius: var(--card-radius);
   overflow: hidden;
   padding: 3px;
   display: flex;
@@ -1178,7 +1150,7 @@ function badgeClass(interpretation) {
   max-width: 98vw;
   height: 96vh;
   max-height: 96vh;
-  border-radius: 8px;
+  border-radius: var(--card-radius);
 }
 
 @keyframes aiBorderAnimation {
@@ -1334,7 +1306,7 @@ function badgeClass(interpretation) {
   box-shadow: 0 4px 12px rgba(10, 39, 138, 0.25);
 }
 
-/* ── Mobile-friendly report layout (faculty / staff) ── */
+/* ── Mobile-friendly report layout (faculty) ── */
 .reports-summary-row {
   margin-left: 0;
   margin-right: 0;
@@ -1367,7 +1339,7 @@ function badgeClass(interpretation) {
 .reports-category-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--card-radius);
   padding: 1rem;
 }
 
@@ -1418,8 +1390,29 @@ function badgeClass(interpretation) {
   border-top: 1px dashed var(--border-color);
 }
 
-.reports-table-scroll {
-  -webkit-overflow-scrolling: touch;
+/* Sticky Table Header with Glassmorphism */
+.reports-table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
+table { border-collapse: separate; border-spacing: 0; }
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
+  transition: all 0.2s ease;
+  box-shadow: none;
+  border-right: 1px solid var(--border-light);
+}
+thead th:last-child { border-right: none; }
+.glass-header th {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+[data-theme="dark"] .glass-header th {
+  background: rgba(30, 41, 59, 0.6);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 @media print {

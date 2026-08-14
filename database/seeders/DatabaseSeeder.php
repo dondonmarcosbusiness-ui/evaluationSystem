@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
       AdminUserSeeder::class,
       RolePermissionSeeder::class,
       QuestionnaireSeeder::class,
-      StaffSeeder::class,
+      OfficeSeeder::class,
     ]);
   }
 }

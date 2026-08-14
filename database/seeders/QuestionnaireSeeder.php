@@ -85,53 +85,5 @@ class QuestionnaireSeeder extends Seeder
                 ]);
             }
         }
-
-        // Staff Categories
-        $staffCategories = [
-            [
-                'category_name' => 'Service Quality',
-                'weight' => 0.40,
-                'questions' => [
-                    'The staff member is polite, courteous, and approachable.',
-                    'The staff member provides clear instructions and helpful information.',
-                    'The staff member demonstrates a strong desire to assist students.',
-                ]
-            ],
-            [
-                'category_name' => 'Efficiency & Promptness',
-                'weight' => 0.35,
-                'questions' => [
-                    'The staff member processes student requests and inquiries efficiently.',
-                    'The staff member keeps services moving with minimal wait times.',
-                    'The staff member is organized and fast in delivery of tasks.',
-                ]
-            ],
-            [
-                'category_name' => 'Professionalism & Decorum',
-                'weight' => 0.25,
-                'questions' => [
-                    'The staff member maintains professional conduct and attire.',
-                    'The staff member treats everyone with equal respect and fairness.',
-                    'The staff member handles complex requests or complaints in a helpful manner.',
-                ]
-            ],
-        ];
-
-        foreach ($staffCategories as $catData) {
-            $category = Category::create([
-                'category_name' => $catData['category_name'],
-                'weight'        => $catData['weight'],
-                'academic_year' => '2025-2026',
-                'semester'      => '1st Semester',
-                'evaluatee_type'=> 'staff',
-            ]);
-
-            foreach ($catData['questions'] as $q) {
-                Question::create([
-                    'category_id'   => $category->id,
-                    'question_text' => $q,
-                ]);
-            }
-        }
     }
 }

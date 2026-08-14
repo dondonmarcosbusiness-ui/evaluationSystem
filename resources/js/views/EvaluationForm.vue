@@ -2,7 +2,7 @@
   <div class="d-flex">
     <Sidebar />
     <div class="main-wrapper w-100">
-      <Navbar><template #title>{{ evaluateeType === 'faculty' ? t.evaluate_faculty : t.evaluate_staff }}</template></Navbar>
+      <Navbar><template #title>{{ t.evaluate_faculty }}</template></Navbar>
 
       <div class="content-area">
         <!-- Step 1: Select Faculty + Semester -->
@@ -10,45 +10,22 @@
           v-if="step === 1"
           class="card border-0 rounded-4 overflow-visible evaluation-step-card fade-in"
         >
-          <ul class="nav nav-tabs evaluatee-tabs border-0" role="tablist">
-            <li class="nav-item flex-fill" role="presentation">
-              <button
-                type="button"
-                class="nav-link evaluatee-tab"
-                :class="{ active: evaluateeType === 'faculty' }"
-                role="tab"
-                :aria-selected="evaluateeType === 'faculty'"
-                @click="setEvaluateeType('faculty')"
-              >
-                <i class="fas fa-chalkboard-teacher me-2"></i>
-                {{ t.faculty_member }}
-              </button>
-            </li>
-            <li class="nav-item flex-fill" role="presentation">
-              <button
-                type="button"
-                class="nav-link evaluatee-tab"
-                :class="{ active: evaluateeType === 'staff' }"
-                role="tab"
-                :aria-selected="evaluateeType === 'staff'"
-                @click="setEvaluateeType('staff')"
-              >
-                <i class="fas fa-user-tie me-2"></i>
-                {{ t.staff_member }}
-              </button>
-            </li>
-          </ul>
           <div class="evaluatee-tab-panel">
           <div class="text-center mb-4 mt-3">
+            <div class="mb-2">
+              <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold px-3 py-2">
+                Faculty Evaluation
+              </span>
+            </div>
             <div class="mb-3">
               <i class="fas fa-clipboard-list fa-3x text-primary" style="opacity: 0.8"></i>
             </div>
-            <h4 class="fw-bold mb-1">{{ evaluateeType === 'faculty' ? t.evaluate_faculty : t.evaluate_staff }}</h4>
-            <p class="text-muted small">{{ evaluateeType === 'faculty' ? t.select_faculty_desc : t.select_staff_desc }}</p>
+            <h4 class="fw-bold mb-1">{{ t.evaluate_faculty }}</h4>
+            <p class="text-muted small">{{ t.select_faculty_desc }}</p>
           </div>
           <div class="px-3 pb-3">
             <div class="mb-3">
-              <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.faculty_staff }}</label>
+              <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.faculty_member }}</label>
               <CustomSelect v-model="selectedFacultyData" :options="facultyOptions" placeholder="-- Select --" />
             </div>
             <div class="row g-3">
@@ -60,7 +37,7 @@
                 <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.academic_year }}</label>
                 <input type="text" class="form-control bg-light border-0 fw-semibold" :value="academicYear" readonly />
               </div>
-              <div class="col-sm-6" v-if="evaluateeType === 'faculty'">
+              <div class="col-sm-6">
                 <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.subject_code }} *</label>
                 <input
                   type="text"
@@ -70,7 +47,7 @@
                   readonly
                 />
               </div>
-              <div class="col-sm-6" v-if="evaluateeType === 'faculty'">
+              <div class="col-sm-6">
                 <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.year_section }} *</label>
                 <input type="text" class="form-control bg-light border-0 fw-semibold" :value="yearSection" readonly />
               </div>
@@ -83,7 +60,7 @@
             </div>
             <button
               class="btn btn-primary w-100 mt-2"
-              :disabled="!selectedFacultyData || !semester || !academicYear || (evaluateeType === 'faculty' && (!subjectCode || !yearSection))"
+              :disabled="!selectedFacultyData || !semester || !academicYear || (!subjectCode || !yearSection)"
               @click="loadQuestions"
             >
               <i class="fas fa-arrow-right me-2"></i>
@@ -108,8 +85,8 @@
             </div>
           </div>
 
-          <div v-if="loadingQ" class="text-center py-5">
-            <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+          <div v-if="loadingQ" class="py-4">
+            <SkeletonLoader variant="form" :rows="3" />
           </div>
 
           <template v-else>
@@ -217,6 +194,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
+import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
 import { useLanguage } from "../helpers/language.js";
@@ -226,6 +204,8 @@ const { currentLang } = useLanguage();
 const t = computed(() => translations[currentLang.value]);
 
 const headerTopOffset = ref('60px');
+
+const user = ref(JSON.parse(localStorage.getItem("user") || "{}") || {});
 
 const updateTopOffset = () => {
   const topbar = document.querySelector('.topbar');
@@ -241,10 +221,7 @@ const facultyOptions = computed(() => {
   return [
     { label: "-- Select --", value: null },
     ...facultyList.value.map((f) => {
-      const isStaff = evaluateeType.value === 'staff';
-      const labelSuffix = isStaff 
-        ? (f.designation ? ` - ${f.designation}` : '') 
-        : ` (${f.subject_code})`;
+      const labelSuffix = ` (${f.subject_code})`;
       return {
         label: `${f.user?.name}${labelSuffix}${f.is_evaluated ? " ✓ " + t.value.evaluated_badge : ""}`,
         value: f,
@@ -278,7 +255,6 @@ const categories = ref([]);
 const answers = ref({});
 const subjectCode = computed(() => selectedFacultyData.value?.subject_code || "");
 const yearSection = computed(() => selectedFacultyData.value?.section_name || "");
-const user = ref(JSON.parse(localStorage.getItem("user") || "{}"));
 const comments = ref("");
 const loadingQ = ref(false);
 const submitting = ref(false);
@@ -471,11 +447,11 @@ async function submitEvaluation() {
   const payload = {
     evaluatee_id: selectedFaculty.value,
     evaluatee_type: evaluateeType.value,
-    faculty_id: evaluateeType.value === 'faculty' ? selectedFaculty.value : null,
+    faculty_id: selectedFaculty.value,
     semester: semester.value,
     academic_year: academicYear.value,
-    subject_code: evaluateeType.value === 'faculty' ? subjectCode.value : null,
-    year_section: evaluateeType.value === 'faculty' ? yearSection.value : null,
+    subject_code: subjectCode.value,
+    year_section: yearSection.value,
     comments: comments.value,
     ai_analysis: aiAnalysis.value,
     answers: Object.entries(answers.value).map(([question_id, rating]) => ({

@@ -26,8 +26,8 @@
           </span>
         </div>
 
-        <div v-if="loading" class="text-center py-4">
-          <div class="spinner-border spinner-border-sm text-primary"></div>
+        <div v-if="loading" class="py-3">
+          <SkeletonLoader variant="list" :rows="4" />
         </div>
 
         <div v-else class="load-list d-flex flex-column gap-3 mb-5">
@@ -116,6 +116,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import CustomSelect from "./CustomSelect.vue";
+import SkeletonLoader from "./SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
 
@@ -297,7 +298,7 @@ async function removeEnrollment(id) {
 .load-item-card {
   background: var(--bg-light);
   padding: 1.25rem;
-  border-radius: 1.25rem;
+  border-radius: var(--card-radius);
   border: 1px solid var(--border-light);
   transition: all 0.2s;
 }

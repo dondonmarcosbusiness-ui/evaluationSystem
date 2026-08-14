@@ -8,7 +8,6 @@ use App\Models\Answer;
 use App\Models\Evaluation;
 use App\Models\Faculty;
 use App\Models\FacultyAssignment;
-use App\Models\Staff;
 use App\Rules\EvaluateeExists;
 use App\Rules\ValidEvaluateeType;
 use App\Services\EvaluationAnswerRepairService;
@@ -35,7 +34,7 @@ class EvaluationController extends Controller
                 return response()->json([]);
             }
 
-            $settings = \App\Models\Setting::all()->pluck('value', 'key');
+            $settings = \App\Models\Setting::cachedAll();
             $activeSemester = $settings->get('active_semester');
             $activeAcademicYear = $settings->get('active_academic_year');
             $evaluationStatus = $settings->get('evaluation_status', 'closed');
@@ -44,42 +43,11 @@ class EvaluationController extends Controller
                 return response()->json([]);
             }
 
-            if ($evaluateeType === EvaluateeType::STAFF->value) {
-                return $this->getStaffToEvaluate($user, $activeSemester, $activeAcademicYear);
-            }
-
-            // Default to faculty
             return $this->getFacultyToEvaluateNew($user, $activeSemester, $activeAcademicYear);
         } catch (\Exception $e) {
             Log::error('getEvaluatees error: ' . $e->getMessage());
             return response()->json(['message' => 'Error loading evaluatees list'], 500);
         }
-    }
-
-    private function getStaffToEvaluate($user, $activeSemester, $activeAcademicYear)
-    {
-        $staffList = Staff::with('user')->get()->map(function ($staff) use ($user, $activeSemester, $activeAcademicYear) {
-            // Check if already evaluated
-            $isEvaluated = Evaluation::where([
-                'student_id' => $user->id,
-                'evaluatee_id' => $staff->id,
-                'evaluatee_type' => 'staff',
-                'semester' => $activeSemester,
-                'academic_year' => $activeAcademicYear
-            ])->exists();
-
-            return [
-                'id' => $staff->id,
-                'evaluatee_type' => 'staff',
-                'type' => 'staff',
-                'user' => $staff->user,
-                'department' => $staff->department,
-                'designation' => $staff->designation,
-                'is_evaluated' => $isEvaluated,
-            ];
-        });
-
-        return response()->json($staffList->values());
     }
 
     private function getFacultyToEvaluateNew($user, $activeSemester, $activeAcademicYear)
@@ -212,12 +180,6 @@ class EvaluationController extends Controller
         return response()->json(array_values($facultyDataMap));
     }
 
-    public function getFacultyToEvaluate(Request $request)
-    {
-        // Deprecated: Use getEvaluatees with evaluatee_type=faculty instead
-        return $this->getEvaluatees($request->merge(['evaluatee_type' => 'faculty']));
-    }
-
     public function store(Request $request)
     {
         $evaluateeType = $request->input('evaluatee_type', 'faculty');
@@ -256,7 +218,6 @@ class EvaluationController extends Controller
             return response()->json(['message' => 'You have already evaluated this evaluatee for this semester.'], 422);
         }
 
-        // Validate assignment for faculty (staff has no restrictions)
         if ($evaluateeType === EvaluateeType::FACULTY->value) {
             if (!$this->validateFacultyAssignment($request->user(), $request->evaluatee_id, $request->semester, $request->academic_year)) {
                 return response()->json(['message' => 'This faculty is not assigned to your section or enrolled subjects.'], 403);
@@ -351,7 +312,7 @@ class EvaluationController extends Controller
             $evaluateeType = $request->input('evaluatee_type', 'faculty');
             $departmentFilter = $request->query('department');
 
-            $settings = \App\Models\Setting::all()->pluck('value', 'key');
+            $settings = \App\Models\Setting::cachedAll();
             $activeSemester = $settings->get('active_semester');
             $activeAcademicYear = $settings->get('active_academic_year');
 
@@ -367,7 +328,6 @@ class EvaluationController extends Controller
                 });
             } else {
                 $query->where('evaluations.evaluatee_type', $evaluateeType);
-                $query->join('staff', 'evaluations.evaluatee_id', '=', 'staff.id');
             }
 
             if ($evaluateeId !== 'all') {
@@ -382,13 +342,9 @@ class EvaluationController extends Controller
                 } else {
                     $query->where('evaluations.evaluatee_id', $evaluateeId);
                 }
-            } elseif ($departmentFilter && $departmentFilter !== 'all') {
-                if ($evaluateeType === 'faculty') {
-                    $query->join('faculty', DB::raw('COALESCE(evaluations.evaluatee_id, evaluations.faculty_id)'), '=', 'faculty.id');
-                    $query->where('faculty.department', $departmentFilter);
-                } elseif ($evaluateeType === 'staff') {
-                    $query->where('staff.department', $departmentFilter);
-                }
+            } elseif ($departmentFilter && $departmentFilter !== 'all' && $evaluateeType === 'faculty') {
+                $query->join('faculty', DB::raw('COALESCE(evaluations.evaluatee_id, evaluations.faculty_id)'), '=', 'faculty.id');
+                $query->where('faculty.department', $departmentFilter);
             }
 
             if ($activeSemester) {
@@ -448,7 +404,6 @@ class EvaluationController extends Controller
                     });
                 } else {
                     $fallback->where('evaluations.evaluatee_type', $evaluateeType);
-                    $fallback->join('staff', 'evaluations.evaluatee_id', '=', 'staff.id');
                 }
 
                 if ($evaluateeId !== 'all') {
@@ -463,13 +418,9 @@ class EvaluationController extends Controller
                     } else {
                         $fallback->where('evaluations.evaluatee_id', $evaluateeId);
                     }
-                } elseif ($departmentFilter && $departmentFilter !== 'all') {
-                    if ($evaluateeType === 'faculty') {
-                        $fallback->join('faculty', DB::raw('COALESCE(evaluations.evaluatee_id, evaluations.faculty_id)'), '=', 'faculty.id');
-                        $fallback->where('faculty.department', $departmentFilter);
-                    } elseif ($evaluateeType === 'staff') {
-                        $fallback->where('staff.department', $departmentFilter);
-                    }
+                } elseif ($departmentFilter && $departmentFilter !== 'all' && $evaluateeType === 'faculty') {
+                    $fallback->join('faculty', DB::raw('COALESCE(evaluations.evaluatee_id, evaluations.faculty_id)'), '=', 'faculty.id');
+                    $fallback->where('faculty.department', $departmentFilter);
                 }
 
                 if ($activeSemester) {

@@ -5,7 +5,6 @@ namespace App\Enums;
 enum EvaluateeType: string
 {
     case FACULTY = 'faculty';
-    case STAFF = 'staff';
     case REGISTRAR = 'registrar';
     case GUIDANCE = 'guidance';
     case LIBRARY = 'library';

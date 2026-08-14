@@ -232,13 +232,27 @@ class StudentController extends Controller
         $imported = 0;
         $failed = 0;
 
+        $courses = \App\Models\Course::all()->keyBy('name');
+        $sectionsByCourse = \App\Models\Section::all()->groupBy('course_id');
+        $existingIdNumbers = \App\Models\User::whereIn('id_number', array_map(function ($row) {
+            return trim($row[0] ?? '');
+        }, $rows))->pluck('id_number')->toArray();
+        $existingSet = array_flip($existingIdNumbers);
+
+        $role = \Spatie\Permission\Models\Role::where('name', 'Student')->first();
+
         foreach ($rows as $row) {
             if (count($row) !== count($header)) continue;
             
             $data = array_combine($header, $row);
-            
+
+            if (in_array(trim($data['id number']), $existingSet, true)) {
+                $failed++;
+                continue;
+            }
+
             $validator = Validator::make($data, [
-                'id number' => 'required|unique:users,id_number',
+                'id number' => 'required|string',
                 'last name' => 'required|string',
                 'first name' => 'required|string',
                 'course' => 'required',
@@ -275,25 +289,25 @@ class StudentController extends Controller
                 $courseName = trim($data['course']);
                 $sectionName = trim($data['section']);
                 
-                // Try to find matching section_id
-                $sectionId = null;
-                $matchingCourse = \App\Models\Course::where('name', $courseName)->first();
-                if ($matchingCourse) {
-                    $matchingSection = \App\Models\Section::where('course_id', $matchingCourse->id)
-                        ->where('name', $sectionName)
-                        ->first();
-                    if ($matchingSection) {
-                        $sectionId = $matchingSection->id;
-                    }
-                }
+                $matchingCourse = $courses->get($courseName);
+                $matchingSection = $matchingCourse
+                    ? $sectionsByCourse->get($matchingCourse->id)?->firstWhere('name', $sectionName)
+                    : null;
 
                 $user->student()->create([
                     'course' => $courseName,
                     'section' => $sectionName,
-                    'section_id' => $sectionId,
+                    'section_id' => $matchingSection?->id,
                 ]);
 
-                $user->assignRole('Student');
+                if ($role) {
+                    DB::table('model_has_roles')->insert([
+                        'role_id' => $role->id,
+                        'model_type' => \App\Models\User::class,
+                        'model_id' => $user->id,
+                    ]);
+                }
+
                 $imported++;
             } catch (\Exception $e) {
                 $failed++;

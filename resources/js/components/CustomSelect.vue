@@ -22,8 +22,18 @@
           class="custom-select-options custom-select-options-teleported"
           :style="dropdownStyle"
         >
+          <li v-if="searchable" class="search-input-li" @click.stop>
+            <input
+              ref="searchInputRef"
+              v-model="searchQuery"
+              type="text"
+              class="search-input-premium"
+              placeholder="Type to search..."
+              @input="onSearchInput"
+            />
+          </li>
           <li
-            v-for="option in normalizedOptions"
+            v-for="option in visibleOptions"
             :key="option.value"
             :class="{
               selected: modelValue === option.value,
@@ -33,6 +43,9 @@
           >
             <span class="text-truncate" style="flex: 1; padding-right: 10px;">{{ option.label }}</span>
             <i v-if="modelValue === option.value" class="fas fa-check check-icon flex-shrink-0"></i>
+          </li>
+          <li v-if="visibleOptions.length === 0" class="no-results-li">
+            <span class="text-muted small fw-600">No matches found</span>
           </li>
         </ul>
       </transition>
@@ -57,6 +70,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  searchable: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "change"]);
@@ -66,6 +83,8 @@ const containerRef = ref(null);
 const triggerRef = ref(null);
 const dropdownRef = ref(null);
 const dropdownStyle = ref({});
+const searchQuery = ref("");
+const searchInputRef = ref(null);
 
 const normalizedOptions = computed(() => {
   return props.options.map((opt) => {
@@ -79,6 +98,16 @@ const normalizedOptions = computed(() => {
 const selectedLabel = computed(() => {
   const selected = normalizedOptions.value.find((opt) => opt.value === props.modelValue);
   return selected ? selected.label : "";
+});
+
+const filteredOptions = computed(() => {
+  if (!props.searchable || !searchQuery.value) return normalizedOptions.value;
+  const q = searchQuery.value.toLowerCase();
+  return normalizedOptions.value.filter((opt) => opt.label.toLowerCase().includes(q));
+});
+
+const visibleOptions = computed(() => {
+  return props.searchable ? filteredOptions.value : normalizedOptions.value;
 });
 
 function updateDropdownPosition() {
@@ -107,6 +136,13 @@ function toggleDropdown() {
 
 function closeDropdown() {
   isOpen.value = false;
+  if (props.searchable) {
+    searchQuery.value = "";
+  }
+}
+
+function onSearchInput() {
+  // keep dropdown open while typing
 }
 
 function selectOption(option) {
@@ -129,6 +165,9 @@ watch(isOpen, async (open) => {
     updateDropdownPosition();
     await nextTick();
     updateDropdownPosition();
+    if (props.searchable && searchInputRef.value) {
+      searchInputRef.value.focus();
+    }
     document.addEventListener("click", handleDocumentClick);
     window.addEventListener("scroll", updateDropdownPosition, true);
     window.addEventListener("resize", updateDropdownPosition);
@@ -159,7 +198,7 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 0.5rem 1rem;
   background: var(--bg-card);
-  border: 1px solid #0a278a;
+  border: 1px solid var(--border-color);
   border-radius: 50px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -182,7 +221,7 @@ onUnmounted(() => {
 .custom-select-trigger.active {
   border-color: var(--primary);
   box-shadow:
-    0 0 0 4px rgba(10, 39, 138, 0.08),
+    0 0 0 4px rgba(0, 82, 255, 0.12),
     0 8px 20px rgba(0, 0, 0, 0.06);
   transform: translateY(-1px);
 }
@@ -251,12 +290,12 @@ onUnmounted(() => {
 }
 
 .custom-select-options li:hover {
-  background: rgba(10, 39, 138, 0.05);
+  background: rgba(0, 82, 255, 0.08);
   color: var(--primary);
 }
 
 .custom-select-options li.selected {
-  background: #0a278a;
+  background: var(--primary);
   color: #ffffff;
   font-weight: 600;
 }
@@ -276,6 +315,43 @@ onUnmounted(() => {
 .dropdown-fade-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+.search-input-li {
+  padding: 0 !important;
+  margin-bottom: 0.4rem;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: inherit;
+}
+
+.search-input-premium {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border-light);
+  border-radius: 0.5rem;
+  background: var(--bg-light);
+  font-size: 0.8rem;
+  font-weight: 600;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search-input-premium:focus {
+  border-color: var(--primary);
+  background: white;
+}
+
+.no-results-li {
+  justify-content: center;
+  padding: 1rem !important;
+  cursor: default !important;
+}
+
+.no-results-li:hover {
+  background: transparent !important;
+  color: var(--text-muted) !important;
 }
 
 [data-theme="dark"] .custom-select-options {

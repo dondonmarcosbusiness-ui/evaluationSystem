@@ -53,7 +53,7 @@
         <!-- Admin Action Bar -->
         <div
           class="card mb-4 no-print shadow-none mx-3 mx-md-0"
-          v-if="$can('view_reports') && user.role !== 'faculty' && user.role !== 'staff'"
+          v-if="$can('view_reports') && user.role !== 'faculty'"
           style="position: relative; z-index: 900; overflow: visible !important"
         >
           <div
@@ -67,7 +67,7 @@
                 type="text" 
                 v-model="searchQuery" 
                 class="search-input-field" 
-                :placeholder="evaluateeType === 'faculty' ? 'Search faculty...' : 'Search staff...'"
+                placeholder="Search faculty..."
               />
             </div>
 
@@ -86,7 +86,7 @@
               <CustomSelect
                 v-model="selectedFacultyId"
                 :options="facultyOptions"
-                :placeholder="evaluateeType === 'faculty' ? 'Select Faculty:' : 'Select Staff:'"
+                placeholder="Select Faculty:"
                 @change="loadResults"
               />
             </div>
@@ -110,8 +110,8 @@
           </div>
         </div>
 
-        <!-- Faculty/Staff View Header (Non-admin) -->
-        <div class="card mb-4 no-print shadow-none set-report-header mx-0" v-if="user.role === 'faculty' || user.role === 'staff'">
+        <!-- Faculty View Header (Non-admin) -->
+        <div class="card mb-4 no-print shadow-none set-report-header mx-0" v-if="user.role === 'faculty'">
           <div class="card-body d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-3">
             <div class="min-w-0">
               <h5 class="mb-0 fw-bold">My Detailed SET Report</h5>
@@ -129,11 +129,8 @@
         </div>
 
         <!-- Results -->
-        <div v-if="loading" class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <p class="mt-2 text-muted">Generating report info...</p>
+        <div v-if="loading" class="py-4">
+          <SkeletonLoader variant="table" :rows="6" :cols="4" />
         </div>
 
         <div v-else-if="detailedResults">
@@ -189,106 +186,13 @@
           <!-- No Data Notice -->
           <div
             class="alert alert-info border-0 shadow-sm text-center py-4 mb-4"
-            v-if="(evaluateeType === 'faculty' && filteredCourseSummaries.length === 0) || (evaluateeType === 'staff' && (!detailedResults.category_scores || detailedResults.category_scores.length === 0))"
+            v-if="filteredCourseSummaries.length === 0"
           >
             <i class="fas fa-info-circle fa-2x mb-2 text-primary opacity-75"></i>
             <h6 class="fw-bold mb-0">No Evaluation Data</h6>
             <p class="mb-0 small">
-              There are no evaluation ratings recorded for this {{ evaluateeType === 'faculty' ? 'faculty member' : 'staff member' }} yet.
+              There are no evaluation ratings recorded for this faculty member yet.
             </p>
-          </div>
-
-          <!-- Staff Category Scores — mobile -->
-          <div
-            class="d-md-none set-report-mobile-list mb-4"
-            v-if="evaluateeType === 'staff' && detailedResults.category_scores && detailedResults.category_scores.length > 0"
-          >
-            <h6 class="fw-bold mb-3 px-1">
-              <i class="fas fa-table me-2 text-primary"></i>
-              Summary of Category Ratings
-            </h6>
-            <div
-              v-for="(cat, catIndex) in detailedResults.category_scores"
-              :key="'staff-m-' + catIndex"
-              class="set-report-mobile-card"
-            >
-              <div class="set-report-mobile-card-title">
-                <span class="badge bg-light text-dark border me-2">{{ catIndex + 1 }}</span>
-                {{ cat.category_name }}
-              </div>
-              <dl class="set-report-mobile-dl">
-                <div><dt>Weight</dt><dd>{{ Math.round(cat.weight * 100) }}%</dd></div>
-                <div><dt>Avg Rating</dt><dd class="fw-bold">{{ Number(cat.average_rating).toFixed(2) }}</dd></div>
-                <div><dt>Weighted Score</dt><dd class="fw-bold">{{ (Number(cat.average_rating) * cat.weight * 20).toFixed(2) }}%</dd></div>
-              </dl>
-            </div>
-            <div class="set-report-mobile-total">
-              <span class="fw-bold">Overall Rating</span>
-              <span class="fw-bold text-primary">{{ detailedResults.overall_set_rating.toFixed(2) }}%</span>
-            </div>
-          </div>
-
-          <!-- Staff Category Scores Table (desktop) -->
-          <div
-            class="card shadow-none mb-4 overflow-hidden report-table-card d-none d-md-block"
-            v-if="evaluateeType === 'staff' && detailedResults.category_scores && detailedResults.category_scores.length > 0"
-          >
-            <div class="card-header bg-white py-3 no-print">
-              <h6 class="mb-0 fw-bold">
-                <i class="fas fa-table me-2 text-primary"></i>
-                Summary of Category Ratings
-              </h6>
-            </div>
-            <div class="card-body p-0 print-table-block mx-2">
-              <div class="print-only print-table-title">
-                Summary of Category Ratings
-              </div>
-              <div class="table-responsive set-report-table-scroll print-table-container">
-                <table class="table table-bordered table-hover mb-0 align-middle text-center print-table">
-                  <thead class="small">
-                    <tr class="print-header-row">
-                      <th class="print-col-header py-3 fw-normal text-capitalize">Seq</th>
-                      <th class="print-col-header py-3 fw-normal text-capitalize text-start ps-4">Category Name</th>
-                      <th class="print-col-header py-3 fw-normal text-capitalize">Weight</th>
-                      <th class="print-col-header py-3 fw-normal text-capitalize">Average Rating (1-5)</th>
-                      <th class="print-col-header py-3 fw-normal text-capitalize">Weighted Score</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(cat, catIndex) in detailedResults.category_scores" :key="catIndex">
-                      <td class="print-text-black fw-bold">
-                        {{ catIndex + 1 }}
-                      </td>
-                      <td class="print-text-black fw-semibold text-start ps-4">
-                        {{ cat.category_name }}
-                      </td>
-                      <td class="print-text-black fw-normal">
-                        {{ Math.round(cat.weight * 100) }}%
-                      </td>
-                      <td class="print-text-black fw-bold">
-                        {{ Number(cat.average_rating).toFixed(2) }}
-                      </td>
-                      <td class="print-text-black fw-bold">
-                        {{ (Number(cat.average_rating) * cat.weight * 20).toFixed(2) }}%
-                      </td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colspan="3" class="text-center print-text-black fw-bold">
-                        OVERALL RATING
-                      </td>
-                      <td class="print-text-black fw-bold">
-                        {{ (detailedResults.overall_set_rating / 20).toFixed(2) }}
-                      </td>
-                      <td class="print-text-black fw-bold">
-                        {{ detailedResults.overall_set_rating.toFixed(2) }}%
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
           </div>
 
           <!-- Main Data Table per Course -->
@@ -351,9 +255,9 @@
                 <div class="print-only print-table-title">
                   Summary of Average SET Rating — <span class="text-uppercase">{{ summary.course_name }}</span>
                 </div>
-                <div class="table-responsive set-report-table-scroll print-table-container">
+                <div class="table-responsive set-report-table-scroll print-table-container" @scroll="onTableScroll">
                   <table class="table table-bordered table-hover mb-0 align-middle text-center print-table">
-                    <thead class="small">
+                    <thead :class="{ 'glass-header': tableScrolled }" class="small">
                       <tr class="print-header-row">
                         <th class="print-col-header py-3 fw-normal text-capitalize">Seq</th>
                         <th class="print-col-header py-3 fw-normal text-capitalize">Course Code</th>
@@ -438,20 +342,20 @@
         </div>
 
         <div
-          v-else-if="!loading && selectedFacultyId === '' && $can('view_reports') && user.role !== 'faculty' && user.role !== 'staff'"
+          v-else-if="!loading && selectedFacultyId === '' && $can('view_reports') && user.role !== 'faculty'"
           class="card shadow-none mx-3 mx-md-0"
         >
           <div class="card-body text-center py-5 text-muted">
             <div class="mb-3">
               <i class="fas fa-file-invoice fa-4x opacity-25"></i>
             </div>
-            <h5 class="fw-bold mb-1">No {{ evaluateeType === 'faculty' ? 'Faculty' : 'Staff' }} Selected</h5>
-            <p class="mb-0">Please select a {{ evaluateeType === 'faculty' ? 'faculty member' : 'staff member' }} to generate their detailed performance report.</p>
+            <h5 class="fw-bold mb-1">No Faculty Selected</h5>
+            <p class="mb-0">Please select a faculty member to generate their detailed performance report.</p>
           </div>
         </div>
 
         <div
-          v-else-if="!loading && !detailedResults && (user.role === 'staff' || user.role === 'faculty')"
+          v-else-if="!loading && !detailedResults && (user.role === 'faculty')"
           class="card shadow-none"
         >
           <div class="card-body text-center py-5 text-muted">
@@ -459,10 +363,7 @@
               <i class="fas fa-chart-bar fa-4x opacity-25"></i>
             </div>
             <h5 class="fw-bold mb-1">No Report Data Available</h5>
-            <p class="mb-0 small" v-if="user.role === 'staff'">
-              Your staff profile could not be loaded, or no evaluations have been submitted for you in the active semester yet.
-            </p>
-            <p class="mb-0 small" v-else>
+            <p class="mb-0 small">
               Your faculty profile could not be loaded, or no evaluations have been submitted for you in the active semester yet.
             </p>
           </div>
@@ -478,6 +379,7 @@ import { useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
+import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 
 const can = inject("can");
@@ -491,6 +393,11 @@ const selectedFacultyId = ref("all");
 const selectedCourseFilter = ref("All");
 const detailedResults = ref(null);
 const loading = ref(false);
+const tableScrolled = ref(false);
+
+function onTableScroll(e) {
+  tableScrolled.value = e.target.scrollTop > 0;
+}
 
 // Filters
 const searchQuery = ref("");
@@ -528,10 +435,6 @@ const filteredFacultyList = computed(() => {
   if (q) {
     list = list.filter(f => {
       const name = f.user?.name?.toLowerCase() || "";
-      if (evaluateeType.value === "staff") {
-        const designation = f.designation?.toLowerCase() || "";
-        return name.includes(q) || designation.includes(q);
-      }
       const dept = f.department?.toLowerCase() || "";
       return name.includes(q) || dept.includes(q);
     });
@@ -540,19 +443,15 @@ const filteredFacultyList = computed(() => {
   return list;
 });
 
-const evaluateeType = ref(user.value.role === 'staff' ? 'staff' : 'faculty');
+const evaluateeType = ref('faculty');
 
-const printInfoSectionTitle = computed(() =>
-  evaluateeType.value === "staff" ? "A. Staff information" : "A. Faculty information",
-);
+const printInfoSectionTitle = computed(() => "A. Faculty information");
 
-const printEvaluateeFieldLabel = computed(() =>
-  evaluateeType.value === "staff" ? "Staff" : "Faculty",
-);
+const printEvaluateeFieldLabel = computed(() => "Faculty");
 
 const printEvaluateeValue = computed(() => {
   if (selectedFacultyId.value === "all") {
-    return evaluateeType.value === "staff" ? "All Staff" : "All Faculty";
+    return "All Faculty";
   }
   return detailedResults.value?.faculty_name || "N/A";
 });
@@ -568,17 +467,10 @@ const printDepartmentValue = computed(() => {
 });
 
 const facultyOptions = computed(() => {
-  const allLabel = evaluateeType.value === 'faculty' ? "All Faculty" : "All Staff";
+  const allLabel = "All Faculty";
   return [
     { label: allLabel, value: "all" },
     ...filteredFacultyList.value.map((f) => {
-      if (evaluateeType.value === "staff") {
-        const suffix = f.designation ? ` - ${f.designation}` : "";
-        return {
-          label: `${f.user?.name}${suffix}`,
-          value: f.id,
-        };
-      }
       return {
         label: `${f.user?.name} (${f.department || "N/A"})`,
         value: f.id,
@@ -604,30 +496,20 @@ const courseOptions = computed(() => [
 
 async function fetchEvaluateesList() {
   try {
-    if (evaluateeType.value === 'faculty') {
-      const res = await api.get("/faculty/all");
-      facultyList.value = res.data;
-    } else {
-      const res = await api.get("/reports/staff-list");
-      facultyList.value = (res.data || []).map(s => ({
-        id: s.id,
-        user_id: s.user_id,
-        user: { name: s.name },
-        department: s.department,
-        designation: s.designation,
-      }));
-    }
+    // Only faculty lists are supported now (staff reports removed)
+    const res = await api.get("/faculty/all");
+    facultyList.value = res.data;
   } catch (e) {
     console.error("Error fetching evaluatees list:", e);
   }
 }
 
 function getTypeFromRoute() {
-  return route.query.type === "staff" ? "staff" : "faculty";
+  return "faculty";
 }
 
 async function applyEvaluateeTypeFromRoute() {
-  if (can("view_reports") && user.value.role !== "faculty" && user.value.role !== "staff") {
+  if (can("view_reports") && user.value.role !== "faculty") {
     const type = getTypeFromRoute();
     if (evaluateeType.value !== type) {
       evaluateeType.value = type;
@@ -659,7 +541,7 @@ onMounted(async () => {
     console.error("Failed to load initial data", e);
   }
 
-  if (can("view_reports") && user.value.role !== "faculty" && user.value.role !== "staff") {
+  if (can("view_reports") && user.value.role !== "faculty") {
     evaluateeType.value = getTypeFromRoute();
     await fetchEvaluateesList();
     await loadResults();
@@ -671,34 +553,8 @@ onMounted(async () => {
       selectedFacultyId.value = mine.id;
       await loadResults();
     }
-  } else if (user.value.role === "staff") {
-    evaluateeType.value = "staff";
-    const staffId = await resolveMyStaffId();
-    if (staffId) {
-      selectedFacultyId.value = staffId;
-      await loadResults();
-    }
   }
 });
-
-async function resolveMyStaffId() {
-  try {
-    const res = await api.get("/reports/staff-list");
-    const list = res.data || [];
-    const mine = list.find(
-      (s) => s?.user_id === user.value?.id || s?.user?.id === user.value?.id,
-    );
-    if (mine?.id) return mine.id;
-    // Fallback: match by display name if user_id was missing on older records
-    const byName = list.find(
-      (s) => s?.name && user.value?.name && s.name.trim() === user.value.name.trim(),
-    );
-    return byName?.id ?? null;
-  } catch (e) {
-    console.error("Failed to resolve staff profile:", e);
-    return null;
-  }
-}
 
 async function handleDepartmentChange() {
   if (selectedFacultyId.value !== 'all') {
@@ -995,8 +851,9 @@ function getRatingBadge(rating) {
 .search-icon {
   color: #3b82f6;
   margin-right: 0.75rem;
-  font-size: 1rem;
-  font-weight: 900;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 [data-theme="dark"] .search-icon {
@@ -1069,8 +926,29 @@ function getRatingBadge(rating) {
   margin-right: 0;
 }
 
-.set-report-table-scroll {
-  -webkit-overflow-scrolling: touch;
+/* Sticky Table Header with Glassmorphism */
+.set-report-table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
+table { border-collapse: separate; border-spacing: 0; }
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
+  transition: all 0.2s ease;
+  box-shadow: none;
+  border-right: 1px solid var(--border-light);
+}
+thead th:last-child { border-right: none; }
+.glass-header th {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+[data-theme="dark"] .glass-header th {
+  background: rgba(30, 41, 59, 0.6);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 .set-report-mobile-list {
@@ -1082,7 +960,7 @@ function getRatingBadge(rating) {
 .set-report-mobile-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--card-radius);
   padding: 0.85rem 1rem;
 }
 
@@ -1129,7 +1007,7 @@ function getRatingBadge(rating) {
   padding: 0.85rem 1rem;
   background: var(--bg-light);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--card-radius);
   margin-top: 0.25rem;
 }
 
@@ -1142,7 +1020,7 @@ function getRatingBadge(rating) {
   margin-top: 0.5rem;
   background: var(--bg-light);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--card-radius);
 }
 
 .set-report-overall-footer .d-flex.align-items-center.gap-3 {

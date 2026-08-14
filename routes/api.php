@@ -13,7 +13,11 @@ use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\UserRoleController;
 use App\Http\Controllers\Api\AssignmentController;
 use App\Http\Controllers\Api\AiController;
-use App\Http\Controllers\Api\StaffController;
+use App\Http\Controllers\Api\OfficeController;
+use App\Http\Controllers\Api\OfficeFeedbackController;
+use App\Http\Controllers\Api\QrCodeController;
+use App\Http\Controllers\Api\OfficeReportController;
+use App\Http\Controllers\Api\OfficeQuestionnaireController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +31,14 @@ Route::post('/auth/google/link', [GoogleAuthController::class, 'linkGoogle'])->m
 Route::post('/auth/google/unlink', [GoogleAuthController::class, 'unlinkGoogle'])->middleware('auth:sanctum');
 Route::post('/auth/google/unlink/{id}', [GoogleAuthController::class, 'unlinkGoogle'])->middleware(['auth:sanctum', 'permission:manage_users']);
 Route::get('/courses', [CourseController::class, 'index']); // Public endpoint for registration form
+
+// Public QR Code endpoint (no auth required for visitors)
+Route::get('/qr/{token}', [QrCodeController::class, 'showByToken']);
+
+// Public office feedback & questionnaire (no auth required for visitors scanning QR codes)
+Route::post('office-feedback', [OfficeFeedbackController::class, 'submit']);
+Route::get('office-categories', [OfficeQuestionnaireController::class, 'index']);
+Route::get('office-categories/{categoryId}/questions', [OfficeQuestionnaireController::class, 'questions']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -61,16 +73,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('students/{studentId}/enrollments', [\App\Http\Controllers\Api\EnrollmentController::class, 'index']);
         Route::post('students/{studentId}/enrollments', [\App\Http\Controllers\Api\EnrollmentController::class, 'store']);
         Route::delete('enrollments/{id}', [\App\Http\Controllers\Api\EnrollmentController::class, 'destroy']);
-
-        // Staff Management
-        Route::post('staff/bulk-delete', [StaffController::class, 'bulkDestroy']);
-        Route::post('staff/bulk-status', [StaffController::class, 'bulkToggleActive']);
-        Route::get('staff', [StaffController::class, 'index']);
-        Route::post('staff', [StaffController::class, 'store']);
-        Route::get('staff/{id}', [StaffController::class, 'show']);
-        Route::put('staff/{id}', [StaffController::class, 'update']);
-        Route::delete('staff/{id}', [StaffController::class, 'destroy']);
-        Route::patch('staff/{id}/toggle-active', [StaffController::class, 'toggleActive']);
     });
 
     // Course Management (Admin features inside auth)
@@ -78,7 +80,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('courses', [CourseController::class, 'store']);
         Route::put('courses/{course}', [CourseController::class, 'update']);
         Route::delete('courses/{course}', [CourseController::class, 'destroy']);
-        Route::get('courses/{course}', [CourseController::class, 'show']);
     });
 
     // Faculty Assignments
@@ -106,24 +107,20 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Evaluations
     Route::middleware('permission:give_evaluations')->group(function () {
-        Route::get('evaluations/faculty', [EvaluationController::class, 'getFacultyToEvaluate']);
         Route::get('evaluations/evaluatees', [EvaluationController::class, 'getEvaluatees']);
         Route::post('evaluations', [EvaluationController::class, 'store']);
     });
-    Route::get('evaluations/results/{facultyId}', [EvaluationController::class, 'getResults']);
-    Route::get('evaluations/results-by-type', [EvaluationController::class, 'getResults']);
+    Route::get('evaluations/results/{evaluateeId}', [EvaluationController::class, 'getResults']);
 
     // Reports
     Route::get('reports/dashboard', [ReportController::class, 'dashboardStats']);
     Route::get('reports/faculty-summary', [ReportController::class, 'facultySummary']);
-    Route::get('reports/faculty/{id}', [ReportController::class, 'getFacultyDetailedReport']);
-    Route::get('reports/staff/{id}', [ReportController::class, 'getStaffDetailedReport']);
     Route::get('reports/evaluatee/{id}', [ReportController::class, 'getEvaluateeDetailedReport']);
     Route::get('reports/ai-insights/{id}', [ReportController::class, 'getAiInsights']);
     Route::get('reports/my-feedback', [ReportController::class, 'myFeedback']);
     Route::get('reports/feedbacks', [ReportController::class, 'getFeedbacks']);
     Route::get('reports/feedbacks/{id}', [ReportController::class, 'getFeedbackDetail']);
-    Route::get('reports/staff-list', [ReportController::class, 'staffSummary']);
+    // Staff reports removed: staffSummary route deleted
 
     // RBAC Management & Backups
     Route::middleware('permission:manage_rbac')->group(function () {
@@ -150,5 +147,50 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // AI Features
     Route::post('/ai/analyze-comment', [AiController::class, 'analyzeComment']);
+
+    // Office Management (Admin)
+    Route::get('offices/all', [OfficeController::class, 'all']);
+
+    Route::middleware('permission:manage_offices|manage_faculty')->group(function () {
+        Route::get('offices', [OfficeController::class, 'index']);
+        Route::post('offices', [OfficeController::class, 'store']);
+        Route::put('offices/{id}', [OfficeController::class, 'update']);
+        Route::delete('offices/{id}', [OfficeController::class, 'destroy']);
+        Route::patch('offices/{id}/toggle-active', [OfficeController::class, 'toggleActive']);
+        Route::post('offices/bulk-delete', [OfficeController::class, 'bulkDestroy']);
+        Route::post('offices/bulk-status', [OfficeController::class, 'bulkToggleActive']);
+        Route::post('offices/{officeId}/personnel', [OfficeController::class, 'storePersonnel']);
+        Route::delete('offices/{officeId}/personnel/{personnelId}', [OfficeController::class, 'destroyPersonnel']);
+
+        // QR Code Management
+        Route::get('qr-codes', [QrCodeController::class, 'index']);
+        Route::post('qr-codes/generate', [QrCodeController::class, 'generate']);
+        Route::post('qr-codes/{id}/regenerate', [QrCodeController::class, 'regenerate']);
+
+        // Office Feedback Management
+        Route::get('office-feedback', [OfficeFeedbackController::class, 'index']);
+        Route::get('office-feedback/stats', [OfficeFeedbackController::class, 'stats']);
+        Route::get('office-feedback/{id}', [OfficeFeedbackController::class, 'show']);
+        Route::delete('office-feedback/{id}', [OfficeFeedbackController::class, 'destroy']);
+
+        // Office Reports
+        Route::get('office-reports/dashboard', [OfficeReportController::class, 'dashboardStats']);
+        Route::get('office-reports/summary', [OfficeReportController::class, 'officeSummary']);
+        Route::get('office-reports/{id}/feedbacks', [OfficeReportController::class, 'feedbacks']);
+        Route::get('office-reports/{id}', [OfficeReportController::class, 'officeDetailedReport']);
+        Route::get('office-reports/export/csv', [OfficeReportController::class, 'export']);
+
+        // Office Questionnaire Management
+        Route::post('office-categories', [OfficeQuestionnaireController::class, 'store']);
+        Route::put('office-categories/{id}', [OfficeQuestionnaireController::class, 'update']);
+        Route::delete('office-categories/{id}', [OfficeQuestionnaireController::class, 'destroy']);
+        Route::get('office-categories/stats', [OfficeQuestionnaireController::class, 'stats']);
+        Route::post('office-questions', [OfficeQuestionnaireController::class, 'storeQuestion']);
+        Route::put('office-questions/{id}', [OfficeQuestionnaireController::class, 'updateQuestion']);
+        Route::delete('office-questions/{id}', [OfficeQuestionnaireController::class, 'destroyQuestion']);
+    });
+
+    // Office detail (all authenticated users — students need this for evaluation form)
+    Route::get('offices/{id}', [OfficeController::class, 'show']);
 });
 

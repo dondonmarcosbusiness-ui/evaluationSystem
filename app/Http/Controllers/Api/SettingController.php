@@ -10,8 +10,7 @@ class SettingController extends Controller
 {
     public function index()
     {
-        $settings = Setting::all()->pluck('value', 'key');
-        return response()->json($settings);
+        return response()->json(Setting::cachedAll());
     }
 
     public function update(Request $request)
@@ -26,6 +25,8 @@ class SettingController extends Controller
         foreach ($request->settings as $key => $value) {
             Setting::updateOrCreate(['key' => $key], ['value' => $value]);
         }
+
+        Setting::forgetCache();
 
         // Trigger notification if status changed to 'open'
         if ($newStatus === 'open' && $prevStatus !== 'open') {

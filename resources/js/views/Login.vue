@@ -547,7 +547,7 @@ function loginWithGoogle() {
   .login-form-container {
     background: #ffffff;
     padding: 2.5rem 2rem;
-    border-radius: 1.5rem;
+    border-radius: var(--card-radius);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08); /* Float effect on mobile */
   }
   .separator span.bg-white {

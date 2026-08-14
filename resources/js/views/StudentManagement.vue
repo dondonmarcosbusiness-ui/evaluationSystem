@@ -75,16 +75,7 @@
 
                 <div class="vr mx-1 d-none d-md-block" style="height: 24px; opacity: 0.1"></div>
 
-                <!-- Bulk Actions Button -->
-                <button
-                  v-if="selectedIds.length > 0"
-                  class="btn btn-light btn-sm px-3 shadow-sm animate__animated animate__pulse animate__infinite"
-                  style="animation-duration: 2s"
-                  @click="showBulkModal = true"
-                >
-                  <i class="fas fa-tasks me-2"></i>
-                  Manage Selected ({{ selectedIds.length }})
-                </button>
+
 
                 <!-- Action Buttons -->
                 <button class="btn btn-outline-success btn-sm d-flex align-items-center gap-2" @click="openUploadModal">
@@ -100,11 +91,12 @@
           </div>
           <div class="card-body p-0">
             <Transition name="fade" mode="out-in">
-              <div v-if="loading" key="loading" class="text-center py-5 text-muted">
-                <i class="fas fa-spinner fa-spin fa-2x"></i>
+              <div v-if="loading" key="loading">
+                <SkeletonLoader variant="table" :rows="8" :cols="10" />
               </div>
-              <table v-else key="table" class="table table-hover mb-0">
-                <thead>
+              <div v-else key="table" class="table-scroll" @scroll="onTableScroll">
+                <table class="table table-hover mb-0">
+                  <thead :class="{ 'glass-header': tableScrolled }">
                   <tr>
                     <th style="width: 40px">
                       <div class="form-check m-0">
@@ -210,6 +202,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </Transition>
 
             <!-- Pagination -->
@@ -408,72 +401,31 @@
           </div>
         </div>
       </div>
-      <!-- Bulk Actions Modal -->
-      <div
-        v-if="showBulkModal"
-        class="modal d-flex"
-        style="
-          background: rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(4px);
-          position: fixed;
-          inset: 0;
-          z-index: 2050;
-          align-items: center;
-          justify-content: center;
-        "
-      >
-        <div
-          class="card border-0 shadow-lg animate__animated animate__zoomIn"
-          style="width: 420px; max-width: 95vw; overflow: hidden"
-        >
-          <div class="card-header bg-light text-white d-flex justify-content-between align-items-center py-3 px-4">
-            <h6 class="mb-0 fw-bold">
-              <i class="fas fa-tasks me-2"></i>
-              Bulk Management
-            </h6>
-            <button class="btn-close btn-close-dark" @click="showBulkModal = false"></button>
-          </div>
-          <div class="card-body p-4 text-center">
-            <div class="mb-4">
-              <div class="display-6 fw-bold text-primary mb-1">{{ selectedIds.length }}</div>
-              <div class="text-muted small text-uppercase tracking-wider fw-semibold">Students Selected</div>
+      <!-- Bulk Actions Toast -->
+      <Transition name="toast-slide">
+        <div v-if="selectedIds.length > 0" class="bulk-toast-bar">
+          <div class="bulk-toast-inner">
+            <div class="bulk-toast-count">
+              <span class="bulk-toast-number">{{ selectedIds.length }}</span>
+              students selected
             </div>
-
-            <div class="d-grid gap-3">
-              <button
-                class="btn btn-outline-success py-3 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
-                @click="bulkChangeStatus(true)"
-              >
-                <i class="fas fa-check-circle fa-lg"></i>
-                Activate All Selected
+            <div class="bulk-toast-actions">
+              <button class="btn-toast btn-toast-activate" @click="bulkChangeStatus(true)">
+                <i class="fas fa-check-circle"></i> Activate
               </button>
-              <button
-                class="btn btn-outline-warning py-3 rounded-3 fw-bold shadow-sm text-dark d-flex align-items-center justify-content-center gap-2"
-                @click="bulkChangeStatus(false)"
-              >
-                <i class="fas fa-ban fa-lg"></i>
-                Deactivate All Selected
+              <button class="btn-toast btn-toast-deactivate" @click="bulkChangeStatus(false)">
+                <i class="fas fa-ban"></i> Deactivate
               </button>
-              <div class="py-2"><hr class="my-0 opacity-10" /></div>
-              <button
-                class="btn btn-danger py-3 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
-                @click="bulkDelete"
-              >
-                <i class="fas fa-trash-alt fa-lg"></i>
-                Delete Permanently
+              <button class="btn-toast btn-toast-delete" @click="bulkDelete">
+                <i class="fas fa-trash-alt"></i> Delete
               </button>
             </div>
-          </div>
-          <div class="card-footer bg-light border-0 py-3 text-center">
-            <button
-              class="btn btn-link text-muted text-decoration-none small fw-semibold"
-              @click="showBulkModal = false"
-            >
-              Cancel and Close
+            <button class="bulk-toast-close" @click="selectedIds = []">
+              <i class="fas fa-times"></i>
             </button>
           </div>
         </div>
-      </div>
+      </Transition>
 
 
       <EnrollmentModal
@@ -492,6 +444,7 @@ import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
 
 import Pagination from "../components/Pagination.vue";
+import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
 import EnrollmentModal from "../components/EnrollmentModal.vue";
@@ -513,7 +466,11 @@ const editId = ref(null);
 const saving = ref(false);
 const formError = ref("");
 const selectedIds = ref([]);
-const showBulkModal = ref(false);
+const tableScrolled = ref(false);
+
+function onTableScroll(e) {
+  tableScrolled.value = e.target.scrollTop > 0;
+}
 
 const showEnrollmentModal = ref(false);
 const selectedStudentForEnrollment = ref(null);
@@ -818,7 +775,6 @@ async function bulkDelete() {
   try {
     await api.post("/students/bulk-delete", { ids: selectedIds.value });
     selectedIds.value = [];
-    showBulkModal.value = false;
     await fetchStudents();
     Swal.fire("Deleted!", "Selected students have been deleted.", "success");
   } catch (e) {
@@ -844,7 +800,6 @@ async function bulkChangeStatus(status) {
   try {
     await api.post("/students/bulk-status", { ids: selectedIds.value, status });
     selectedIds.value = [];
-    showBulkModal.value = false;
     await fetchStudents();
     Swal.fire("Updated!", `Selected students have been ${action}d.`, "success");
   } catch (e) {
@@ -990,7 +945,7 @@ async function uploadCsv() {
 
 .glass-modal-inner {
   width: 100%;
-  border-radius: 2.5rem;
+  border-radius: var(--card-radius);
   background: var(--bg-card);
   overflow: visible !important;
 }
@@ -1000,7 +955,7 @@ async function uploadCsv() {
   pointer-events: all;
   background: var(--bg-card);
   border: 1px solid var(--border-light);
-  border-radius: 2rem;
+  border-radius: var(--card-radius);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
   width: 600px;
   max-width: 95vw;
@@ -1163,5 +1118,192 @@ async function uploadCsv() {
 [data-theme="dark"] .modal-header-custom,
 [data-theme="dark"] .modal-footer-custom {
   border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Bulk Actions Toast */
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.bulk-toast-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  min-width: 480px;
+  max-width: 90vw;
+  padding: 2px;
+  overflow: hidden;
+}
+
+.bulk-toast-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: conic-gradient(
+    from var(--border-angle),
+    #ffc107,
+    #ff7b00,
+    #0a278a,
+    #1e40af,
+    #2563eb,
+    #0a278a,
+    #ffc107
+  );
+  animation: spin-border 2s linear infinite;
+  z-index: 0;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  padding: 2px;
+}
+
+@keyframes spin-border {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+.bulk-toast-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 12px 20px;
+}
+
+.bulk-toast-count {
+  color: var(--text-dark);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bulk-toast-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.bulk-toast-actions {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.btn-toast {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.btn-toast-activate {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+.btn-toast-activate:hover {
+  background: #22c55e;
+  color: #fff;
+}
+
+.btn-toast-deactivate {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+.btn-toast-deactivate:hover {
+  background: #eab308;
+  color: #fff;
+}
+
+.btn-toast-delete {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+.btn-toast-delete:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+.bulk-toast-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.bulk-toast-close:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.toast-slide-enter-from,
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(20px);
+}
+
+/* Sticky Table Header with Glassmorphism */
+.table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
+table { border-collapse: separate; border-spacing: 0; }
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
+  transition: all 0.2s ease;
+  box-shadow: none;
+  border-right: 1px solid var(--border-light);
+}
+thead th:last-child { border-right: none; }
+.glass-header th {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+[data-theme="dark"] .glass-header th {
+  background: rgba(30, 41, 59, 0.6);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 </style>

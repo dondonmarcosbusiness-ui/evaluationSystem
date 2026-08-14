@@ -81,7 +81,7 @@ class AssignmentController extends Controller
     public function getMeta()
     {
         return response()->json([
-            'faculty' => Faculty::with('user')->get(),
+            'faculty' => Faculty::with('user:id,id_number,firstname,middlename,lastname,name,email,is_active')->get(),
             'subjects' => Subject::select('id', 'name', 'code', 'course_id')->get(),
             'sections' => Section::select('id', 'name', 'course_id')->get(),
             'courses' => Course::select('id', 'name', 'department')->get(),

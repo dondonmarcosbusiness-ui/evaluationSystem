@@ -21,4 +21,7 @@
 /vendor
 Homestead.json
 Homestead.yaml
+/bootstrap/cache/*.php
+ngrok.exe
+.ngrok.exe.old
 Thumbs.db

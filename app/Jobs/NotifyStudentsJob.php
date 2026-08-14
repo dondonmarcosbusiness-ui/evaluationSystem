@@ -30,7 +30,7 @@ class NotifyStudentsJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $settings = Setting::all()->pluck('value', 'key');
+        $settings = Setting::cachedAll();
         $semester = $settings->get('active_semester', 'N/A');
         $academicYear = $settings->get('active_academic_year', 'N/A');
 

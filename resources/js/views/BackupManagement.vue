@@ -78,9 +78,8 @@
           </div>
 
           <div class="card-body p-0">
-            <div v-if="loading" class="text-center py-5">
-              <div class="spinner-border text-primary" role="status"></div>
-              <p class="text-muted mt-3">Loading backup history...</p>
+            <div v-if="loading">
+              <SkeletonLoader variant="table" :rows="6" :cols="4" />
             </div>
 
             <div v-else-if="backups.length === 0" class="text-center py-5">
@@ -91,8 +90,9 @@
               <p class="small text-muted mb-0">Manual or automated backups will appear here</p>
             </div>
 
-            <table v-else class="table table-hover align-middle mb-0">
-              <thead class="bg-light">
+            <div v-else class="table-scroll" @scroll="onTableScroll">
+              <table class="table table-hover align-middle mb-0">
+                <thead :class="{ 'glass-header': tableScrolled }" class="bg-light">
                 <tr>
                   <th class="ps-4 py-3 text-uppercase small fw-bold text-muted">Date Created</th>
                   <th class="py-3 text-uppercase small fw-bold text-muted">File Name</th>
@@ -108,7 +108,7 @@
                   </td>
                   <td>
                     <div class="d-flex align-items-center gap-2">
-                      <i class="far fa-file-alt text-primary"></i>
+                      <i class="fas fa-file-alt text-primary"></i>
                       <span>{{ backup.filename }}</span>
                     </div>
                   </td>
@@ -142,7 +142,8 @@
                   </td>
                 </tr>
               </tbody>
-            </table>
+              </table>
+              </div>
           </div>
         </div>
 
@@ -202,6 +203,7 @@
 import { ref, onMounted, computed } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
+import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api";
 import { format } from "date-fns";
 import Swal from "sweetalert2";
@@ -211,6 +213,11 @@ const loading = ref(true);
 const creating = ref(false);
 const autoBackupEnabled = ref(false);
 const lastBackup = ref("");
+const tableScrolled = ref(false);
+
+function onTableScroll(e) {
+  tableScrolled.value = e.target.scrollTop > 0;
+}
 
 const showRestoreModal = ref(false);
 const selectedFile = ref("");
@@ -497,5 +504,30 @@ function formatTime(dateString) {
 
 .btn-icon-action:hover {
   transform: translateY(-2px);
+}
+
+/* Sticky Table Header with Glassmorphism */
+.table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
+table { border-collapse: separate; border-spacing: 0; }
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
+  transition: all 0.2s ease;
+  box-shadow: none;
+  border-right: 1px solid var(--border-light);
+}
+thead th:last-child { border-right: none; }
+.glass-header th {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+[data-theme="dark"] .glass-header th {
+  background: rgba(30, 41, 59, 0.6);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 </style>

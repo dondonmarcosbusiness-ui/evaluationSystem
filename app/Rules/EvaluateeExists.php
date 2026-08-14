@@ -4,7 +4,6 @@ namespace App\Rules;
 
 use App\Enums\EvaluateeType;
 use App\Models\Faculty;
-use App\Models\Staff;
 use Illuminate\Contracts\Validation\Rule;
 
 class EvaluateeExists implements Rule
@@ -20,7 +19,6 @@ class EvaluateeExists implements Rule
     {
         return match ($this->evaluateeType) {
             EvaluateeType::FACULTY->value => Faculty::where('id', $value)->exists(),
-            EvaluateeType::STAFF->value => Staff::where('id', $value)->exists(),
             default => false,
         };
     }

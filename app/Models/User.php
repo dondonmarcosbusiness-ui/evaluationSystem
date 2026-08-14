@@ -63,11 +63,6 @@ class User extends Authenticatable
         return $this->hasOne(Faculty::class);
     }
 
-    public function staff()
-    {
-        return $this->hasOne(Staff::class);
-    }
-
     public function evaluations()
     {
         return $this->hasMany(Evaluation::class, 'student_id');

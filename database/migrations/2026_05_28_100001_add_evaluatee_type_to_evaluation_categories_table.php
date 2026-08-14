@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('evaluation_categories', function (Blueprint $table) {
             if (!Schema::hasColumn('evaluation_categories', 'evaluatee_type')) {
-                $table->enum('evaluatee_type', ['faculty', 'staff'])->default('faculty')->after('weight');
+                $table->enum('evaluatee_type', ['faculty'])->default('faculty')->after('weight');
             }
             $table->index(['evaluatee_type', 'semester', 'academic_year'], 'eval_cat_type_sem_ay_index');
         });

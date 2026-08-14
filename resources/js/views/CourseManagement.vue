@@ -34,9 +34,8 @@
           </div>
         </div>
 
-        <div v-if="loading" class="text-center py-5">
-          <div class="spinner-border text-primary" role="status"></div>
-          <p class="mt-3 text-muted fw-bold ls-1">Curating Curricula...</p>
+        <div v-if="loading" class="py-4">
+          <SkeletonLoader variant="cards" :rows="8" />
         </div>
 
         <!-- Grid of Courses -->
@@ -184,7 +183,7 @@
                   {{ editMode ? "Update Curriculum" : "New Course Curriculum" }}
                 </h5>
 
-                <div class="row g-3">
+                <div class="row g-4 px-1 py-1">
                   <div class="col-md-6">
                     <label class="form-label-premium">Course Name</label>
                     <input v-model="form.name" class="form-control-premium" placeholder="e.g. BSIT" />
@@ -237,7 +236,7 @@
                   </div>
                 </div>
               </div>
-              <div class="p-4 pt-0 d-flex gap-2">
+              <div class="px-4 pb-4 pt-2 d-flex gap-2">
                 <button class="btn btn-light-premium w-100" @click="closeModal">Cancel</button>
                 <button class="btn btn-primary-premium w-100" @click="saveCourse" :disabled="saving">
                   {{ saving ? "Processing..." : "Save Curriculum" }}
@@ -255,6 +254,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
+import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
 
@@ -711,7 +711,7 @@ async function deleteCourse(id) {
 .glass-modal-inner {
   margin: auto;
   width: 100%;
-  border-radius: 2.5rem;
+  border-radius: var(--card-radius);
   background: var(--bg-card);
   overflow: visible !important;
 }

@@ -45,7 +45,7 @@ const router = useRouter();
 const route = useRoute();
 
 // Config (3 minutes inactivity + 30 seconds warning)
-const INACTIVITY_LIMIT = 50 * 60 * 1000;
+const INACTIVITY_LIMIT = 3 * 60 * 1000;
 const WARNING_LIMIT = 30;
 
 const showModal = ref(false);

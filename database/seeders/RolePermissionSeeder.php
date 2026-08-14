@@ -29,6 +29,7 @@ class RolePermissionSeeder extends Seeder
             'view_reports',
             'give_evaluations',
             'view_evaluations',
+            'manage_offices',
         ];
 
         $guards = ['web', 'sanctum'];
