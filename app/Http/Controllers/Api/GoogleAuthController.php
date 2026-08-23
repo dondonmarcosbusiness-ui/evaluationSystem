@@ -18,6 +18,7 @@ class GoogleAuthController extends Controller
   public function redirectToGoogle(Request $request)
   {
     $mode = $request->query('mode', 'login');
+    config(['services.google.redirect' => $request->getSchemeAndHttpHost() . '/api/auth/google/callback']);
 
     /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
     $driver = Socialite::driver('google');
@@ -34,6 +35,8 @@ class GoogleAuthController extends Controller
   public function handleGoogleCallback(Request $request)
   {
     try {
+      config(['services.google.redirect' => $request->getSchemeAndHttpHost() . '/api/auth/google/callback']);
+
       $state = json_decode(urldecode($request->input('state')), true);
       $mode = $state['mode'] ?? 'login';
 
