@@ -3,6 +3,8 @@
 .env
 .env.backup
 .env.production
+.env.local
+.env.staging
 .phpactor.json
 .phpunit.result.cache
 /.fleet
@@ -25,3 +27,25 @@ Homestead.yaml
 ngrok.exe
 .ngrok.exe.old
 Thumbs.db
+.devswarm-temp/
+
+# AI tool directories
+/.agent
+/.agents
+/.claude
+/.codex
+/.cursor
+/.gemini
+/.impeccable
+/.kiro
+
+# Compiled views
+/storage/framework/views/*.php
+
+# Scratch/temp files
+/scratch
+*.py
+
+# Test files with potential secrets
+/test_*.php
+*_test.php
