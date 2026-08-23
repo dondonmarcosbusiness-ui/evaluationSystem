@@ -1,0 +1,9 @@
+node_modules
+.git
+.env
+.env.*
+*.log
+.DS_Store
+storage/framework/views/*.php
+storage/logs/*.log
+bootstrap/cache/*.php
