@@ -17,4 +17,15 @@ class PermissionMigrationTest extends TestCase
         $this->assertTrue(Schema::hasTable('permissions'));
         $this->assertTrue(Schema::hasTable('roles'));
     }
+
+    public function test_permission_migration_ignores_missing_cache_table(): void
+    {
+        config()->set('cache.default', 'database');
+
+        $migration = require base_path('database/migrations/2026_03_22_083540_create_permission_tables.php');
+
+        $migration->up();
+
+        $this->assertTrue(Schema::hasTable('permissions'));
+    }
 }

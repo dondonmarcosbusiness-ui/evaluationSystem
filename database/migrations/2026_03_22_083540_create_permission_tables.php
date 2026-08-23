@@ -121,9 +121,15 @@ return new class extends Migration
             });
         }
 
-        app('cache')
-            ->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null)
-            ->forget(config('permission.cache.key'));
+        $cacheStore = app('cache')->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null);
+        $cacheDriver = config('cache.stores.' . config('cache.default') . '.driver', null);
+        $cacheTable = config('cache.stores.database.table', 'cache');
+
+        if ($cacheDriver === 'database' && ! Schema::hasTable($cacheTable)) {
+            return;
+        }
+
+        $cacheStore->forget(config('permission.cache.key'));
     }
 
     /**
