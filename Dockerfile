@@ -35,4 +35,7 @@ RUN mkdir -p storage/framework/{sessions,views,cache,testing} storage/logs boots
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "php artisan migrate:fresh --force && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]
