@@ -476,6 +476,13 @@ let officeVisitorChart = null;
 let facultyDelayed = false;
 let ratingsDelayed = false;
 
+function formatMonthLabel(month) {
+  const [year, m] = String(month || "").split("-");
+  if (!year || !m) return month;
+  const date = new Date(Number(year), Number(m) - 1, 1);
+  return date.toLocaleDateString(undefined, { month: "short" });
+}
+
 function sparklinePath(data, w = 80, h = 32) {
   if (!data || data.length < 2) return "";
   const mx = Math.max(...data);
@@ -684,7 +691,7 @@ function initCharts() {
             {
               label: "Average Score",
               data: data,
-              backgroundColor: "rgba(26,86,219,0.7)",
+              backgroundColor: "rgba(25,25,112,0.7)",
               borderRadius: 6,
               order: 2,
             },
@@ -692,9 +699,9 @@ function initCharts() {
               label: "Trend",
               data: data,
               type: "line",
-              borderColor: "#1a56db",
+              borderColor: "#191970",
               borderWidth: 2,
-              pointBackgroundColor: "#1a56db",
+              pointBackgroundColor: "#191970",
               pointBorderColor: "#fff",
               pointBorderWidth: 2,
               pointRadius: 4,
@@ -702,7 +709,7 @@ function initCharts() {
               tension: 0,
               fill: {
                 target: "origin",
-                above: "rgba(26,86,219,0.12)",
+                above: "rgba(25,25,112,0.12)",
               },
               order: 1,
             },
@@ -805,8 +812,8 @@ function initCharts() {
 
     const officeTrendCtx = document.getElementById("officeTrendChart");
     if (officeTrendCtx && officeTrend.value.length) {
-      const labels = officeTrend.value.map((item) => item.month);
-      const data = officeTrend.value.map((item) => item.count);
+      const labels = officeTrend.value.map((item) => formatMonthLabel(item.month));
+      const data = officeTrend.value.map((item) => Number(item.count) || 0);
 
       officeTrendChart = new Chart(officeTrendCtx, {
         type: "line",
@@ -816,13 +823,13 @@ function initCharts() {
             {
               label: "Feedback Volume",
               data,
-              borderColor: "#1a56db",
-              backgroundColor: "rgba(26,86,219,0.12)",
+              borderColor: "#191970",
+              backgroundColor: "rgba(25,25,112,0.12)",
               borderWidth: 3,
               pointRadius: 5,
               pointHoverRadius: 7,
               pointBackgroundColor: "#ffffff",
-              pointBorderColor: "#1a56db",
+              pointBorderColor: "#191970",
               pointBorderWidth: 2,
               tension: 0.35,
               fill: false,
@@ -859,13 +866,13 @@ function initCharts() {
           datasets: [
             {
               label: "Visitors",
-              data: Object.values(officeVisitorTypes.value),
+              data: Object.values(officeVisitorTypes.value).map((v) => Number(v) || 0),
               backgroundColor: [
                 "#0e9f6e",
-                "#1d4ed8",
+                "#191970",
                 "#f59e0b",
                 "#e11d48",
-                "#6366f1",
+                "#232380",
               ],
               borderRadius: 8,
             },
@@ -925,13 +932,13 @@ function initCharts() {
 
 .toggle-option:hover {
   color: var(--text-dark);
-  background: rgba(0, 82, 255, 0.05);
+  background: rgba(25, 25, 112, 0.05);
 }
 
 .toggle-option.active {
   background: var(--primary);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 82, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(25, 25, 112, 0.25);
 }
 
 @media (max-width: 575.98px) {
@@ -993,7 +1000,7 @@ function initCharts() {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--primary);
-  background: rgba(0, 82, 255, 0.1);
+  background: rgba(25, 25, 112, 0.1);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   margin-bottom: 0.35rem;
@@ -1054,8 +1061,8 @@ function initCharts() {
 }
 
 .faculty-action-card--primary {
-  border-color: rgba(0, 82, 255, 0.25);
-  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(0, 82, 255, 0.04) 100%);
+  border-color: rgba(25, 25, 112, 0.25);
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(25, 25, 112, 0.04) 100%);
 }
 
 .faculty-action-icon {
@@ -1293,10 +1300,10 @@ function initCharts() {
     from var(--border-angle),
     #ffc107,
     #ff7b00,
-    #0a278a,
-    #1e40af,
-    #2563eb,
-    #0a278a,
+    #191970,
+    #232380,
+    #232380,
+    #191970,
     #ffc107
   );
   animation: spin-border 2s linear infinite;
@@ -1377,7 +1384,7 @@ function initCharts() {
 
 .office-eval-card:hover {
   border-color: var(--primary);
-  box-shadow: 0 4px 16px rgba(0, 82, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(25, 25, 112, 0.1);
 }
 
 .office-icon-sm {
@@ -1385,7 +1392,7 @@ function initCharts() {
   height: 40px;
   min-width: 40px;
   border-radius: 10px;
-  background: rgba(0, 82, 255, 0.1);
+  background: rgba(25, 25, 112, 0.1);
   color: var(--primary);
   display: flex;
   align-items: center;

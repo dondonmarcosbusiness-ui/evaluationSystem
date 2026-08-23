@@ -15,7 +15,7 @@
             <div class="d-flex gap-1 align-items-center">
               <div style="border-left: 3px solid #facd04; height: 75px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
               <div style="border-left: 3px solid #facd04; height: 75px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
-              <div style="border-left: 8px solid #0a278a; height: 75px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
+              <div style="border-left: 8px solid #191970; height: 75px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
             </div>
             <div class="text-start lh-1">
               <p class="mb-0 text-dark" style="font-family: 'Times New Roman', Times, serif; font-size: 14px;">Republic of the Philippines</p>
@@ -25,7 +25,7 @@
             <div></div> <!-- Spacer to maintain center -->
           </div>
 
-          <div class="mt-1" style="background-color: #0a278a; height: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; width: 100%;"></div>
+          <div class="mt-1" style="background-color: #191970; height: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; width: 100%;"></div>
 
           <h5 class="print-report-title text-center fw-bold mt-4">NEUST EVALUATION REPORT</h5>
 
@@ -102,7 +102,7 @@
               class="btn btn-primary d-flex align-items-center gap-2 shadow-sm px-4 text-white"
               @click="printReport"
               :disabled="!detailedResults || loading"
-              style="background-color: #0a278a; border-color: #0a278a; border-radius: 50px; height: 42px"
+              style="background-color: #191970; border-color: #191970; border-radius: 50px; height: 42px"
             >
               <i class="fas fa-print text-white"></i>
               <span class="fw-bold text-white">Print Report</span>
@@ -632,7 +632,7 @@ function getRatingBadge(rating) {
     margin: 0;
   }
   .content-area {
-    --set-report-print-blue: #0a278a;
+    --set-report-print-blue: #191970;
     padding: 0 !important;
     margin-top: 0 !important;
   }
@@ -711,17 +711,17 @@ function getRatingBadge(rating) {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #fff !important;
-    background-color: var(--set-report-print-blue, #0a278a) !important;
+    background-color: var(--set-report-print-blue, #191970) !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     padding: 10px 14px !important;
-    border: 1px solid var(--set-report-print-blue, #0a278a) !important;
+    border: 1px solid var(--set-report-print-blue, #191970) !important;
     margin: 0 !important;
   }
 
   .print-table-container {
-    border-left: 1px solid var(--set-report-print-blue, #0a278a) !important;
-    border-right: 1px solid var(--set-report-print-blue, #0a278a) !important;
+    border-left: 1px solid var(--set-report-print-blue, #191970) !important;
+    border-right: 1px solid var(--set-report-print-blue, #191970) !important;
     border-top: none !important;
   }
 
@@ -732,7 +732,7 @@ function getRatingBadge(rating) {
     text-align: center !important;
     color: #000 !important;
     background-color: #fff !important;
-    border: 1px solid var(--set-report-print-blue, #0a278a);
+    border: 1px solid var(--set-report-print-blue, #191970);
     border-top: none;
     padding: 11px 14px !important;
     margin: 0 !important;
@@ -754,8 +754,8 @@ function getRatingBadge(rating) {
   }
 
   .print-table thead th {
-    border: 1px solid var(--set-report-print-blue, #0a278a) !important;
-    border-bottom: 2px solid var(--set-report-print-blue, #0a278a) !important;
+    border: 1px solid var(--set-report-print-blue, #191970) !important;
+    border-bottom: 2px solid var(--set-report-print-blue, #191970) !important;
     background-color: #fff !important;
     color: #000 !important;
     padding: 9px 8px !important;
@@ -773,11 +773,11 @@ function getRatingBadge(rating) {
   .print-table.table > :not(caption) > thead > tr > td {
     border-width: 1px !important;
     border-style: solid !important;
-    border-color: var(--set-report-print-blue, #0a278a) !important;
+    border-color: var(--set-report-print-blue, #191970) !important;
   }
 
   .print-table tbody td {
-    border: 1px solid var(--set-report-print-blue, #0a278a) !important;
+    border: 1px solid var(--set-report-print-blue, #191970) !important;
     padding: 9px 8px !important;
     vertical-align: middle !important;
     color: #000 !important;
@@ -786,7 +786,7 @@ function getRatingBadge(rating) {
   }
 
   .print-table tfoot td {
-    border: 1px solid var(--set-report-print-blue, #0a278a) !important;
+    border: 1px solid var(--set-report-print-blue, #191970) !important;
     background-color: #fff !important;
     color: #000 !important;
     padding: 10px 8px !important;
@@ -845,11 +845,11 @@ function getRatingBadge(rating) {
 
 .search-pill-container:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(26, 86, 219, 0.1);
+  box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1);
 }
 
 .search-icon {
-  color: #3b82f6;
+  color: #191970;
   margin-right: 0.75rem;
   width: 18px;
   height: 18px;
@@ -903,7 +903,7 @@ function getRatingBadge(rating) {
 }
 
 .refresh-pill-btn:hover {
-  background: rgba(26, 86, 219, 0.1);
+  background: rgba(25, 25, 112, 0.1);
   color: var(--primary);
   border-color: var(--primary);
   transform: rotate(-30deg);
@@ -1043,19 +1043,19 @@ thead th:last-child { border-right: none; }
 @media print {
   table.print-table {
     border-collapse: collapse !important;
-    --set-report-print-blue: #0a278a;
+    --set-report-print-blue: #191970;
   }
 
   table.print-table .print-table-title,
   .print-table-title {
-    background-color: #0a278a !important;
-    border-color: #0a278a !important;
+    background-color: #191970 !important;
+    border-color: #191970 !important;
   }
 
   table.print-table th.print-col-header,
   table.print-table thead th {
-    border: 1px solid #0a278a !important;
-    border-bottom: 2px solid #0a278a !important;
+    border: 1px solid #191970 !important;
+    border-bottom: 2px solid #191970 !important;
     color: #000 !important;
     background-color: #fff !important;
     font-weight: 700 !important;
@@ -1065,7 +1065,7 @@ thead th:last-child { border-right: none; }
 
   table.print-table tbody td,
   table.print-table tfoot td {
-    border: 1px solid #0a278a !important;
+    border: 1px solid #191970 !important;
     color: #000 !important;
     background-color: #fff !important;
     -webkit-print-color-adjust: exact;
@@ -1073,12 +1073,12 @@ thead th:last-child { border-right: none; }
   }
 
   .print-table-container {
-    border-left-color: #0a278a !important;
-    border-right-color: #0a278a !important;
+    border-left-color: #191970 !important;
+    border-right-color: #191970 !important;
   }
 
   .print-table-summary {
-    border-color: #0a278a !important;
+    border-color: #191970 !important;
   }
 }
 </style>

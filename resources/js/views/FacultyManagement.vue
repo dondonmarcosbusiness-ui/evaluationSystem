@@ -724,7 +724,7 @@ async function toggleActive(f) {
     text: `Do you want to ${action} ${f.user?.name}?`,
     icon: "question",
     showCancelButton: true,
-    confirmButtonColor: "#3b82f6",
+    confirmButtonColor: "#191970",
     confirmButtonText: `Yes, ${action}!`,
     background: document.documentElement.getAttribute("data-theme") === "dark" ? "#1e293b" : "#fff",
     color: document.documentElement.getAttribute("data-theme") === "dark" ? "#f1f5f9" : "#1e293b",
@@ -822,7 +822,7 @@ async function bulkChangeStatus(status) {
     text: `Are you sure you want to bulk ${action} the selected faculty?`,
     icon: "question",
     showCancelButton: true,
-    confirmButtonColor: "#3b82f6",
+    confirmButtonColor: "#191970",
     confirmButtonText: `Yes, ${action} them!`,
   });
 
@@ -898,7 +898,7 @@ async function uploadCsv() {
 
 /* --- Premium Modal (Faculty Theme - Indigo) --- */
 :root {
-  --indigo: #6366f1;
+  --indigo: #232380;
 }
 
 .bg-indigo {
@@ -1021,7 +1021,7 @@ async function uploadCsv() {
 .select-custom:focus {
   outline: none;
   border-color: var(--indigo);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1);
 }
 
 .input-group-custom {
@@ -1043,7 +1043,7 @@ async function uploadCsv() {
 }
 
 .btn-indigo-custom {
-  background: #3b82f6 !important;
+  background: #191970 !important;
   color: white !important;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -1054,8 +1054,8 @@ async function uploadCsv() {
 
 .btn-indigo-custom:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 15px -5px rgba(59, 130, 246, 0.5);
-  background: #2563eb !important;
+  box-shadow: 0 8px 15px -5px rgba(25, 25, 112, 0.5);
+  background: #232380 !important;
 }
 
 .btn-light-custom {
@@ -1104,7 +1104,7 @@ async function uploadCsv() {
 }
 
 .course-check-item.active .course-check-label {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(25, 25, 112, 0.1);
   border-color: var(--indigo);
   color: var(--indigo);
 }
@@ -1133,9 +1133,9 @@ async function uploadCsv() {
 }
 
 .badge-all-course {
-  background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #232380 0%, #191970 100%);
   color: white;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 2px 4px rgba(25, 25, 112, 0.2);
   border: none;
 }
 
@@ -1169,10 +1169,10 @@ async function uploadCsv() {
     from var(--border-angle),
     #ffc107,
     #ff7b00,
-    #0a278a,
-    #1e40af,
-    #2563eb,
-    #0a278a,
+    #191970,
+    #232380,
+    #232380,
+    #191970,
     #ffc107
   );
   animation: spin-border 2s linear infinite;

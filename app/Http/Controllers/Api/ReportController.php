@@ -183,7 +183,7 @@ class ReportController extends Controller
 
         return response()->json([
             'total_faculty' => $scopedEvaluateeId ? 1 : Faculty::count(),
-            'total_students' => $scopedEvaluateeId ? $totalEvaluations->distinct('student_id')->count() : User::where('role', 'student')->count(),
+            'total_students' => $scopedEvaluateeId ? $totalEvaluations->distinct('student_id')->count() : User::where('role', 'student')->has('student')->count(),
             'total_evaluations' => $totalEvaluationsCount,
             'average_rating' => $avgQuery->avg('evaluation_answers.rating') ?: 0,
             'performance_overview' => $categoryAverages,

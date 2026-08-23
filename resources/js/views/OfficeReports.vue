@@ -413,7 +413,9 @@
                           <thead :class="{ 'glass-header': tableScrolled }" class="bg-light">
                             <tr class="x-small text-uppercase text-muted">
                               <th class="ps-4">Visitor Type</th>
+                              <th>Purpose of Visit</th>
                               <th>IP Address</th>
+                              <th>Device</th>
                               <th class="text-center">Yes / No</th>
                               <th>Comments</th>
                               <th class="pe-4 text-end">Date</th>
@@ -424,7 +426,9 @@
                               <td class="ps-4">
                                 <span class="badge bg-light text-dark rounded-pill small">{{ fb.visitor_type || 'N/A' }}</span>
                               </td>
+                              <td class="small">{{ fb.purpose_of_visit || '—' }}</td>
                               <td class="small">{{ fb.ip_address || '—' }}</td>
+                              <td class="small" :title="fb.device_id || ''">{{ (fb.device_id || '').slice(0, 8) || '—' }}</td>
                               <td class="text-center small">
                                 <span class="fw-bold text-success">{{ feedbackYesCount(fb) }}</span>
                                 <span class="text-muted"> / </span>
@@ -752,7 +756,7 @@ onMounted(async () => {
 .filter-input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3.5px rgba(0, 82, 255, 0.12);
+  box-shadow: 0 0 0 3.5px rgba(25, 25, 112, 0.12);
   background: var(--bg-card);
   color: var(--text-main);
 }
@@ -789,12 +793,12 @@ onMounted(async () => {
 
 .filter-select :deep(.custom-select-trigger:hover) {
   border-color: var(--primary);
-  box-shadow: 0 2px 8px rgba(0, 82, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(25, 25, 112, 0.08);
 }
 
 .filter-select :deep(.custom-select-trigger.active) {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3.5px rgba(0, 82, 255, 0.12);
+  box-shadow: 0 0 0 3.5px rgba(25, 25, 112, 0.12);
 }
 
 .filter-btn {
@@ -815,13 +819,13 @@ onMounted(async () => {
   background: var(--primary);
   border: 1.5px solid var(--primary);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 82, 255, 0.25);
+  box-shadow: 0 4px 12px rgba(25, 25, 112, 0.25);
 }
 
 .filter-btn-apply:hover {
-  background: #0045d8;
-  border-color: #0045d8;
-  box-shadow: 0 6px 16px rgba(0, 82, 255, 0.35);
+  background: #14145a;
+  border-color: #14145a;
+  box-shadow: 0 6px 16px rgba(25, 25, 112, 0.35);
   transform: translateY(-1px);
   color: #ffffff;
 }
@@ -874,7 +878,7 @@ onMounted(async () => {
 .input-custom:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(10, 39, 138, 0.08);
+  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.08);
 }
 
 .x-small {

@@ -42,7 +42,7 @@
         <div v-else class="row g-4 fade-in-up">
           <TransitionGroup name="grid-stagger">
             <div v-for="course in courses" :key="course.id" class="col-md-6 col-lg-4 col-xl-3">
-              <div class="course-card-premium" @click="handleCourseClick(course)">
+              <div class="course-card-premium" @click="handleCourseClick(course, $event)">
                 <div class="card-glow"></div>
                 <div class="course-card-inner p-4 h-100 d-flex flex-column">
                   <div class="d-flex justify-content-between align-items-start mb-4">
@@ -108,66 +108,98 @@
           </div>
         </div>
 
-        <!-- Curriculum Drawer -->
-        <div v-if="showDrawer" class="drawer-overlay" @click="closeDrawer"></div>
-        <Transition name="drawer-slide">
-          <div v-if="showDrawer" class="curriculum-drawer">
+        <!-- Curriculum Detail - Morphing Card -->
+        <Teleport to="body">
+          <div v-if="detailReady" class="morph-overlay" :class="{ closing: detailClosing }">
+            <div class="morph-backdrop" @click="closeDetail"></div>
             <div
-              class="drawer-header p-4 d-flex align-items-center justify-content-between border-bottom sticky-top bg-card shadow-sm"
+              class="morph-card"
+              :style="morphCardStyle"
+              @transitionend="onMorphEnd"
             >
-              <div class="d-flex align-items-center gap-3">
-                <div class="drawer-icon-v3">
-                  <i class="fas fa-book-open"></i>
+              <div class="detail-card-glow"></div>
+
+              <div class="morph-card-summary" :class="{ visible: detailClosing }">
+                <div class="course-icon-box">
+                  <i class="fas fa-graduation-cap"></i>
                 </div>
-                <div>
-                  <h5 class="fw-800 mb-0">{{ activeCourse?.name }}</h5>
-                  <span class="small text-muted fw-600 ls-1 text-uppercase">Curriculum Details</span>
+                <div class="morph-summary-text">
+                  <h5 class="course-title-v3 mb-1 fw-800">{{ activeCourse?.name }}</h5>
+                  <span class="course-dept-v3">{{ activeCourse?.department }}</span>
                 </div>
               </div>
-              <button class="btn-close-drawer" @click="closeDrawer">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
 
-            <div class="drawer-content p-4">
-              <!-- Subjects Section -->
-              <div class="mb-5">
-                <h6 class="text-uppercase ls-1 fw-800 small text-muted mb-4 d-flex align-items-center gap-2">
-                  <i class="fas fa-bookmark text-primary opacity-50"></i>
-                  Subject Bank
-                </h6>
-                <div class="d-flex flex-column gap-2">
-                  <div v-for="(sub, idx) in splitList(activeCourse?.subjects)" :key="idx" class="drawer-item-card">
-                    <div class="d-flex align-items-center gap-3">
-                      <div class="item-index">{{ idx + 1 }}</div>
-                      <span class="fw-600 text-main small">{{ sub }}</span>
+              <div class="morph-card-detail" :class="{ fading: detailClosing }">
+                <div class="detail-header">
+                  <div class="detail-header-left">
+                    <div class="detail-icon-box">
+                      <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div>
+                      <h4 class="fw-800 mb-0 detail-title">{{ activeCourse?.name }}</h4>
+                      <span class="detail-dept">{{ activeCourse?.department }}</span>
                     </div>
                   </div>
-                  <div v-if="!splitList(activeCourse?.subjects).length" class="text-center py-4 opacity-50">
-                    <p class="small fw-600 mb-0">No subjects listed.</p>
+                  <button class="detail-close-btn" @click.stop="closeDetail">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+
+                <div class="detail-stats-row">
+                  <div class="detail-stat-chip">
+                    <i class="fas fa-bookmark"></i>
+                    <span>{{ splitList(activeCourse?.subjects).length }} Subjects</span>
+                  </div>
+                  <div class="detail-stat-chip">
+                    <i class="fas fa-users"></i>
+                    <span>{{ splitList(activeCourse?.sections).length }} Sections</span>
                   </div>
                 </div>
-              </div>
 
-              <!-- Sections Section -->
-              <div>
-                <h6 class="text-uppercase ls-1 fw-800 small text-muted mb-4 d-flex align-items-center gap-2">
-                  <i class="fas fa-users-rectangle text-primary opacity-50"></i>
-                  Academic Sections
-                </h6>
-                <div class="d-flex flex-wrap gap-2">
-                  <div v-for="(sec, idx) in splitList(activeCourse?.sections)" :key="idx" class="drawer-pill">
-                    <div class="pill-dot"></div>
-                    <span>{{ sec }}</span>
+                <div class="detail-body">
+                  <div class="detail-section">
+                    <h6 class="detail-section-heading">
+                      <i class="fas fa-bookmark text-primary opacity-60"></i>
+                      Subject Bank
+                    </h6>
+                    <div class="detail-subject-list">
+                      <div v-for="(sub, idx) in splitList(activeCourse?.subjects)" :key="idx" class="detail-subject-item">
+                        <div class="detail-item-idx">{{ idx + 1 }}</div>
+                        <span class="fw-600 text-main small">{{ sub }}</span>
+                      </div>
+                      <div v-if="!splitList(activeCourse?.subjects).length" class="detail-empty">
+                        <p class="small fw-600 mb-0">No subjects listed.</p>
+                      </div>
+                    </div>
                   </div>
-                  <div v-if="!splitList(activeCourse?.sections).length" class="text-center w-100 py-4 opacity-50">
-                    <p class="small fw-600 mb-0">No sections listed.</p>
+
+                  <div class="detail-section">
+                    <h6 class="detail-section-heading">
+                      <i class="fas fa-users-rectangle text-primary opacity-60"></i>
+                      Academic Sections
+                    </h6>
+                    <div class="detail-section-pills">
+                      <div v-for="(sec, idx) in splitList(activeCourse?.sections)" :key="idx" class="detail-pill">
+                        <div class="pill-dot"></div>
+                        <span>{{ sec }}</span>
+                      </div>
+                      <div v-if="!splitList(activeCourse?.sections).length" class="detail-empty">
+                        <p class="small fw-600 mb-0">No sections listed.</p>
+                      </div>
+                    </div>
                   </div>
+                </div>
+
+                <div class="detail-footer">
+                  <button class="detail-back-btn" @click.stop="closeDetail">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Courses
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-        </Transition>
+        </Teleport>
 
         <!-- Modals -->
         <Transition name="fade">
@@ -251,7 +283,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
@@ -262,7 +294,6 @@ const courses = ref([]);
 const loading = ref(true);
 const saving = ref(false);
 const showModal = ref(false);
-const showDrawer = ref(false);
 const editMode = ref(false);
 const editId = ref(null);
 const subjectInput = ref("");
@@ -270,6 +301,11 @@ const sectionInput = ref("");
 
 const activeCourseId = ref(null);
 const activeCourse = computed(() => courses.value.find((c) => c.id === activeCourseId.value) || null);
+
+const detailReady = ref(false);
+const detailClosing = ref(false);
+const morphCardStyle = ref({});
+let morphSourceRect = null;
 
 const coursePage = ref(1);
 const coursesPerPage = 8;
@@ -285,7 +321,21 @@ const uniqueDepartmentsCount = computed(() => {
   return new Set(depts).size;
 });
 
-onMounted(fetchCourses);
+onMounted(() => {
+  fetchCourses();
+  document.addEventListener("keydown", handleEscape);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("keydown", handleEscape);
+});
+
+function handleEscape(e) {
+  if (e.key === "Escape") {
+    if (detailReady.value) closeDetail();
+    else if (showModal.value) closeModal();
+  }
+}
 
 function splitList(str) {
   if (!str) return [];
@@ -321,13 +371,79 @@ function handleSearch() {
   }, 500);
 }
 
-function handleCourseClick(course) {
+function handleCourseClick(course, event) {
+  const cardEl = event.currentTarget;
+  morphSourceRect = cardEl.getBoundingClientRect();
+
   activeCourseId.value = course.id;
-  showDrawer.value = true;
+  detailClosing.value = false;
+
+  morphCardStyle.value = {
+    position: "fixed",
+    top: morphSourceRect.top + "px",
+    left: morphSourceRect.left + "px",
+    width: morphSourceRect.width + "px",
+    height: morphSourceRect.height + "px",
+    borderRadius: "2rem",
+    transition: "none",
+    zIndex: 9999,
+  };
+
+  detailReady.value = true;
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      morphToCenter();
+    });
+  });
 }
 
-function closeDrawer() {
-  showDrawer.value = false;
+function morphToCenter() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const targetW = Math.min(580, vw - 32);
+  const targetH = Math.min(vh * 0.85, vh - 40);
+  const targetX = (vw - targetW) / 2;
+  const targetY = (vh - targetH) / 2;
+
+  morphCardStyle.value = {
+    position: "fixed",
+    top: targetY + "px",
+    left: targetX + "px",
+    width: targetW + "px",
+    height: targetH + "px",
+    borderRadius: "2rem",
+    transition: "all 0.45s cubic-bezier(0.4, 0, 0.1, 1)",
+    zIndex: 9999,
+  };
+}
+
+function closeDetail() {
+  if (!morphSourceRect) {
+    detailReady.value = false;
+    return;
+  }
+
+  detailClosing.value = true;
+
+  morphCardStyle.value = {
+    position: "fixed",
+    top: morphSourceRect.top + "px",
+    left: morphSourceRect.left + "px",
+    width: morphSourceRect.width + "px",
+    height: morphSourceRect.height + "px",
+    borderRadius: "2rem",
+    transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+    zIndex: 9999,
+  };
+}
+
+function onMorphEnd(e) {
+  if (e.propertyName === "top" && detailClosing.value) {
+    detailReady.value = false;
+    detailClosing.value = false;
+    morphSourceRect = null;
+  }
 }
 
 function openAddModal() {
@@ -421,7 +537,7 @@ async function deleteCourse(id) {
   try {
     await api.delete(`/courses/${id}`);
     await fetchCourses();
-    if (activeCourseId.value === id) showDrawer.value = false;
+    if (activeCourseId.value === id) { detailReady.value = false; detailClosing.value = false; }
     Swal.fire("Deleted!", "Curriculum has been deleted.", "success");
   } catch (e) {
     Swal.fire("Error", "Failed to delete course.", "error");
@@ -492,7 +608,7 @@ async function deleteCourse(id) {
   outline: none;
   border-color: var(--primary);
   background: white;
-  box-shadow: 0 4px 12px rgba(10, 39, 138, 0.08);
+  box-shadow: 0 4px 12px rgba(25, 25, 112, 0.08);
 }
 
 /* Course Grid Card */
@@ -528,7 +644,7 @@ async function deleteCourse(id) {
   width: 50px;
   height: 50px;
   border-radius: 1rem;
-  background: rgba(10, 39, 138, 0.08);
+  background: rgba(25, 25, 112, 0.08);
   color: var(--primary);
   display: flex;
   align-items: center;
@@ -593,99 +709,311 @@ async function deleteCourse(id) {
   transform: translateX(4px);
 }
 
-/* Curriculum Drawer */
-.drawer-overlay {
+/* Morphing Card Overlay */
+.morph-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(4px);
-  z-index: 1050;
+  z-index: 9998;
 }
 
-.curriculum-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  max-width: 520px;
+.morph-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.morph-overlay:not(.closing) .morph-backdrop {
+  opacity: 1;
+}
+
+.morph-overlay.closing .morph-backdrop {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.morph-card {
   background: var(--bg-card);
-  z-index: 1060;
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+  position: fixed;
+  will-change: top, left, width, height;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+}
+
+.morph-card-summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.morph-card-summary.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.morph-summary-text {
+  min-width: 0;
+}
+
+.morph-summary-text .course-title-v3 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.morph-card-detail {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  transition: opacity 0.25s ease;
+  position: relative;
+  z-index: 1;
 }
 
-.drawer-icon-v3 {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgba(10, 39, 138, 0.08);
+.morph-card-detail.fading {
+  opacity: 0;
+}
+
+/* Detail inner styles */
+.detail-card-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  background: var(--primary);
+  filter: blur(100px);
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.detail-header {
+  padding: 1.5rem 1.5rem 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.detail-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.detail-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 1rem;
+  background: rgba(25, 25, 112, 0.08);
   color: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  flex-shrink: 0;
 }
 
-.drawer-item-card {
-  background: var(--bg-light);
-  padding: 1rem;
-  border-radius: 1rem;
-  border: 1px solid var(--border-light);
-  transition: all 0.2s;
+.detail-title {
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.drawer-item-card:hover {
-  background: white;
-  transform: translateX(-4px);
-}
-
-.item-index {
-  width: 24px;
-  height: 24px;
-  background: var(--primary);
-  color: white;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
-.drawer-pill {
-  background: white;
-  padding: 0.5rem 1rem;
-  border-radius: 2rem;
-  border: 1px solid var(--border-light);
-  font-size: 0.85rem;
+.detail-dept {
+  font-size: 0.65rem;
   font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.detail-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: var(--bg-light);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.detail-close-btn:hover {
+  background: #fee2e2;
+  color: var(--danger);
+}
+
+.detail-stats-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0 1.5rem 1rem;
+  flex-shrink: 0;
+}
+
+.detail-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  background: var(--bg-light);
+  border: 1px solid var(--border-light);
+  border-radius: 2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.detail-stat-chip i {
+  color: var(--primary);
+  font-size: 0.65rem;
+  opacity: 0.6;
+}
+
+.detail-body {
+  padding: 0 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.detail-section {
+  margin-bottom: 1.5rem;
+}
+
+.detail-section-heading {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.pill-dot {
-  width: 6px;
-  height: 6px;
+.detail-subject-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.detail-subject-item {
+  background: var(--bg-light);
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  transition: all 0.2s;
+}
+
+.detail-subject-item:hover {
+  background: white;
+  transform: translateX(-3px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.detail-item-idx {
+  width: 24px;
+  height: 24px;
+  background: var(--primary);
+  color: white;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.detail-section-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.detail-pill {
+  background: white;
+  padding: 0.45rem 0.9rem;
+  border-radius: 2rem;
+  border: 1px solid var(--border-light);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s;
+}
+
+.detail-pill:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.detail-pill .pill-dot {
+  width: 5px;
+  height: 5px;
   background: var(--primary);
   border-radius: 50%;
 }
 
-.btn-close-drawer {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: none;
+.detail-empty {
+  text-align: center;
+  padding: 1.25rem;
+  opacity: 0.5;
+}
+
+.detail-footer {
+  padding: 0.75rem 1.5rem 1.25rem;
+  border-top: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+
+.detail-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
   background: var(--bg-light);
+  border: 1px solid var(--border-light);
+  border-radius: 0.85rem;
   color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-close-drawer:hover {
-  background: #fee2e2;
-  color: var(--danger);
+.detail-back-btn:hover {
+  background: white;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.detail-back-btn i {
+  font-size: 0.65rem;
 }
 
 /* Modals */
@@ -751,7 +1079,7 @@ async function deleteCourse(id) {
   display: inline-flex;
   align-items: center;
   padding: 0.4rem 0.75rem;
-  background: rgba(10, 39, 138, 0.08);
+  background: rgba(25, 25, 112, 0.08);
   color: var(--primary);
   border-radius: 8px;
   font-size: 0.75rem;
@@ -785,14 +1113,14 @@ async function deleteCourse(id) {
   border: none;
   color: #fff;
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0, 82, 255, 0.3);
+  box-shadow: 0 10px 20px rgba(25, 25, 112, 0.3);
 }
 
 .btn.btn-primary-premium:active:not(:disabled) {
   background: #0039b3;
   color: #fff;
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(0, 82, 255, 0.25);
+  box-shadow: 0 4px 12px rgba(25, 25, 112, 0.25);
 }
 
 .btn.btn-primary-premium:disabled {
@@ -828,14 +1156,6 @@ async function deleteCourse(id) {
 }
 
 /* Animations */
-.drawer-slide-enter-active,
-.drawer-slide-leave-active {
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.drawer-slide-enter-from,
-.drawer-slide-leave-to {
-  transform: translateX(100%);
-}
 
 .fade-in-up {
   animation: fadeInUp 0.6s ease-out;

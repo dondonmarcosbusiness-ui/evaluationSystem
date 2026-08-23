@@ -50,7 +50,7 @@
             <div class="category-header"><h6 class="fw-700 mb-0">Comments / Suggestions</h6></div>
             <textarea v-model="comments" class="input-custom" rows="4" placeholder="Share your experience..."></textarea>
           </div>
-          <div class="text-end">
+          <div class="text-center">
             <button class="btn btn-primary btn-lg px-5" @click="submitFeedback" :disabled="submitting">
               <i class="fas fa-paper-plane me-2"></i>{{ submitting ? "Submitting..." : "Submit Feedback" }}
             </button>
@@ -68,6 +68,7 @@ import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
+import { getDeviceId } from "../utils/device.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -111,6 +112,7 @@ async function submitFeedback() {
   try {
     const payload = {
       office_id: route.params.officeId,
+      device_id: getDeviceId(),
       visitor_type: "student",
       gender: gender.value,
       comments: comments.value,
@@ -118,21 +120,24 @@ async function submitFeedback() {
     };
     await api.post("/office-feedback", payload);
     submitted.value = true;
-  } catch (e) { error.value = e.response?.data?.message || "Failed to submit feedback."; } finally { submitting.value = false; }
+  } catch (e) {
+    error.value = e.response?.data?.message || "Failed to submit feedback.";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } finally { submitting.value = false; }
 }
 </script>
 
 <style scoped>
 .office-header { display: flex; align-items: center; gap: 1rem; padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--card-radius); }
-.office-icon { width: 56px; height: 56px; border-radius: 16px; background: rgba(0, 82, 255, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+.office-icon { width: 56px; height: 56px; border-radius: 16px; background: rgba(25, 25, 112, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
 .form-section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--card-radius); padding: 1.25rem; }
 .label-custom { display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
-.gender-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.gender-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .gender-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 1.4rem; border: 2px solid var(--border-light); border-radius: 10px; background: var(--bg-card); color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
 .gender-btn:hover { border-color: var(--primary); color: var(--text-dark); }
-.gender-btn.active { border-color: var(--primary); background: rgba(0, 82, 255, 0.06); color: var(--primary); }
+.gender-btn.active { border-color: var(--primary); background: rgba(25, 25, 112, 0.06); color: var(--primary); }
 .category-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--card-radius); overflow: hidden; }
-.category-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; background: rgba(0, 82, 255, 0.02); }
+.category-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; background: rgba(25, 25, 112, 0.02); }
 .question-row { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-light); }
 .question-row:last-child { border-bottom: none; }
 .question-text { font-size: 0.9rem; font-weight: 500; color: var(--text-dark); }
@@ -142,7 +147,7 @@ async function submitFeedback() {
 .yesno-btn.yes.active { border-color: #22c55e; background: rgba(34, 197, 94, 0.08); color: #16a34a; }
 .yesno-btn.no.active { border-color: #ef4444; background: rgba(239, 68, 68, 0.08); color: #dc2626; }
 .input-custom { width: 100%; padding: 0.75rem 1.15rem; border-radius: 0!important; border: 2px solid var(--border-light); background: var(--bg-card); color: var(--text-dark); font-size: 0.9rem; transition: all 0.2s ease; }
-.input-custom:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(10, 39, 138, 0.1); }
+.input-custom:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1); }
 .success-icon { font-size: 4rem; color: #22c55e; }
 .alert-danger { border-radius: 12px; }
 </style>

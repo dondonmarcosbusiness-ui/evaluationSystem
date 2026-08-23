@@ -71,7 +71,7 @@ const changePage = (page) => {
 
 .pagination-btn:hover:not(:disabled):not(.disabled) {
   color: var(--primary-dark);
-  background: rgba(10, 39, 138, 0.05);
+  background: rgba(25, 25, 112, 0.05);
 }
 
 .pagination-btn:disabled,

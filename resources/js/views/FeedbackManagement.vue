@@ -679,7 +679,7 @@ function formatDate(dateStr) {
 }
 
 .feedback-row:hover {
-  background-color: rgba(0, 82, 255, 0.03) !important;
+  background-color: rgba(25, 25, 112, 0.03) !important;
   transform: translateY(-1px);
 }
 
@@ -746,7 +746,7 @@ function formatDate(dateStr) {
 }
 
 .modal-header-custom.primary {
-  background: #0a278a;
+  background: #191970;
   padding: 1.5rem 2rem;
 }
 

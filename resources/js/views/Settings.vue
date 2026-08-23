@@ -238,7 +238,7 @@ async function saveSettings() {
 }
 
 .bg-primary-soft {
-  background-color: rgba(10, 39, 138, 0.08);
+  background-color: rgba(25, 25, 112, 0.08);
 }
 .bg-warning-soft {
   background-color: rgba(255, 193, 7, 0.1);
@@ -296,13 +296,13 @@ async function saveSettings() {
 
 .premium-btn {
   letter-spacing: 1px;
-  box-shadow: 0 4px 15px rgba(10, 39, 138, 0.2);
+  box-shadow: 0 4px 15px rgba(25, 25, 112, 0.2);
   transition: all 0.3s ease;
 }
 
 .premium-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(10, 39, 138, 0.3);
+  box-shadow: 0 8px 25px rgba(25, 25, 112, 0.3);
 }
 
 .transition-all {

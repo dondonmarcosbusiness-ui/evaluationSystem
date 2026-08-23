@@ -579,7 +579,7 @@ async function deleteAssignment(id) {
   width: 50px;
   height: 50px;
   border-radius: 1.25rem;
-  background: rgba(10, 39, 138, 0.08);
+  background: rgba(25, 25, 112, 0.08);
   color: var(--primary);
   display: flex;
   align-items: center;
@@ -662,7 +662,7 @@ async function deleteAssignment(id) {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: rgba(10, 39, 138, 0.08);
+  background: rgba(25, 25, 112, 0.08);
   color: var(--primary);
   display: flex;
   align-items: center;
@@ -687,7 +687,7 @@ async function deleteAssignment(id) {
   font-size: 0.65rem;
   font-weight: 800;
   color: var(--primary);
-  background: rgba(10, 39, 138, 0.08);
+  background: rgba(25, 25, 112, 0.08);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -795,14 +795,14 @@ async function deleteAssignment(id) {
   border: none;
   color: #fff;
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0, 82, 255, 0.3);
+  box-shadow: 0 10px 20px rgba(25, 25, 112, 0.3);
 }
 
 .btn.btn-primary-premium:active:not(:disabled) {
   background: #0039b3;
   color: #fff;
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(0, 82, 255, 0.25);
+  box-shadow: 0 4px 12px rgba(25, 25, 112, 0.25);
 }
 
 .btn.btn-primary-premium:disabled {

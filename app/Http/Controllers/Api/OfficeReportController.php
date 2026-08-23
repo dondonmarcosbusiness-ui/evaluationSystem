@@ -59,13 +59,25 @@ class OfficeReportController extends Controller
                 ->limit(5)
                 ->get();
 
-            $monthlyStats = DB::table('office_feedback as of')
+            $monthlyData = DB::table('office_feedback as of')
                 ->join('office_feedback_answers as fa', 'fa.office_feedback_id', '=', 'of.id')
                 ->selectRaw("DATE_FORMAT(of.submitted_at, '%Y-%m') as month, count(distinct of.id) as count, round(sum(case when fa.answer = 1 then 1 else 0 end) * 100.0 / count(fa.id), 2) as satisfaction_rate")
-                ->where('of.submitted_at', '>=', now()->subMonths(12))
+                ->where('of.submitted_at', '>=', now()->subMonths(11)->startOfMonth())
                 ->groupBy('month')
                 ->orderBy('month')
-                ->get();
+                ->get()
+                ->keyBy('month');
+
+            $monthlyStats = collect();
+            for ($i = 11; $i >= 0; $i--) {
+                $key = now()->startOfMonth()->subMonths($i)->format('Y-m');
+                $row = $monthlyData->get($key);
+                $monthlyStats->push((object) [
+                    'month' => $key,
+                    'count' => (int) ($row->count ?? 0),
+                    'satisfaction_rate' => (float) ($row->satisfaction_rate ?? 0),
+                ]);
+            }
 
             $satisfactionDistribution = [
                 'yes' => $yes,
@@ -74,7 +86,8 @@ class OfficeReportController extends Controller
 
             $visitorTypeDistribution = OfficeFeedback::selectRaw('visitor_type, count(*) as count')
                 ->groupBy('visitor_type')
-                ->pluck('count', 'visitor_type');
+                ->pluck('count', 'visitor_type')
+                ->map(fn($count) => (int) $count);
 
             return response()->json([
                 'total_offices' => $totalOffices,
@@ -256,7 +269,7 @@ class OfficeReportController extends Controller
 
             return response()->streamDownload(function () use ($query, $questions) {
                 $handle = fopen('php://output', 'w');
-                $headers = ['Office', 'Visitor Type', 'IP Address', 'Satisfaction (Yes/Total)', 'Comments', 'Device', 'Submitted At'];
+                $headers = ['Office', 'Visitor Type', 'Purpose of Visit', 'IP Address', 'Satisfaction (Yes/Total)', 'Comments', 'Device', 'Submitted At'];
                 foreach ($questions as $q) {
                     $headers[] = mb_strimwidth($q->question_text, 0, 60, '…');
                 }
@@ -269,6 +282,7 @@ class OfficeReportController extends Controller
                         $row = [
                             $fb->office->name ?? '',
                             $fb->visitor_type,
+                            $fb->purpose_of_visit ?? '',
                             $fb->ip_address ?? '',
                             $yes . '/' . $fb->answers->count(),
                             $fb->comments ?? '',

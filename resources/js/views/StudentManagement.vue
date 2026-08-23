@@ -692,7 +692,7 @@ async function toggleActive(student) {
     text: `Do you want to ${action} ${student.name}?`,
     icon: "question",
     showCancelButton: true,
-    confirmButtonColor: "#3b82f6",
+    confirmButtonColor: "#191970",
     cancelButtonColor: "#64748b",
     confirmButtonText: `Yes, ${action}!`,
     background: document.documentElement.getAttribute("data-theme") === "dark" ? "#1e293b" : "#fff",
@@ -791,7 +791,7 @@ async function bulkChangeStatus(status) {
     text: `Are you sure you want to bulk ${action} the selected students?`,
     icon: "question",
     showCancelButton: true,
-    confirmButtonColor: "#3b82f6",
+    confirmButtonColor: "#191970",
     confirmButtonText: `Yes, ${action} them!`,
   });
 
@@ -856,7 +856,7 @@ async function uploadCsv() {
 
 .premium-filter-group:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(0, 82, 255, 0.1);
+  box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1);
 }
 
 .premium-filter-group .input-group-text {
@@ -1041,7 +1041,7 @@ async function uploadCsv() {
 .select-custom:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(10, 39, 138, 0.1);
+  box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1);
 }
 
 .input-group-custom {
@@ -1063,7 +1063,7 @@ async function uploadCsv() {
 }
 
 .btn-primary-custom {
-  background: #3b82f6 !important;
+  background: #191970 !important;
   color: white !important;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -1074,8 +1074,8 @@ async function uploadCsv() {
 
 .btn-primary-custom:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 15px -5px rgba(59, 130, 246, 0.5);
-  background: #2563eb !important;
+  box-shadow: 0 8px 15px -5px rgba(25, 25, 112, 0.5);
+  background: #232380 !important;
 }
 
 .btn-light-custom {
@@ -1150,10 +1150,10 @@ async function uploadCsv() {
     from var(--border-angle),
     #ffc107,
     #ff7b00,
-    #0a278a,
-    #1e40af,
-    #2563eb,
-    #0a278a,
+    #191970,
+    #232380,
+    #232380,
+    #191970,
     #ffc107
   );
   animation: spin-border 2s linear infinite;

@@ -166,10 +166,13 @@
               <div v-else-if="qrDataUrl" class="qr-display">
                 <img :src="qrDataUrl" alt="QR Code" class="img-fluid mb-3" style="max-width: 220px; border: 1px solid var(--border-color); border-radius: 12px; padding: 8px" />
                 <p class="text-muted small mb-3">Scan to provide feedback for this office</p>
-                <div class="d-flex gap-2 justify-content-center">
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
                   <a :href="qrDataUrl" :download="'qr-' + (selectedOffice?.name || 'office') + '.png'" class="btn btn-primary btn-sm d-flex align-items-center gap-2">
                     <i class="fas fa-download"></i> Download
                   </a>
+                  <button class="btn btn-success btn-sm d-flex align-items-center gap-2" @click="printSingleQr">
+                    <i class="fas fa-print"></i> Print
+                  </button>
                   <button class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2" @click="regenerateQr">
                     <i class="fas fa-sync-alt"></i> Regenerate
                   </button>
@@ -189,6 +192,7 @@
               <span class="bulk-toast-number">{{ selectedIds.length }}</span> offices selected
             </div>
             <div class="bulk-toast-actions">
+              <button class="btn-toast btn-toast-print" @click="printSelectedQr"><i class="fas fa-print"></i> Print QR</button>
               <button class="btn-toast btn-toast-activate" @click="bulkChangeStatus(true)"><i class="fas fa-check-circle"></i> Activate</button>
               <button class="btn-toast btn-toast-deactivate" @click="bulkChangeStatus(false)"><i class="fas fa-ban"></i> Deactivate</button>
               <button class="btn-toast btn-toast-delete" @click="bulkDelete"><i class="fas fa-trash-alt"></i> Delete</button>
@@ -278,7 +282,7 @@ async function saveOffice() {
 
 async function toggleActive(o) {
   const action = o.is_active ? "deactivate" : "activate";
-  const result = await Swal.fire({ title: "Are you sure?", text: `${action.charAt(0).toUpperCase() + action.slice(1)} "${o.name}"?`, icon: "question", showCancelButton: true, confirmButtonColor: "#3b82f6", confirmButtonText: `Yes, ${action}!` });
+  const result = await Swal.fire({ title: "Are you sure?", text: `${action.charAt(0).toUpperCase() + action.slice(1)} "${o.name}"?`, icon: "question", showCancelButton: true, confirmButtonColor: "#191970", confirmButtonText: `Yes, ${action}!` });
   if (!result.isConfirmed) return;
   try { await api.patch(`/offices/${o.id}/toggle-active`); await fetchOffices(); Swal.fire({ icon: "success", title: "Updated", timer: 1500, showConfirmButton: false }); } catch (e) { Swal.fire("Error", "Failed.", "error"); }
 }
@@ -327,11 +331,82 @@ async function regenerateQr() {
 function getAppBasePath() {
   return window.location.pathname.startsWith("/evaluation_system/public") ? "/evaluation_system/public" : "";
 }
+
+function buildQrUrl(token) {
+  return `${window.location.origin}${getAppBasePath()}/qr/${token}`;
+}
+
+function buildQrImgUrl(token) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(buildQrUrl(token))}`;
+}
+
+async function printSingleQr() {
+  if (!qrDataUrl.value || !selectedOffice.value) return;
+  const items = [{ name: selectedOffice.value.name, img: qrDataUrl.value }];
+  openPrintWindow(items);
+}
+
+async function printSelectedQr() {
+  if (!selectedIds.value.length) return;
+  try {
+    const res = await api.get("/qr-codes");
+    const selected = res.data.filter((qr) => selectedIds.value.includes(qr.office_id));
+    if (!selected.length) {
+      Swal.fire({ icon: "info", title: "No QR Codes", text: "Selected offices do not have QR codes yet." });
+      return;
+    }
+    const items = selected.map((qr) => ({
+      name: qr.office?.name || "Office",
+      img: buildQrImgUrl(qr.qr_token),
+    }));
+    openPrintWindow(items);
+  } catch (e) {
+    Swal.fire("Error", "Failed to load QR codes.", "error");
+  }
+}
+
+function openPrintWindow(items) {
+  const printWindow = window.open("", "_blank", "width=800,height=600");
+  const html = `<!DOCTYPE html>
+<html><head><title>Print QR Codes</title>
+<style>
+  @page { margin: 15mm; size: A4; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #1e293b; }
+  h2 { text-align: center; margin-bottom: 24px; font-size: 18px; color: #191970; }
+  .qr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .qr-card { border: 2px solid #e2e8f0; border-radius: 12px; padding: 16px; text-align: center; page-break-inside: avoid; }
+  .qr-card img { width: 180px; height: 180px; display: block; margin: 0 auto 12px; }
+  .qr-card .office-name { font-size: 13px; font-weight: 700; color: #191970; margin-bottom: 4px; }
+  .qr-card .scan-text { font-size: 10px; color: #6b7280; }
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none !important; }
+  }
+</style></head><body>
+  <div class="no-print" style="text-align:center;margin-bottom:16px;">
+    <button onclick="window.print()" style="padding:10px 24px;font-size:14px;font-weight:700;background:#191970;color:#fff;border:none;border-radius:8px;cursor:pointer;">Print Now</button>
+    <button onclick="window.close()" style="padding:10px 24px;font-size:14px;font-weight:700;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;margin-left:8px;">Close</button>
+  </div>
+  <h2>Office QR Codes</h2>
+  <div class="qr-grid">
+    ${items.map((item) => `
+      <div class="qr-card">
+        <img src="${item.img}" alt="QR Code for ${item.name}" />
+        <div class="office-name">${item.name}</div>
+        <div class="scan-text">Scan to provide feedback</div>
+      </div>
+    `).join("")}
+  </div>
+</body></html>`;
+  printWindow.document.write(html);
+  printWindow.document.close();
+}
 </script>
 
 <style scoped>
 .premium-filter-group { display: flex; align-items: center; background: var(--bg-light); border: 1px solid var(--border-light); border-radius: 12px; padding: 0 0.75rem; transition: all 0.2s; }
-.premium-filter-group:focus-within { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(0, 82, 255, 0.1); }
+.premium-filter-group:focus-within { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1); }
 .premium-filter-group .input-group-text { background: transparent; border: none; padding: 0; color: var(--text-muted); font-size: 0.85rem; }
 .premium-filter-group .form-control { background: transparent; border: none; padding: 0.6rem 0.5rem; font-size: 0.85rem; font-weight: 600; }
 .premium-filter-group .form-control:focus { box-shadow: none; }
@@ -350,9 +425,9 @@ function getAppBasePath() {
 .form-section-modern .section-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
 .label-custom { display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.65rem; margin-left: 0.25rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
 .input-custom { width: 100%; padding: 0.75rem 1.15rem; border-radius: 0!important; border: 2px solid var(--border-light); background: var(--bg-card); color: var(--text-dark); font-size: 0.9rem; font-weight: 500; transition: all 0.2s ease; }
-.input-custom:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(10, 39, 138, 0.1); }
-.btn-primary-custom { background: #3b82f6 !important; color: white !important; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; transition: all 0.2s ease; }
-.btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -5px rgba(59, 130, 246, 0.5); }
+.input-custom:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1); }
+.btn-primary-custom { background: #191970 !important; color: white !important; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; transition: all 0.2s ease; }
+.btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -5px rgba(25, 25, 112, 0.5); }
 .btn-light-custom { background: var(--border-light); color: var(--text-main); border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; }
 .btn-close-custom { background: none; border: none; color: var(--text-muted); font-size: 1.25rem; cursor: pointer; transition: all 0.2s ease; }
 .btn-close-custom:hover { color: var(--danger); transform: rotate(90deg); }
@@ -362,13 +437,15 @@ function getAppBasePath() {
 
 @property --border-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
 .bulk-toast-bar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); min-width: 480px; max-width: 90vw; padding: 2px; overflow: hidden; }
-.bulk-toast-bar::before { content: ""; position: absolute; inset: 0; border-radius: 16px; background: conic-gradient(from var(--border-angle), #ffc107, #ff7b00, #0a278a, #1e40af, #2563eb, #0a278a, #ffc107); animation: spin-border 2s linear infinite; z-index: 0; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; padding: 2px; }
+.bulk-toast-bar::before { content: ""; position: absolute; inset: 0; border-radius: 16px; background: conic-gradient(from var(--border-angle), #ffc107, #ff7b00, #191970, #232380, #232380, #191970, #ffc107); animation: spin-border 2s linear infinite; z-index: 0; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; padding: 2px; }
 @keyframes spin-border { to { --border-angle: 360deg; } }
 .bulk-toast-inner { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; background: var(--bg-card); border-radius: 14px; padding: 12px 20px; }
 .bulk-toast-count { color: var(--text-dark); font-size: 0.85rem; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
 .bulk-toast-number { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: var(--primary); color: #fff; font-size: 0.75rem; font-weight: 800; }
 .bulk-toast-actions { display: flex; gap: 8px; flex: 1; }
 .btn-toast { padding: 6px 14px; border-radius: 8px; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn-toast-print { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.btn-toast-print:hover { background: #22c55e; color: #fff; }
 .btn-toast-activate { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
 .btn-toast-activate:hover { background: #22c55e; color: #fff; }
 .btn-toast-deactivate { background: rgba(234, 179, 8, 0.15); color: #eab308; }

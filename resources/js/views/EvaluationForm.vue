@@ -12,11 +12,6 @@
         >
           <div class="evaluatee-tab-panel">
           <div class="text-center mb-4 mt-3">
-            <div class="mb-2">
-              <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold px-3 py-2">
-                Faculty Evaluation
-              </span>
-            </div>
             <div class="mb-3">
               <i class="fas fa-clipboard-list fa-3x text-primary" style="opacity: 0.8"></i>
             </div>
@@ -511,7 +506,7 @@ async function submitEvaluation() {
 }
 
 .question-card-header {
-  background: #0a278a;
+  background: #191970;
   color: white;
   padding: 0.75rem 1.25rem;
   font-weight: 800;
@@ -562,8 +557,8 @@ async function submitEvaluation() {
 }
 
 .likert-option input:checked + .likert-label {
-  background: #0a278a;
-  border-color: #0a278a;
+  background: #191970;
+  border-color: #191970;
   color: white;
 }
 
@@ -571,7 +566,7 @@ async function submitEvaluation() {
   width: 32px;
   height: 32px;
   background: white;
-  color: #0a278a;
+  color: #191970;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -582,7 +577,7 @@ async function submitEvaluation() {
 
 .likert-option input:checked + .likert-label .likert-val {
   background: white;
-  color: #0a278a;
+  color: #191970;
 }
 
 .likert-text {
@@ -667,16 +662,16 @@ async function submitEvaluation() {
 
 .evaluatee-tabs .nav-link.evaluatee-tab:hover,
 .evaluatee-tabs .nav-link.evaluatee-tab:focus {
-  color: var(--primary, #0a278a);
+  color: var(--primary, #191970);
   border-color: transparent;
   background: transparent;
   isolation: auto;
 }
 
 .evaluatee-tabs .nav-link.evaluatee-tab.active {
-  color: var(--primary, #0a278a);
+  color: var(--primary, #191970);
   background: transparent;
-  border-bottom-color: var(--primary, #0a278a);
+  border-bottom-color: var(--primary, #191970);
   font-weight: 700;
 }
 

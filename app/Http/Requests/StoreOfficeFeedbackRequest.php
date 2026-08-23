@@ -22,6 +22,7 @@ class StoreOfficeFeedbackRequest extends FormRequest
             'contact_number' => 'nullable|string|max:50',
             'purpose_of_visit' => 'nullable|string|max:500',
             'comments' => 'nullable|string|max:2000',
+            'device_id' => 'nullable|string|max:64',
             'answers' => 'required|array|min:1',
             'answers.*.question_id' => 'required|uuid|exists:office_questions,id',
             'answers.*.answer' => 'required|boolean',

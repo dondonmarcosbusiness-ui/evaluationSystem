@@ -221,7 +221,7 @@ onUnmounted(() => {
 .custom-select-trigger.active {
   border-color: var(--primary);
   box-shadow:
-    0 0 0 4px rgba(0, 82, 255, 0.12),
+    0 0 0 4px rgba(25, 25, 112, 0.12),
     0 8px 20px rgba(0, 0, 0, 0.06);
   transform: translateY(-1px);
 }
@@ -290,7 +290,7 @@ onUnmounted(() => {
 }
 
 .custom-select-options li:hover {
-  background: rgba(0, 82, 255, 0.08);
+  background: rgba(25, 25, 112, 0.08);
   color: var(--primary);
 }
 

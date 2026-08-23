@@ -218,9 +218,19 @@
             </button>
           </div>
 
-          <Transition name="drop-down">
-            <div v-if="showAiOverlay && canUseAiInsights" class="ai-top-overlay no-print" @click.self="showAiOverlay = false">
-              <div class="ai-animated-border-wrapper shadow-2xl" :class="{ 'is-full-screen': isAiFullScreen }">
+          <div v-if="showAiOverlay && canUseAiInsights" class="ai-top-overlay no-print" :class="{ 'is-visible': isMorphing }" @click.self="toggleAiOverlay">
+            <div
+              class="ai-morph-panel"
+              :class="{ expanded: isMorphing, 'is-full-screen': isAiFullScreen }"
+              :style="fabRect ? {
+                '--fab-top': fabRect.top + 'px',
+                '--fab-left': fabRect.left + 'px',
+                '--fab-w': fabRect.width + 'px',
+                '--fab-h': fabRect.height + 'px',
+                '--fab-cx': (fabRect.left + fabRect.width / 2) + 'px',
+                '--fab-cy': (fabRect.top + fabRect.height / 2) + 'px',
+              } : {}"
+            >
                 <div class="ai-overlay-content border-0 h-100 w-100">
                   <div
                     class="ai-overlay-header ai-gradient-header py-3 px-4 d-flex justify-content-between align-items-center"
@@ -253,7 +263,7 @@
                       <button
                         class="btn-close"
                         style="margin-bottom: 2px"
-                        @click="showAiOverlay = false"
+                        @click="toggleAiOverlay"
                       ></button>
                     </div>
                   </div>
@@ -527,7 +537,6 @@
                 </div>
               </div>
             </div>
-          </Transition>
         </div>
 
         <!-- Empty State -->
@@ -573,6 +582,8 @@ const tableScrolled = ref(false);
 const showAiOverlay = ref(false);
 const isAiFullScreen = ref(false);
 const aiError = ref(null);
+const fabRect = ref(null);
+const isMorphing = ref(false);
 
 function onTableScroll(e) {
   tableScrolled.value = e.target.scrollTop > 0;
@@ -601,9 +612,31 @@ async function resetFilters() {
   await loadResults();
 }
 
-function toggleAiOverlay() {
-  showAiOverlay.value = !showAiOverlay.value;
-  if (!showAiOverlay.value) isAiFullScreen.value = false;
+function toggleAiOverlay(event) {
+  if (!showAiOverlay.value) {
+    const btn = event?.currentTarget?.closest('.ai-fab');
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      fabRect.value = {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      };
+      showAiOverlay.value = true;
+      requestAnimationFrame(() => {
+        isMorphing.value = true;
+      });
+    } else {
+      showAiOverlay.value = true;
+    }
+  } else {
+    isMorphing.value = false;
+    setTimeout(() => {
+      showAiOverlay.value = false;
+      isAiFullScreen.value = false;
+    }, 250);
+  }
 }
 
 function toggleAiFullScreen() {
@@ -781,7 +814,7 @@ function renderDashboardCharts() {
             {
               label: "Average Rating",
               data: results.value.category_results.map((c) => Number(c.average_rating).toFixed(2)),
-              backgroundColor: "#1a56db",
+              backgroundColor: "#191970",
               borderRadius: 8,
               barThickness: 30,
             },
@@ -868,20 +901,20 @@ function drawChart() {
           {
             label: "Average Rating",
             data: results.value.category_results.map((c) => Number(c.average_rating).toFixed(2)),
-            borderColor: "#1a56db",
+            borderColor: "#191970",
             backgroundColor: (context) => {
               const chart = context.chart;
               const { ctx, chartArea } = chart;
               if (!chartArea) return null;
               const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-              gradient.addColorStop(0, "rgba(26, 86, 219, 0.2)");
-              gradient.addColorStop(1, "rgba(26, 86, 219, 0)");
+              gradient.addColorStop(0, "rgba(25, 25, 112, 0.2)");
+              gradient.addColorStop(1, "rgba(25, 25, 112, 0)");
               return gradient;
             },
             borderWidth: 3,
             pointRadius: 5,
             pointHoverRadius: 7,
-            pointBackgroundColor: "#1a56db",
+            pointBackgroundColor: "#191970",
             tension: 0.4,
             fill: true,
           },
@@ -955,11 +988,11 @@ function badgeClass(interpretation) {
 
 .search-pill-container:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(26, 86, 219, 0.1);
+  box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1);
 }
 
 .search-icon {
-  color: #3b82f6; /* Vibrant Blue from reference */
+  color: #191970; /* Vibrant Blue from reference */
   margin-right: 0.75rem;
   width: 18px;
   height: 18px;
@@ -1013,7 +1046,7 @@ function badgeClass(interpretation) {
 }
 
 .refresh-pill-btn:hover {
-  background: rgba(26, 86, 219, 0.1);
+  background: rgba(25, 25, 112, 0.1);
   color: var(--primary);
   border-color: var(--primary);
   transform: rotate(-30deg);
@@ -1024,6 +1057,13 @@ function badgeClass(interpretation) {
   bottom: 2.5rem;
   right: 2.5rem;
   z-index: 2100;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.ai-fab-container:has(~ .ai-top-overlay.is-visible) {
+  opacity: 0;
+  transform: scale(0.5);
+  pointer-events: none;
 }
 
 .ai-fab {
@@ -1037,15 +1077,25 @@ function badgeClass(interpretation) {
   align-items: center;
   justify-content: center;
   font-size: 1.75rem;
-  box-shadow: 0 10px 30px -5px rgba(26, 86, 219, 0.5);
+  box-shadow: 0 10px 30px -5px rgba(25, 25, 112, 0.5);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   cursor: pointer;
   position: relative;
+  animation: fabPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes fabPulse {
+  0%, 100% {
+    box-shadow: 0 10px 30px -5px rgba(25, 25, 112, 0.5);
+  }
+  50% {
+    box-shadow: 0 10px 30px -5px rgba(25, 25, 112, 0.5), 0 0 0 12px rgba(25, 25, 112, 0.15);
+  }
 }
 
 .ai-fab:hover {
   transform: scale(1.1) rotate(5deg);
-  background: #1e40af;
+  background: #232380;
 }
 
 .ai-fab.active {
@@ -1100,71 +1150,83 @@ function badgeClass(interpretation) {
 .ai-top-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0);
+  backdrop-filter: blur(0px);
   z-index: 9999;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1.5rem;
+  transition: background 0.25s ease, backdrop-filter 0.25s ease;
+  pointer-events: none;
 }
 
-.ai-animated-border-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 1200px;
-  height: 90vh;
-  max-height: 90vh;
-  border-radius: var(--card-radius);
+.ai-top-overlay.is-visible {
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+
+.ai-morph-panel {
+  position: fixed;
+  top: var(--fab-top, 50%);
+  left: var(--fab-left, 50%);
+  width: var(--fab-w, 65px);
+  height: var(--fab-h, 65px);
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 10px 30px -5px rgba(25, 25, 112, 0.5);
   overflow: hidden;
-  padding: 3px;
   display: flex;
+  flex-direction: column;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: rgba(15, 23, 42, 0.1);
+  z-index: 10000;
+}
+
+.ai-morph-panel.expanded {
+  top: 50%;
+  left: 50%;
+  width: min(1200px, calc(100vw - 3rem));
+  height: min(90vh, calc(100vh - 3rem));
+  transform: translate(-50%, -50%);
+  border-radius: var(--card-radius);
+  background: var(--bg-card);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
-.ai-animated-border-wrapper::before {
+.ai-morph-panel.is-full-screen.expanded {
+  width: 98vw;
+  height: 96vh;
+}
+
+.ai-morph-panel::before {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 150%;
-  height: 150%;
-  transform: translate(-50%, -50%);
-  background: conic-gradient(from 0deg, transparent 20%, #1a56db, #3b82f6, #8b5cf6, transparent 80%);
-  animation: rotateBorder 4s linear infinite;
-  z-index: 0;
+  inset: -3px;
+  border-radius: inherit;
+  padding: 3px;
+  background: conic-gradient(from 0deg, transparent 20%, #191970, #191970, #8b5cf6, transparent 80%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: -1;
+}
+
+.ai-morph-panel.expanded::before {
+  opacity: 1;
+  transition: opacity 0.25s ease 0.3s;
 }
 
 @keyframes rotateBorder {
-  from {
-    transform: translate(-50%, -50%) rotate(0deg);
-  }
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.ai-animated-border-wrapper.is-full-screen {
-  max-width: 98vw;
-  height: 96vh;
-  max-height: 96vh;
-  border-radius: var(--card-radius);
-}
-
-@keyframes aiBorderAnimation {
-  0% {
-    background-position: 0% 0;
-  }
-  100% {
-    background-position: 300% 0;
-  }
-}
-
-.ai-overlay-content {
+.ai-morph-panel .ai-overlay-content {
   background: var(--bg-card);
-  border-radius: calc(8px - 3px);
+  border-radius: inherit;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1172,10 +1234,12 @@ function badgeClass(interpretation) {
   z-index: 1;
   width: 100%;
   height: 100%;
+  opacity: 0;
+  transition: opacity 0.2s ease 0.15s;
 }
 
-.ai-animated-border-wrapper.is-full-screen .ai-overlay-content {
-  border-radius: calc(8px - 3px);
+.ai-morph-panel.expanded .ai-overlay-content {
+  opacity: 1;
 }
 
 .ai-gradient-header {
@@ -1196,7 +1260,7 @@ function badgeClass(interpretation) {
   inset: 0;
   background:
     radial-gradient(circle at top right, rgba(139, 92, 246, 0.03), transparent 400px),
-    radial-gradient(circle at bottom left, rgba(26, 86, 219, 0.03), transparent 400px);
+    radial-gradient(circle at bottom left, rgba(25, 25, 112, 0.03), transparent 400px);
   pointer-events: none;
 }
 
@@ -1209,16 +1273,6 @@ function badgeClass(interpretation) {
 .ai-overlay-body::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.1);
   border-radius: 10px;
-}
-
-.drop-down-enter-active,
-.drop-down-leave-active {
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.drop-down-enter-from,
-.drop-down-leave-to {
-  transform: translateY(-30px) scale(0.95);
-  opacity: 0;
 }
 
 .suggestion-scroll::-webkit-scrollbar {
@@ -1297,13 +1351,13 @@ function badgeClass(interpretation) {
 
 .tab-btn-premium:hover {
   color: var(--primary);
-  background: rgba(10, 39, 138, 0.05);
+  background: rgba(25, 25, 112, 0.05);
 }
 
 .tab-btn-premium.active {
-  background: #0a278a;
+  background: #191970;
   color: white;
-  box-shadow: 0 4px 12px rgba(10, 39, 138, 0.25);
+  box-shadow: 0 4px 12px rgba(25, 25, 112, 0.25);
 }
 
 /* ── Mobile-friendly report layout (faculty) ── */

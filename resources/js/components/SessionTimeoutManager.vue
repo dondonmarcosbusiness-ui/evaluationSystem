@@ -178,7 +178,7 @@ watch(() => route.path, () => {
   top: 0;
   left: 0;
   height: 3px;
-  background: #3b82f6;
+  background: #191970;
   transition: width 1s linear;
 }
 

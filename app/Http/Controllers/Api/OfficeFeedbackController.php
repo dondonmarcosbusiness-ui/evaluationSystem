@@ -51,21 +51,30 @@ class OfficeFeedbackController extends Controller
             return response()->json(['message' => 'This office is not currently accepting feedback'], 422);
         }
 
-        // Rate limit: one feedback per office per day for students
+        // Rate limit: one feedback per office per day
         $studentId = null;
-        if ($validated['visitor_type'] === 'student' && !empty($validated['student_number'])) {
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if ($user) {
+            $studentId = $user->id;
+        } elseif ($validated['visitor_type'] === 'student' && !empty($validated['student_number'])) {
             $studentUser = \App\Models\User::where('id_number', $validated['student_number'])->first();
             if ($studentUser) {
                 $studentId = $studentUser->id;
-                $todayFeedback = OfficeFeedback::where('office_id', $validated['office_id'])
-                    ->where('student_id', $studentId)
-                    ->whereDate('submitted_at', now()->toDateString())
-                    ->exists();
-
-                if ($todayFeedback) {
-                    return response()->json(['message' => 'You have already submitted feedback for this office today'], 422);
-                }
             }
+        }
+
+        $duplicateQuery = OfficeFeedback::where('office_id', $validated['office_id']);
+        if ($studentId) {
+            $duplicateQuery->where('student_id', $studentId);
+        } elseif (!empty($validated['device_id'])) {
+            $duplicateQuery->where('device_id', $validated['device_id']);
+        } else {
+            $duplicateQuery = null;
+        }
+
+        if ($duplicateQuery && $duplicateQuery->whereDate('submitted_at', now()->toDateString())->exists()) {
+            return response()->json(['message' => 'You have already submitted feedback for this office today'], 422);
         }
 
         $userAgent = $request->userAgent();
@@ -83,6 +92,7 @@ class OfficeFeedbackController extends Controller
             'comments' => $validated['comments'] ?? null,
             'ip_address' => $request->ip(),
             'user_agent' => $userAgent,
+            'device_id' => $validated['device_id'] ?? null,
             'device_type' => $deviceType,
             'submitted_at' => now(),
         ]);

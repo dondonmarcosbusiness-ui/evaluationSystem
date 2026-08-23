@@ -15,6 +15,7 @@ const AssignmentManagement = () => import("../views/AssignmentManagement.vue");
 const BackupManagement = () => import("../views/BackupManagement.vue");
 const FeedbackManagement = () => import("../views/FeedbackManagement.vue");
 const OfficeManagement = () => import("../views/OfficeManagement.vue");
+const OfficeQuestionnaireManagement = () => import("../views/OfficeQuestionnaireManagement.vue");
 const OfficeEvaluationForm = () => import("../views/OfficeEvaluationForm.vue");
 const OfficeReports = () => import("../views/OfficeReports.vue");
 const QrFeedback = () => import("../views/QrFeedback.vue");
@@ -55,6 +56,12 @@ const routes = [
     path: "/office-reports",
     name: "OfficeReports",
     component: OfficeReports,
+    meta: { requiresAuth: true, permission: ["manage_offices", "manage_faculty"] },
+  },
+  {
+    path: "/questionnaire/office",
+    name: "OfficeQuestionnaireManagement",
+    component: OfficeQuestionnaireManagement,
     meta: { requiresAuth: true, permission: ["manage_offices", "manage_faculty"] },
   },
   {

@@ -22,6 +22,7 @@ class OfficeFeedback extends Model
         'comments',
         'ip_address',
         'user_agent',
+        'device_id',
         'device_type',
         'submitted_at',
     ];

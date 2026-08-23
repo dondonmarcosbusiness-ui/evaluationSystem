@@ -11,11 +11,11 @@
           :src="`${basePath}/assets/img/neust_logo.webp`"
           alt="NEUST Logo"
           class="brand-logo"
-          style="height: 32px; width: auto"
+          style="height: 44px; width: auto"
         />
         <div class="lh-1">
-          <div class="text-white fw-bold small">NEUST</div>
-          <div class="text-white fw-bold" style="font-size: 0.65rem; opacity: 0.8">CARRANGLAN</div>
+          <div class="text-white fw-bold" style="font-size: 1.15rem">NEUST</div>
+          <div class="text-white fw-bold" style="font-size: 0.75rem; opacity: 0.8">CARRANGLAN</div>
         </div>
       </div>
       <button
@@ -122,6 +122,12 @@
               <span>Office Reports</span>
             </router-link>
           </li>
+          <li>
+            <router-link to="/questionnaire/office">
+              <i class="fas fa-list-check"></i>
+              <span>Evaluation Questions</span>
+            </router-link>
+          </li>
         </ul>
       </li>
 
@@ -225,7 +231,7 @@
           >
             <Transition name="theme-icon" mode="out-in">
               <i v-if="isDark" key="sun" class="fas fa-sun text-warning"></i>
-              <i v-else key="moon" class="fas fa-moon text-secondary"></i>
+              <i v-else key="moon" class="fas fa-moon text-white"></i>
             </Transition>
           </button>
 
@@ -376,7 +382,7 @@ watch(
 
 function checkActiveDropdowns() {
   const facultyRoutes = ["/faculty", "/assignments", "/questionnaire/faculty"];
-  const officeMgmtRoutes = ["/offices", "/office-reports"];
+  const officeMgmtRoutes = ["/offices", "/office-reports", "/questionnaire/office"];
   const studentsRoutes = ["/students/regular", "/students/irregular"];
 
   if (facultyRoutes.some((path) => route.path.startsWith(path))) {
@@ -479,7 +485,7 @@ async function logout() {
     text: "Are you sure you want to end your current session?",
     icon: "warning",
     showCancelButton: true,
-    confirmButtonColor: "#4f46e5",
+    confirmButtonColor: "#191970",
     cancelButtonColor: "#6b7280",
     confirmButtonText: '<span class="text-white"><i class="fas fa-sign-out-alt me-2"></i> Yes, Logout</span>',
     cancelButtonText: '<span class="text-white">No, Stay Here</span>',
@@ -509,7 +515,7 @@ async function logout() {
 .sidebar-footer {
   padding: 0.85rem;
   margin-top: auto;
-  border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-user-card {
@@ -522,15 +528,15 @@ async function logout() {
 }
 
 .user-badge-trigger:hover {
-  background: var(--bg-light, rgba(0, 0, 0, 0.04));
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .sidebar-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #0052ff;
-  color: #ffffff;
+  background-color: #eceff1;
+  color: #191970;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -541,7 +547,7 @@ async function logout() {
 
 .user-name {
   font-size: 0.88rem;
-  color: var(--text-dark, #1e293b);
+  color: #f8fafc;
   line-height: 1.25;
 }
 
@@ -551,7 +557,7 @@ async function logout() {
 
 .user-role {
   font-size: 0.75rem;
-  color: var(--text-muted, #64748b);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .btn-theme-toggle {
@@ -560,7 +566,7 @@ async function logout() {
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--text-muted, #64748b);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 1.15rem;
   cursor: pointer;
   display: flex;
@@ -570,8 +576,8 @@ async function logout() {
 }
 
 .btn-theme-toggle:hover {
-  background: var(--border-color, rgba(0, 0, 0, 0.06));
-  color: var(--text-dark, #0f172a);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
   transform: rotate(15deg);
 }
 

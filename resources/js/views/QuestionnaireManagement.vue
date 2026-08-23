@@ -61,7 +61,7 @@
                 <div class="card-glow"></div>
                 <div class="sector-card-inner p-4 h-100 d-flex flex-column">
                   <div class="d-flex justify-content-between align-items-start mb-4">
-                    <div class="sector-icon-box" style="background: rgba(10, 39, 138, 0.1); color: #0a278a">
+                    <div class="sector-icon-box" style="background: rgba(25, 25, 112, 0.1); color: #191970">
                       <i class="fas fa-folder-open"></i>
                     </div>
                     <div class="d-flex gap-1">
@@ -250,13 +250,29 @@
                     <label class="form-label-premium mb-0">Weight Percentage</label>
                     <span class="fw-800 text-primary">{{ catForm.weight_percent }}%</span>
                   </div>
-                  <input
-                    v-model="catForm.weight_percent"
-                    type="range"
-                    class="form-range custom-range-premium"
-                    min="0"
-                    max="100"
-                  />
+                  <div class="weight-segments">
+                    <button
+                      v-for="seg in weightSegments"
+                      :key="seg"
+                      type="button"
+                      class="weight-seg-btn"
+                      :class="{ active: catForm.weight_percent === seg }"
+                      @click="catForm.weight_percent = seg"
+                    >
+                      {{ seg }}%
+                    </button>
+                  </div>
+                  <div class="mt-2">
+                    <label class="form-label-premium tiny-label">Custom</label>
+                    <input
+                      v-model.number="catForm.weight_percent"
+                      type="number"
+                      class="form-control-premium sm"
+                      min="0"
+                      max="100"
+                      placeholder="0-100"
+                    />
+                  </div>
                 </div>
               </div>
               <div class="p-4 pt-0 d-flex gap-2">
@@ -333,6 +349,7 @@ const showDrawer = ref(false);
 const showCatModal = ref(false);
 const editCatId = ref(null);
 const catForm = ref({ category_name: "", category_name_tl: "", weight_percent: 20 });
+const weightSegments = [5, 10, 15, 20, 25, 30, 40, 50];
 
 const activeCategoryId = ref(null);
 const selectedCategory = ref(null);
@@ -630,6 +647,38 @@ async function deleteQuestion(catId, qId) {
   color: var(--text-dark);
 }
 
+.weight-segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.weight-seg-btn {
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.6rem;
+  border: 1.5px solid var(--border-light);
+  background: var(--bg-light);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.weight-seg-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(25, 25, 112, 0.04);
+}
+
+.weight-seg-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(25, 25, 112, 0.2);
+}
+
 .progress-minimal {
   height: 6px;
   background: var(--bg-light);
@@ -827,7 +876,7 @@ async function deleteQuestion(catId, qId) {
   outline: none;
   border-color: var(--primary);
   background: white;
-  box-shadow: 0 0 0 4px rgba(10, 39, 138, 0.1);
+  box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1);
 }
 
 .btn-primary-premium {
@@ -846,14 +895,14 @@ async function deleteQuestion(catId, qId) {
   border: none;
   color: #fff;
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0, 82, 255, 0.3);
+  box-shadow: 0 10px 20px rgba(25, 25, 112, 0.3);
 }
 
 .btn.btn-primary-premium:active:not(:disabled) {
   background: #0039b3;
   color: #fff;
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(0, 82, 255, 0.25);
+  box-shadow: 0 4px 12px rgba(25, 25, 112, 0.25);
 }
 
 .btn.btn-primary-premium:disabled {
