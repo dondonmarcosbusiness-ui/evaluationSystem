@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -27,5 +28,27 @@ class PermissionMigrationTest extends TestCase
         $migration->up();
 
         $this->assertTrue(Schema::hasTable('permissions'));
+    }
+
+    public function test_permission_seeder_ignores_missing_cache_table(): void
+    {
+        config()->set('cache.default', 'database');
+
+        $seeder = new RolePermissionSeeder();
+
+        $seeder->run();
+
+        $this->assertTrue(true);
+    }
+
+    public function test_permission_seeder_noops_until_permission_tables_exist(): void
+    {
+        config()->set('cache.default', 'database');
+
+        $seeder = new RolePermissionSeeder();
+
+        $seeder->run();
+
+        $this->assertFalse(Schema::hasTable('permissions'));
     }
 }

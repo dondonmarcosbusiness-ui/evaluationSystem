@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 use App\Models\Role;
 use App\Models\Permission;
 use App\Models\User;
@@ -14,8 +15,19 @@ class RolePermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        // Reset cached roles and permissions
-        app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        if (! Schema::hasTable('permissions') || ! Schema::hasTable('roles')) {
+            return;
+        }
+
+        // Reset cached roles and permissions when the cache store is already available.
+        $cacheDriver = config('cache.default');
+        $cacheTable = config('cache.stores.database.table', 'cache');
+
+        if ($cacheDriver === 'database' && ! Schema::hasTable($cacheTable)) {
+            // Skip cache invalidation until the Laravel cache table exists.
+        } else {
+            app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        }
 
         // Create Permissions
         $permissions = [
