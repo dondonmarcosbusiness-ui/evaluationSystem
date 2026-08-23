@@ -1,21 +1,20 @@
 #!/bin/sh
 set -e
 
-# Clear ALL caches before any artisan command
+# Clear bootstrap cache
 rm -rf bootstrap/cache/*.php
 rm -rf storage/framework/cache/*
 rm -rf storage/framework/views/*.php
 rm -rf storage/framework/sessions/*
 
-php artisan config:clear
-php artisan cache:clear
-php artisan view:clear
-php artisan route:clear
+# Use array cache during migration to avoid cache table dependency
+CACHE_STORE=array php artisan config:clear
+CACHE_STORE=array php artisan cache:clear
 
-# Fresh migration - wipe corrupted DB
-php artisan migrate:fresh --force
+# Fresh migration (clean corrupted DB)
+CACHE_STORE=array php artisan migrate:fresh --force
 
-# Cache everything
+# Now cache config with real driver
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
