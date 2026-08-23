@@ -55,24 +55,30 @@ class RolePermissionSeeder extends Seeder
             }
 
             // Create Roles and Assign Permissions
-            
+
             // Admin (Assign all permissions EXCEPT give_evaluations)
             $adminRole = Role::firstOrCreate(['name' => 'Admin', 'guard_name' => $guard]);
-            $adminRole->syncPermissions(Permission::where('guard_name', $guard)
+            $adminPermissions = Permission::where('guard_name', $guard)
                 ->where('name', '!=', 'give_evaluations')
-                ->get());
+                ->pluck('id')
+                ->all();
+            $adminRole->permissions()->sync($adminPermissions);
 
             // Faculty
             $facultyRole = Role::firstOrCreate(['name' => 'Faculty', 'guard_name' => $guard]);
-            $facultyRole->syncPermissions(Permission::whereIn('name', [
-                'view_evaluations',
-            ])->where('guard_name', $guard)->get());
+            $facultyPermissions = Permission::whereIn('name', ['view_evaluations'])
+                ->where('guard_name', $guard)
+                ->pluck('id')
+                ->all();
+            $facultyRole->permissions()->sync($facultyPermissions);
 
             // Student
             $studentRole = Role::firstOrCreate(['name' => 'Student', 'guard_name' => $guard]);
-            $studentRole->syncPermissions(Permission::whereIn('name', [
-                'give_evaluations',
-            ])->where('guard_name', $guard)->get());
+            $studentPermissions = Permission::whereIn('name', ['give_evaluations'])
+                ->where('guard_name', $guard)
+                ->pluck('id')
+                ->all();
+            $studentRole->permissions()->sync($studentPermissions);
         }
 
         // Sync all existing users to their respective Spatie roles
