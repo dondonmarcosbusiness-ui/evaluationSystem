@@ -44,10 +44,10 @@ class GoogleAuthController extends Controller
       $driver = Socialite::driver('google');
       $googleUser = $driver->stateless()->user();
 
-      $email = $googleUser->getEmail();
+      $email = strtolower(trim((string) $googleUser->getEmail()));
 
       // Domain validation
-      if (!str_ends_with(strtolower($email), '@neustcarranglan.ph.education')) {
+      if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !str_ends_with($email, '@neustcarranglan.ph.education')) {
         return redirect('/login?error=Access denied. Only @neustcarranglan.ph.education domain is allowed.');
       }
 
@@ -74,13 +74,8 @@ class GoogleAuthController extends Controller
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
-        $user->load('roles.permissions', 'permissions', 'student', 'faculty');
-        $userJson = urlencode(json_encode($user));
-        $permissionNames = $user->permissions->pluck('name')
-          ->merge($user->roles->flatMap(fn ($role) => $role->permissions->pluck('name')))
-          ->unique()
-          ->values();
-        $permsJson = urlencode(json_encode($permissionNames));
+        $userJson = urlencode(json_encode($user->load('roles', 'permissions', 'student', 'faculty')));
+        $permsJson = urlencode(json_encode($user->getAllPermissions()->pluck('name')));
 
         // Redirect back to frontend with credentials
         return redirect($loginRedirect . "?token={$token}&user={$userJson}&permissions={$permsJson}");
