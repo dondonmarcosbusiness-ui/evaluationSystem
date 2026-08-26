@@ -168,14 +168,11 @@ class BackupController extends Controller
 
             $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
 
-            $statements = array_filter(
-                array_map('trim', explode(";", $sqlContent)),
-                fn($s) => !empty($s) && !str_starts_with($s, '--')
-            );
+            $statements = $this->splitSqlStatements($sqlContent);
 
             foreach ($statements as $statement) {
                 $statement = trim($statement);
-                if (!empty($statement) && $statement !== 'SET FOREIGN_KEY_CHECKS = 0' && $statement !== 'SET FOREIGN_KEY_CHECKS = 1') {
+                if (!empty($statement) && !str_starts_with($statement, '--') && $statement !== 'SET FOREIGN_KEY_CHECKS = 0' && $statement !== 'SET FOREIGN_KEY_CHECKS = 1') {
                     $pdo->exec($statement);
                 }
             }
@@ -201,6 +198,62 @@ class BackupController extends Controller
         Setting::forgetCache();
 
         return response()->json(['message' => 'Auto-backup setting updated']);
+    }
+
+    private function splitSqlStatements(string $sql): array
+    {
+        $statements = [];
+        $current = '';
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $escaped = false;
+        $len = strlen($sql);
+
+        for ($i = 0; $i < $len; $i++) {
+            $char = $sql[$i];
+
+            if ($escaped) {
+                $current .= $char;
+                $escaped = false;
+                continue;
+            }
+
+            if ($char === '\\' && ($inSingleQuote || $inDoubleQuote)) {
+                $escaped = true;
+                $current .= $char;
+                continue;
+            }
+
+            if ($char === "'" && !$inDoubleQuote) {
+                $inSingleQuote = !$inSingleQuote;
+                $current .= $char;
+                continue;
+            }
+
+            if ($char === '"' && !$inSingleQuote) {
+                $inDoubleQuote = !$inDoubleQuote;
+                $current .= $char;
+                continue;
+            }
+
+            if ($char === ';' && !$inSingleQuote && !$inDoubleQuote) {
+                $trimmed = trim($current);
+                if (!empty($trimmed)) {
+                    $statements[] = $trimmed;
+                }
+                $current = '';
+                continue;
+            }
+
+            $current .= $char;
+        }
+
+        $trimmed = trim($current);
+        if (!empty($trimmed)) {
+            $statements[] = $trimmed;
+        }
+
+        return $statements;
     }
 
     private function formatBytes($bytes, $precision = 2)
