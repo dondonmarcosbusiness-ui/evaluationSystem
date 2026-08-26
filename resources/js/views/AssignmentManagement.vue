@@ -340,10 +340,9 @@ const paginatedFacultyGroups = computed(() => {
 });
 
 const availableDepartments = computed(() => {
-  if (!meta.value.courses) return [];
-  const depts = meta.value.courses.map((c) => c.department).filter((d) => !!d);
+  if (!meta.value.faculty) return [];
+  const depts = meta.value.faculty.map((f) => f.department).filter((d) => !!d);
   const uniqueDepts = [...new Set(depts)];
-  if (!uniqueDepts.includes("General Education")) uniqueDepts.push("General Education");
   return uniqueDepts.sort();
 });
 
