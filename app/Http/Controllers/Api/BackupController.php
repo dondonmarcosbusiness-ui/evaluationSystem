@@ -87,7 +87,7 @@ class BackupController extends Controller
                     $mysqldump = '"' . $xamppPath . '"';
                 }
             } else {
-                // Linux/macOS: try common paths and `which`
+                // Linux/macOS: try common paths, `which`, and Nix store
                 $commonPaths = [
                     '/usr/bin/mysqldump',
                     '/usr/local/bin/mysqldump',
@@ -102,9 +102,16 @@ class BackupController extends Controller
                     }
                 }
                 if (!$found) {
-                    exec('which mysqldump 2>/dev/null', $whichOutput, $whichReturn);
+                    exec('which mysqldump 2>/dev/null || bash -lc "which mysqldump" 2>/dev/null', $whichOutput, $whichReturn);
                     if ($whichReturn === 0 && !empty($whichOutput)) {
                         $mysqldump = trim($whichOutput[0]);
+                    }
+                }
+                if ($mysqldump === 'mysqldump') {
+                    // Fallback: search Nix store for mysqldump
+                    exec('find /nix/store -maxdepth 4 -name mysqldump -type f 2>/dev/null | head -1', $nixOutput, $nixReturn);
+                    if ($nixReturn === 0 && !empty($nixOutput)) {
+                        $mysqldump = trim($nixOutput[0]);
                     }
                 }
             }
@@ -230,9 +237,15 @@ class BackupController extends Controller
                     }
                 }
                 if (!$found) {
-                    exec('which mysql 2>/dev/null', $whichOutput, $whichReturn);
+                    exec('which mysql 2>/dev/null || bash -lc "which mysql" 2>/dev/null', $whichOutput, $whichReturn);
                     if ($whichReturn === 0 && !empty($whichOutput)) {
                         $mysql = trim($whichOutput[0]);
+                    }
+                }
+                if ($mysql === 'mysql') {
+                    exec('find /nix/store -maxdepth 4 -name mysql -type f 2>/dev/null | head -1', $nixOutput, $nixReturn);
+                    if ($nixReturn === 0 && !empty($nixOutput)) {
+                        $mysql = trim($nixOutput[0]);
                     }
                 }
             }
