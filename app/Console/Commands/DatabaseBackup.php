@@ -4,29 +4,17 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Setting;
 use App\Services\BackupRetentionService;
 
 class DatabaseBackup extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'db:backup';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Generate a database backup if auto-backup is enabled';
 
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
         $autoBackup = Setting::where('key', 'auto_backup')->first();
@@ -42,71 +30,63 @@ class DatabaseBackup extends Command
             }
 
             $filename = 'backup_auto_' . date('Y-m-d_H-i-s') . '.sql';
-            $filePath = storage_path('app/private/' . $backupPath . '/' . $filename);
-            
-            $absPath = storage_path('app/private/' . $backupPath);
-            if (!file_exists($absPath)) {
-                mkdir($absPath, 0755, true);
-            }
+            $path = $backupPath . '/' . $filename;
 
+            $pdo = DB::connection()->getPdo();
             $dbName = config('database.connections.mysql.database');
-            $dbUser = config('database.connections.mysql.username');
-            $dbPass = config('database.connections.mysql.password');
-            $dbHost = config('database.connections.mysql.host');
 
-            $mysqldump = 'mysqldump';
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                $xamppPath = 'C:\xampp\mysql\bin\mysqldump.exe';
-                if (file_exists($xamppPath)) {
-                    $mysqldump = '"' . $xamppPath . '"';
-                }
-            } else {
-                $commonPaths = [
-                    '/usr/bin/mysqldump',
-                    '/usr/local/bin/mysqldump',
-                    '/opt/homebrew/bin/mysqldump',
-                ];
-                $found = false;
-                foreach ($commonPaths as $path) {
-                    if (file_exists($path)) {
-                        $mysqldump = $path;
-                        $found = true;
-                        break;
+            $sql = '';
+            $sql .= "-- Auto Backup: {$dbName}\n";
+            $sql .= "-- Generated: " . date('Y-m-d H:i:s') . "\n";
+            $sql .= "-- ==========================================\n\n";
+            $sql .= "SET FOREIGN_KEY_CHECKS = 0;\n\n";
+
+            $tables = $pdo->query("SHOW TABLES")->fetchAll(\PDO::FETCH_NUM);
+
+            foreach ($tables as $tableRow) {
+                $table = $tableRow[0];
+
+                $createTable = $pdo->query("SHOW CREATE TABLE `{$table}`")->fetch(\PDO::FETCH_NUM);
+                $sql .= "DROP TABLE IF EXISTS `{$table}`;\n";
+                $sql .= $createTable[1] . ";\n\n";
+
+                $rows = $pdo->query("SELECT * FROM `{$table}`")->fetchAll(\PDO::FETCH_NUM);
+                if (!empty($rows)) {
+                    $columnCount = count($rows[0]);
+                    $sql .= "INSERT INTO `{$table}` VALUES\n";
+
+                    $chunks = array_chunk($rows, 100);
+                    foreach ($chunks as $chunk) {
+                        $valueStrings = [];
+                        foreach ($chunk as $row) {
+                            $escaped = array_map(function ($val) use ($pdo) {
+                                if ($val === null) {
+                                    return 'NULL';
+                                }
+                                return $pdo->quote($val);
+                            }, $row);
+                            $valueStrings[] = '(' . implode(', ', $escaped) . ')';
+                        }
+                        $sql .= implode(",\n", $valueStrings) . ";\n";
                     }
-                }
-                if (!$found) {
-                    exec('which mysqldump 2>/dev/null', $whichOutput, $whichReturn);
-                    if ($whichReturn === 0 && !empty($whichOutput)) {
-                        $mysqldump = trim($whichOutput[0]);
-                    }
+                    $sql .= "\n";
                 }
             }
 
-            $command = sprintf(
-                '%s --user=%s --password=%s --host=%s %s > %s',
-                $mysqldump,
-                escapeshellarg($dbUser),
-                escapeshellarg($dbPass),
-                escapeshellarg($dbHost),
-                escapeshellarg($dbName),
-                escapeshellarg($filePath)
-            );
+            $sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
 
-            exec($command, $output, $returnVar);
+            Storage::put($path, $sql);
 
-            if ($returnVar === 0) {
-                $this->info("Backup created: {$filename}");
-                Log::info("Automated backup successful: {$filename}");
+            $this->info("Backup created: {$filename}");
+            Log::info("Automated backup successful: {$filename}");
 
-                $deleted = app(BackupRetentionService::class)->enforce($backupPath);
-                if ($deleted !== []) {
-                    $this->info('Retention policy: removed oldest backup(s): ' . implode(', ', $deleted));
-                }
-            } else {
-                Log::error("Automated backup failed with exit code {$returnVar}");
+            $deleted = app(BackupRetentionService::class)->enforce($backupPath);
+            if ($deleted !== []) {
+                $this->info('Retention policy: removed oldest backup(s): ' . implode(', ', $deleted));
             }
         } catch (\Exception $e) {
             Log::error('Automated backup error: ' . $e->getMessage());
+            $this->error('Backup failed: ' . $e->getMessage());
         }
     }
 }

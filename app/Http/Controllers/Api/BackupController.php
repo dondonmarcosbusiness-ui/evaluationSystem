@@ -62,93 +62,52 @@ class BackupController extends Controller
 
             $filename = 'backup_' . date('Y-m-d_H-i-s') . '.sql';
             $path = $this->backupPath . '/' . $filename;
-            
-            // Ensure the directory exists
-            if (!Storage::exists($this->backupPath)) {
-                Storage::makeDirectory($this->backupPath);
-            }
 
-            $filePath = Storage::path($path);
-
+            $pdo = DB::connection()->getPdo();
             $dbName = config('database.connections.mysql.database');
-            $dbUser = config('database.connections.mysql.username');
-            $dbPass = config('database.connections.mysql.password');
-            $dbHost = config('database.connections.mysql.host');
 
-            // Find mysqldump path
-            $mysqldump = 'mysqldump';
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                $laragonPaths = glob('C:\laragon\bin\mysql\*\bin\mysqldump.exe');
-                $xamppPath = 'C:\xampp\mysql\bin\mysqldump.exe';
-                
-                if (!empty($laragonPaths)) {
-                    $mysqldump = '"' . $laragonPaths[0] . '"';
-                } elseif (file_exists($xamppPath)) {
-                    $mysqldump = '"' . $xamppPath . '"';
-                }
-            } else {
-                // Linux/macOS: try common paths, `which`, and Nix store
-                $commonPaths = [
-                    '/usr/bin/mysqldump',
-                    '/usr/local/bin/mysqldump',
-                    '/opt/homebrew/bin/mysqldump',
-                ];
-                $found = false;
-                foreach ($commonPaths as $path) {
-                    if (file_exists($path)) {
-                        $mysqldump = $path;
-                        $found = true;
-                        break;
+            $sql = '';
+            $sql .= "-- Database Backup: {$dbName}\n";
+            $sql .= "-- Generated: " . date('Y-m-d H:i:s') . "\n";
+            $sql .= "-- ==========================================\n\n";
+            $sql .= "SET FOREIGN_KEY_CHECKS = 0;\n\n";
+
+            $tables = $pdo->query("SHOW TABLES")->fetchAll(\PDO::FETCH_NUM);
+
+            foreach ($tables as $tableRow) {
+                $table = $tableRow[0];
+
+                $createTable = $pdo->query("SHOW CREATE TABLE `{$table}`")->fetch(\PDO::FETCH_NUM);
+                $sql .= "DROP TABLE IF EXISTS `{$table}`;\n";
+                $sql .= $createTable[1] . ";\n\n";
+
+                $rows = $pdo->query("SELECT * FROM `{$table}`")->fetchAll(\PDO::FETCH_NUM);
+                if (!empty($rows)) {
+                    $columnCount = count($rows[0]);
+                    $placeholders = implode(', ', array_fill(0, $columnCount, '?'));
+                    $sql .= "INSERT INTO `{$table}` VALUES\n";
+
+                    $chunks = array_chunk($rows, 100);
+                    foreach ($chunks as $chunk) {
+                        $valueStrings = [];
+                        foreach ($chunk as $row) {
+                            $escaped = array_map(function ($val) use ($pdo) {
+                                if ($val === null) {
+                                    return 'NULL';
+                                }
+                                return $pdo->quote($val);
+                            }, $row);
+                            $valueStrings[] = '(' . implode(', ', $escaped) . ')';
+                        }
+                        $sql .= implode(",\n", $valueStrings) . ";\n";
                     }
-                }
-                if (!$found) {
-                    exec('which mysqldump 2>/dev/null || bash -lc "which mysqldump" 2>/dev/null', $whichOutput, $whichReturn);
-                    if ($whichReturn === 0 && !empty($whichOutput)) {
-                        $mysqldump = trim($whichOutput[0]);
-                    }
-                }
-                if ($mysqldump === 'mysqldump') {
-                    // Fallback: search Nix store for mysqldump
-                    exec('find /nix/store -maxdepth 4 -name mysqldump -type f 2>/dev/null | head -1', $nixOutput, $nixReturn);
-                    if ($nixReturn === 0 && !empty($nixOutput)) {
-                        $mysqldump = trim($nixOutput[0]);
-                    }
+                    $sql .= "\n";
                 }
             }
 
-            chdir(base_path());
-            Log::info('Current Working Directory: ' . getcwd());
-            Log::info('Using mysqldump binary: ' . $mysqldump);
+            $sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
 
-            // Verify mysqldump is available
-            exec($mysqldump . ' --version 2>&1', $versionOutput, $versionReturn);
-            if ($versionReturn !== 0) {
-                throw new \Exception('mysqldump binary not found at "' . $mysqldump . '". Ensure mysql-client is installed on the server.');
-            }
-
-            // Use relative path to avoid issues with % in absolute project path on Windows
-            $relativeFilePath = str_replace(base_path() . DIRECTORY_SEPARATOR, '', Storage::path($path));
-            // Normalize path separators for Windows
-            $relativeFilePath = str_replace('/', DIRECTORY_SEPARATOR, $relativeFilePath);
-
-            $command = sprintf(
-                '%s --user=%s --password=%s --host=%s --result-file=%s %s 2>&1',
-                $mysqldump,
-                escapeshellarg($dbUser),
-                escapeshellarg($dbPass),
-                escapeshellarg($dbHost),
-                escapeshellarg($relativeFilePath),
-                escapeshellarg($dbName)
-            );
-
-            Log::info('Backup command: ' . $command);
-            exec($command, $output, $returnVar);
-
-            if ($returnVar !== 0) {
-                $errorOutput = implode("\n", $output);
-                Log::error('mysqldump failed. Exit code: ' . $returnVar . '. Output: ' . $errorOutput);
-                throw new \Exception("mysqldump failed with exit code {$returnVar}. Error: {$errorOutput}");
-            }
+            Storage::put($path, $sql);
 
             $deletedBackups = $this->backupRetention->enforce($this->backupPath);
 
@@ -191,7 +150,6 @@ class BackupController extends Controller
             'password' => 'required|string'
         ]);
 
-        // Verify admin password for security
         $user = $request->user();
         if (!$user || !\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Invalid password verification'], 422);
@@ -204,75 +162,25 @@ class BackupController extends Controller
             return response()->json(['message' => 'Backup file not found'], 404);
         }
 
-        $filePath = Storage::path($path);
-
         try {
-            $dbName = config('database.connections.mysql.database');
-            $dbUser = config('database.connections.mysql.username');
-            $dbPass = config('database.connections.mysql.password');
-            $dbHost = config('database.connections.mysql.host');
+            $sqlContent = Storage::get($path);
+            $pdo = DB::connection()->getPdo();
 
-            $mysql = 'mysql';
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                $laragonPaths = glob('C:\laragon\bin\mysql\*\bin\mysql.exe');
-                $xamppPath = 'C:\xampp\mysql\bin\mysql.exe';
-                
-                if (!empty($laragonPaths)) {
-                    $mysql = '"' . $laragonPaths[0] . '"';
-                } elseif (file_exists($xamppPath)) {
-                    $mysql = '"' . $xamppPath . '"';
-                }
-            } else {
-                $commonPaths = [
-                    '/usr/bin/mysql',
-                    '/usr/local/bin/mysql',
-                    '/opt/homebrew/bin/mysql',
-                ];
-                $found = false;
-                foreach ($commonPaths as $path) {
-                    if (file_exists($path)) {
-                        $mysql = $path;
-                        $found = true;
-                        break;
-                    }
-                }
-                if (!$found) {
-                    exec('which mysql 2>/dev/null || bash -lc "which mysql" 2>/dev/null', $whichOutput, $whichReturn);
-                    if ($whichReturn === 0 && !empty($whichOutput)) {
-                        $mysql = trim($whichOutput[0]);
-                    }
-                }
-                if ($mysql === 'mysql') {
-                    exec('find /nix/store -maxdepth 4 -name mysql -type f 2>/dev/null | head -1', $nixOutput, $nixReturn);
-                    if ($nixReturn === 0 && !empty($nixOutput)) {
-                        $mysql = trim($nixOutput[0]);
-                    }
-                }
-            }
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
 
-            chdir(base_path());
-            // Use relative path to avoid issues with % in absolute project path on Windows
-            $relativeFilePath = str_replace(base_path() . DIRECTORY_SEPARATOR, '', Storage::path($path));
-            // Normalize path separators for Windows
-            $relativeFilePath = str_replace('/', DIRECTORY_SEPARATOR, $relativeFilePath);
-
-            $command = sprintf(
-                '%s --user=%s --password=%s --host=%s %s < %s 2>&1',
-                $mysql,
-                escapeshellarg($dbUser),
-                escapeshellarg($dbPass),
-                escapeshellarg($dbHost),
-                escapeshellarg($dbName),
-                escapeshellarg($relativeFilePath)
+            $statements = array_filter(
+                array_map('trim', explode(";", $sqlContent)),
+                fn($s) => !empty($s) && !str_starts_with($s, '--')
             );
 
-            exec($command, $output, $returnVar);
-
-            if ($returnVar !== 0) {
-                $errorOutput = implode("\n", $output);
-                Log::error('Database restore failed. Exit code: ' . $returnVar . '. Output: ' . $errorOutput);
-                throw new \Exception("Database restoration failed with exit code {$returnVar}. Error: {$errorOutput}");
+            foreach ($statements as $statement) {
+                $statement = trim($statement);
+                if (!empty($statement) && $statement !== 'SET FOREIGN_KEY_CHECKS = 0' && $statement !== 'SET FOREIGN_KEY_CHECKS = 1') {
+                    $pdo->exec($statement);
+                }
             }
+
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
 
             return response()->json(['message' => 'Database restored successfully']);
         } catch (\Exception $e) {
