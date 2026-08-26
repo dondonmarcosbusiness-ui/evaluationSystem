@@ -60,6 +60,26 @@ class DatabaseBackup extends Command
                 if (file_exists($xamppPath)) {
                     $mysqldump = '"' . $xamppPath . '"';
                 }
+            } else {
+                $commonPaths = [
+                    '/usr/bin/mysqldump',
+                    '/usr/local/bin/mysqldump',
+                    '/opt/homebrew/bin/mysqldump',
+                ];
+                $found = false;
+                foreach ($commonPaths as $path) {
+                    if (file_exists($path)) {
+                        $mysqldump = $path;
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) {
+                    exec('which mysqldump 2>/dev/null', $whichOutput, $whichReturn);
+                    if ($whichReturn === 0 && !empty($whichOutput)) {
+                        $mysqldump = trim($whichOutput[0]);
+                    }
+                }
             }
 
             $command = sprintf(

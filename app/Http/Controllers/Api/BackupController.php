@@ -75,7 +75,7 @@ class BackupController extends Controller
             $dbPass = config('database.connections.mysql.password');
             $dbHost = config('database.connections.mysql.host');
 
-            // Find mysqldump path (Common XAMPP path or system path)
+            // Find mysqldump path
             $mysqldump = 'mysqldump';
             if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
                 $laragonPaths = glob('C:\laragon\bin\mysql\*\bin\mysqldump.exe');
@@ -86,10 +86,39 @@ class BackupController extends Controller
                 } elseif (file_exists($xamppPath)) {
                     $mysqldump = '"' . $xamppPath . '"';
                 }
+            } else {
+                // Linux/macOS: try common paths and `which`
+                $commonPaths = [
+                    '/usr/bin/mysqldump',
+                    '/usr/local/bin/mysqldump',
+                    '/opt/homebrew/bin/mysqldump',
+                ];
+                $found = false;
+                foreach ($commonPaths as $path) {
+                    if (file_exists($path)) {
+                        $mysqldump = $path;
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) {
+                    exec('which mysqldump 2>/dev/null', $whichOutput, $whichReturn);
+                    if ($whichReturn === 0 && !empty($whichOutput)) {
+                        $mysqldump = trim($whichOutput[0]);
+                    }
+                }
             }
 
             chdir(base_path());
             Log::info('Current Working Directory: ' . getcwd());
+            Log::info('Using mysqldump binary: ' . $mysqldump);
+
+            // Verify mysqldump is available
+            exec($mysqldump . ' --version 2>&1', $versionOutput, $versionReturn);
+            if ($versionReturn !== 0) {
+                throw new \Exception('mysqldump binary not found at "' . $mysqldump . '". Ensure mysql-client is installed on the server.');
+            }
+
             // Use relative path to avoid issues with % in absolute project path on Windows
             $relativeFilePath = str_replace(base_path() . DIRECTORY_SEPARATOR, '', Storage::path($path));
             // Normalize path separators for Windows
@@ -185,6 +214,26 @@ class BackupController extends Controller
                     $mysql = '"' . $laragonPaths[0] . '"';
                 } elseif (file_exists($xamppPath)) {
                     $mysql = '"' . $xamppPath . '"';
+                }
+            } else {
+                $commonPaths = [
+                    '/usr/bin/mysql',
+                    '/usr/local/bin/mysql',
+                    '/opt/homebrew/bin/mysql',
+                ];
+                $found = false;
+                foreach ($commonPaths as $path) {
+                    if (file_exists($path)) {
+                        $mysql = $path;
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) {
+                    exec('which mysql 2>/dev/null', $whichOutput, $whichReturn);
+                    if ($whichReturn === 0 && !empty($whichOutput)) {
+                        $mysql = trim($whichOutput[0]);
+                    }
                 }
             }
 
