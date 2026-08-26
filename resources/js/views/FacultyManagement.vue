@@ -460,6 +460,7 @@ import Swal from "sweetalert2";
 const faculty = ref([]);
 const pagination = ref({});
 const availableCourses = ref([]);
+const availableFacultyDepartments = ref([]);
 const loading = ref(true);
 const showModal = ref(false);
 const editMode = ref(false);
@@ -507,7 +508,10 @@ const blankForm = () => ({
 const form = ref(blankForm());
 
 const availableDepartments = computed(() => {
-  const depts = availableCourses.value.map((c) => c.department).filter((d) => !!d);
+  const depts = [
+    ...availableCourses.value.map((c) => c.department),
+    ...availableFacultyDepartments.value,
+  ].filter((d) => !!d);
   const uniqueDepts = [...new Set(depts)];
   if (!uniqueDepts.includes("General Education")) uniqueDepts.push("General Education");
   return uniqueDepts.sort();
@@ -614,6 +618,7 @@ function clearFilters() {
 onMounted(() => {
   fetchFaculty();
   fetchCourses();
+  fetchFacultyDepartments();
 });
 
 async function fetchFaculty(page = 1) {
@@ -641,6 +646,15 @@ async function fetchCourses() {
     availableCourses.value = res.data;
   } catch (e) {
     console.error("Failed to fetch courses:", e);
+  }
+}
+
+async function fetchFacultyDepartments() {
+  try {
+    const res = await api.get("/faculty/all");
+    availableFacultyDepartments.value = res.data.map((item) => item.department);
+  } catch (e) {
+    console.error("Failed to fetch faculty departments:", e);
   }
 }
 

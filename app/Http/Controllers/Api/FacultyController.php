@@ -24,7 +24,7 @@ class FacultyController extends Controller
                     });
                 })
                 ->when($request->query('department'), function ($q, $dept) {
-                    $q->where('department', $dept);
+                    $q->whereRaw('TRIM(department) = ?', [trim($dept)]);
                 })
                 ->paginate(10);
 
