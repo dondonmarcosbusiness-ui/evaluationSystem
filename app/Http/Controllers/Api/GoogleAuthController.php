@@ -18,7 +18,6 @@ class GoogleAuthController extends Controller
   public function redirectToGoogle(Request $request)
   {
     $mode = $request->query('mode', 'login');
-    config(['services.google.redirect' => $request->getSchemeAndHttpHost() . '/api/auth/google/callback']);
 
     /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
     $driver = Socialite::driver('google');
@@ -36,8 +35,6 @@ class GoogleAuthController extends Controller
   public function handleGoogleCallback(Request $request)
   {
     try {
-      config(['services.google.redirect' => $request->getSchemeAndHttpHost() . '/api/auth/google/callback']);
-
       $mode = $request->cookie('google_auth_mode') ?? 'login';
 
       /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
@@ -102,11 +99,11 @@ class GoogleAuthController extends Controller
     } catch (\Exception $e) {
       Log::error('Google callback error: ' . $e->getMessage(), [
         'exception' => $e,
-        'trace' => $e->getTraceAsString(),
+        'redirect_config' => config('services.google.redirect'),
       ]);
       $message = $e->getMessage();
       if (str_contains($message, 'redirect') || str_contains($message, '401') || str_contains($message, 'invalid_request')) {
-        return redirect('/login?error=' . urlencode('Google authentication failed. Please ensure GOOGLE_REDIRECT_URL in .env matches your current callback URL. Check the server log for details.'));
+        return redirect('/login?error=' . urlencode('Google authentication failed: redirect URI mismatch. Configured: ' . config('services.google.redirect') . '. Error: ' . $message));
       }
       return redirect('/login?error=' . urlencode('Google authentication failed: ' . $message));
     }
