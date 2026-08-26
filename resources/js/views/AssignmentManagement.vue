@@ -340,9 +340,9 @@ const paginatedFacultyGroups = computed(() => {
 });
 
 const availableDepartments = computed(() => {
-  if (!meta.value.faculty) return [];
-  const depts = meta.value.faculty.map((f) => f.department).filter((d) => !!d);
-  const uniqueDepts = [...new Set(depts)];
+  const facultyDepts = (meta.value.faculty || []).map((f) => f.department).filter((d) => !!d);
+  const courseDepts = (meta.value.courses || []).map((c) => c.department).filter((d) => !!d);
+  const uniqueDepts = [...new Set([...facultyDepts, ...courseDepts])];
   return uniqueDepts.sort();
 });
 
