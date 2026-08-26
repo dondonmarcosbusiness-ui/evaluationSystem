@@ -23,10 +23,11 @@ class GoogleAuthController extends Controller
     /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
     $driver = Socialite::driver('google');
 
-    return $driver
+    $response = $driver
       ->stateless()
-      ->with(['state' => json_encode(['mode' => $mode])])
       ->redirect();
+
+    return $response->withCookie(cookie('google_auth_mode', $mode, 10));
   }
 
   /**
@@ -37,17 +38,16 @@ class GoogleAuthController extends Controller
     try {
       config(['services.google.redirect' => $request->getSchemeAndHttpHost() . '/api/auth/google/callback']);
 
-      $state = json_decode(urldecode($request->input('state')), true);
-      $mode = $state['mode'] ?? 'login';
+      $mode = $request->cookie('google_auth_mode') ?? 'login';
 
       /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
       $driver = Socialite::driver('google');
       $googleUser = $driver->stateless()->user();
 
-      $email = strtolower(trim((string) $googleUser->getEmail()));
+      $email = $googleUser->getEmail();
 
       // Domain validation
-      if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !str_ends_with($email, '@neustcarranglan.ph.education')) {
+      if (!str_ends_with(strtolower($email), '@neustcarranglan.ph.education')) {
         return redirect('/login?error=Access denied. Only @neustcarranglan.ph.education domain is allowed.');
       }
 
@@ -100,8 +100,15 @@ class GoogleAuthController extends Controller
       return redirect($loginRedirect . "?requires_setup=true&google_user={$googleInfo}");
 
     } catch (\Exception $e) {
-      Log::error('Google callback error: ' . $e->getMessage());
-      return redirect('/login?error=Google authentication failed');
+      Log::error('Google callback error: ' . $e->getMessage(), [
+        'exception' => $e,
+        'trace' => $e->getTraceAsString(),
+      ]);
+      $message = $e->getMessage();
+      if (str_contains($message, 'redirect') || str_contains($message, '401') || str_contains($message, 'invalid_request')) {
+        return redirect('/login?error=' . urlencode('Google authentication failed. Please ensure GOOGLE_REDIRECT_URL in .env matches your current callback URL. Check the server log for details.'));
+      }
+      return redirect('/login?error=' . urlencode('Google authentication failed: ' . $message));
     }
   }
 
