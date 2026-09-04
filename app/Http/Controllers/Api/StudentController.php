@@ -298,14 +298,11 @@ class StudentController extends Controller
                     'course' => $courseName,
                     'section' => $sectionName,
                     'section_id' => $matchingSection?->id,
+                    'student_type' => 'regular',
                 ]);
 
                 if ($role) {
-                    DB::table('model_has_roles')->insert([
-                        'role_id' => $role->id,
-                        'model_type' => \App\Models\User::class,
-                        'model_id' => $user->id,
-                    ]);
+                    $user->assignRole('Student');
                 }
 
                 $imported++;

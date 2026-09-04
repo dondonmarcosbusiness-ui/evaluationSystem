@@ -58,6 +58,15 @@ class EvaluationController extends Controller
         $sectionId = $user->student ? $user->student->section_id : null;
         $studentType = $user->student ? $user->student->student_type : 'regular';
 
+        // Imported legacy records may have the section name but no section_id.
+        if (!$sectionId && $user->student?->section && $user->student?->course) {
+            $sectionId = \App\Models\Section::where('name', $user->student->section)
+                ->whereHas('course', fn ($query) => $query->where('name', $user->student->course))
+                ->value('id');
+            $studentSection = $sectionId ? \App\Models\Section::with('course')->find($sectionId) : null;
+            $studentCourseName = $studentSection?->course?->name;
+        }
+
         $facultyDataMap = [];
         $evaluatedFacultyIds = [];
         if ($activeSemester && $activeAcademicYear) {
