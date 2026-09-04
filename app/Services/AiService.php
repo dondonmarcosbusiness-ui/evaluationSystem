@@ -13,6 +13,7 @@ class AiService
   public function __construct()
   {
     $this->apiKey = config('services.gemini.key');
+    $this->model = config('services.gemini.model', 'gemini-2.5-flash');
   }
 
   /**
@@ -111,7 +112,9 @@ class AiService
     }
 
     try {
-      $response = Http::post("https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}", [
+      $response = Http::retry(2, 1000, throw: false)
+        ->timeout(30)
+        ->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}", [
         'contents' => [
           [
             'parts' => [
@@ -127,14 +130,32 @@ class AiService
       if ($response->successful()) {
         $data = $response->json();
         $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+        $decoded = $text ? json_decode($text, true) : null;
+
+        if (!is_array($decoded)) {
+          Log::error('Gemini API returned an invalid JSON response.', [
+            'model' => $this->model,
+            'status' => $response->status(),
+          ]);
+          return [
+            'success' => false,
+            'error' => 'Gemini API returned invalid JSON.',
+            'code' => 'invalid_response'
+          ];
+        }
+
         return [
           'success' => true,
-          'data' => json_decode($text, true)
+          'data' => $decoded
         ];
       }
 
       $errorMessage = $response->body();
-      Log::error("Gemini API error: " . $errorMessage);
+      Log::error('Gemini API error.', [
+        'model' => $this->model,
+        'status' => $response->status(),
+        'body' => $errorMessage,
+      ]);
 
       return [
         'success' => false,

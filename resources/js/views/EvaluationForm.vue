@@ -368,6 +368,12 @@ async function checkComment() {
       });
     } else {
       console.error("AI analysis failed", e);
+      Swal.fire({
+        icon: "info",
+        title: "AI analysis unavailable",
+        text: "Your comment can still be submitted. Please try the suggestion again later.",
+        confirmButtonColor: "#3085d6",
+      });
     }
   } finally {
     analyzing.value = false;
