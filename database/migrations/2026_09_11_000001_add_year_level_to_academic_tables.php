@@ -12,25 +12,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('subjects', function (Blueprint $table) {
-            $table->string('year_level', 20)->nullable()->after('code');
-        });
+        $columns = [
+            'subjects'           => 'code',
+            'sections'           => 'name',
+            'faculty_assignments'=> 'semester',
+            'students'           => 'section_id',
+            'enrollments'        => 'academic_year',
+        ];
 
-        Schema::table('sections', function (Blueprint $table) {
-            $table->string('year_level', 20)->nullable()->after('name');
-        });
-
-        Schema::table('faculty_assignments', function (Blueprint $table) {
-            $table->string('year_level', 20)->nullable()->after('semester');
-        });
-
-        Schema::table('students', function (Blueprint $table) {
-            $table->string('year_level', 20)->nullable()->after('section_id');
-        });
-
-        Schema::table('enrollments', function (Blueprint $table) {
-            $table->string('year_level', 20)->nullable()->after('academic_year');
-        });
+        foreach ($columns as $table => $after) {
+            if (!Schema::hasColumn($table, 'year_level')) {
+                Schema::table($table, function (Blueprint $table) use ($after) {
+                    $table->string('year_level', 20)->nullable()->after($after);
+                });
+            }
+        }
     }
 
     /**
