@@ -1,78 +1,88 @@
 <template>
-  <div
-    v-if="show"
-    class="change-password-overlay d-flex"
-    @click.self="$emit('close')"
-  >
-    <div class="change-password-card card border-0 shadow-lg">
-      <div class="card-header border-0 py-3 bg-transparent">
-        <div class="d-flex justify-content-between align-items-center w-100">
-          <h5 class="mb-0 fw-bold text-primary">
+  <div ref="modalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold text-primary">
             {{ hasPassword ? t.change_password_title : t.set_password_title }}
           </h5>
-          <button type="button" class="btn-close" @click="$emit('close')" :disabled="submitting"></button>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+            :disabled="submitting"
+          ></button>
         </div>
+
+        <form @submit.prevent="submit">
+          <div class="modal-body">
+            <p class="text-muted small mb-3">{{ t.password_requirements }}</p>
+
+            <div v-if="hasPassword" class="mb-3">
+              <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.current_password }}</label>
+              <input
+                v-model="form.current_password"
+                type="password"
+                class="form-control"
+                :class="{ 'is-invalid': errors.current_password }"
+                autocomplete="current-password"
+              />
+              <div v-if="errors.current_password" class="invalid-feedback d-block">
+                {{ errors.current_password }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.new_password }}</label>
+              <input
+                v-model="form.password"
+                type="password"
+                class="form-control"
+                :class="{ 'is-invalid': errors.password }"
+                autocomplete="new-password"
+              />
+              <div v-if="errors.password" class="invalid-feedback d-block">{{ errors.password }}</div>
+            </div>
+
+            <div class="mb-1">
+              <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.confirm_password }}</label>
+              <input
+                v-model="form.password_confirmation"
+                type="password"
+                class="form-control"
+                :class="{ 'is-invalid': errors.password_confirmation }"
+                autocomplete="new-password"
+              />
+              <div v-if="errors.password_confirmation" class="invalid-feedback d-block">
+                {{ errors.password_confirmation }}
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-light flex-fill rounded-3"
+              data-bs-dismiss="modal"
+              :disabled="submitting"
+            >
+              {{ t.cancel }}
+            </button>
+            <button type="submit" class="btn btn-primary flex-fill rounded-3" :disabled="submitting">
+              <i v-if="submitting" class="fas fa-spinner fa-spin me-1"></i>
+              {{ submitting ? t.saving_password : t.save_password }}
+            </button>
+          </div>
+        </form>
       </div>
-
-      <form class="card-body pt-0 change-password-form" @submit.prevent="submit">
-        <p class="text-muted small mb-3">{{ t.password_requirements }}</p>
-
-        <div v-if="hasPassword" class="mb-3">
-          <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.current_password }}</label>
-          <input
-            v-model="form.current_password"
-            type="password"
-            class="form-control"
-            :class="{ 'is-invalid': errors.current_password }"
-            autocomplete="current-password"
-          />
-          <div v-if="errors.current_password" class="invalid-feedback d-block">
-            {{ errors.current_password }}
-          </div>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.new_password }}</label>
-          <input
-            v-model="form.password"
-            type="password"
-            class="form-control"
-            :class="{ 'is-invalid': errors.password }"
-            autocomplete="new-password"
-          />
-          <div v-if="errors.password" class="invalid-feedback d-block">{{ errors.password }}</div>
-        </div>
-
-        <div class="mb-4">
-          <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.confirm_password }}</label>
-          <input
-            v-model="form.password_confirmation"
-            type="password"
-            class="form-control"
-            :class="{ 'is-invalid': errors.password_confirmation }"
-            autocomplete="new-password"
-          />
-          <div v-if="errors.password_confirmation" class="invalid-feedback d-block">
-            {{ errors.password_confirmation }}
-          </div>
-        </div>
-
-        <div class="change-password-actions d-flex gap-2">
-          <button type="button" class="btn btn-light flex-fill rounded-3" :disabled="submitting" @click="$emit('close')">
-            {{ t.cancel }}
-          </button>
-          <button type="submit" class="btn btn-primary flex-fill rounded-3" :disabled="submitting">
-            <i v-if="submitting" class="fas fa-spinner fa-spin me-1"></i>
-            {{ submitting ? t.saving_password : t.save_password }}
-          </button>
-        </div>
-      </form>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, watch, computed } from "vue";
+import { ref, reactive, watch, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { Modal } from "bootstrap";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
 import { useLanguage } from "../helpers/language.js";
@@ -83,6 +93,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close", "updated"]);
+
+const modalEl = ref(null);
+let modal = null;
 
 const { currentLang } = useLanguage();
 const t = computed(() => translations[currentLang.value] || translations.en);
@@ -98,6 +111,17 @@ const errors = reactive({
   current_password: "",
   password: "",
   password_confirmation: "",
+});
+
+onMounted(() => {
+  modal = new Modal(modalEl.value, { focus: false });
+  if (props.show) modal.show();
+  modalEl.value.addEventListener("hidden.bs.modal", () => emit("close"));
+});
+
+onBeforeUnmount(() => {
+  modal?.dispose();
+  modal = null;
 });
 
 function resetForm() {
@@ -221,56 +245,7 @@ watch(
       resetForm();
       loadUserMeta();
     }
+    nextTick(() => (visible ? modal?.show() : modal?.hide()));
   },
 );
 </script>
-
-<style scoped>
-.change-password-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  background: rgba(0, 0, 0, 0.5);
-  align-items: center;
-  justify-content: center;
-}
-
-.change-password-card {
-  width: 440px;
-  max-width: 95vw;
-  border-radius: var(--card-radius);
-}
-
-.change-password-form {
-  display: flex;
-  flex-direction: column;
-}
-
-@media (max-width: 767.98px) {
-  .change-password-overlay {
-    align-items: stretch;
-    justify-content: stretch;
-    background: var(--bg-card, #fff);
-  }
-
-  .change-password-card {
-    width: 100%;
-    max-width: none;
-    height: 100%;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .change-password-form {
-    flex: 1;
-    overflow-y: auto;
-  }
-
-  .change-password-actions {
-    margin-top: auto;
-    padding-top: 1rem;
-  }
-}
-</style>

@@ -14,14 +14,13 @@
       <i class="fas fa-chevron-down arrow" :class="{ rotated: isOpen }"></i>
     </div>
 
-    <Teleport to="body">
-      <transition name="dropdown-fade">
-        <ul
-          v-if="isOpen"
-          ref="dropdownRef"
-          class="custom-select-options custom-select-options-teleported"
-          :style="dropdownStyle"
-        >
+    <transition name="dropdown-fade">
+      <ul
+        v-if="isOpen"
+        ref="dropdownRef"
+        class="custom-select-options"
+        :class="{ 'drop-up': dropUp }"
+      >
           <li v-if="searchable" class="search-input-li" @click.stop>
             <input
               ref="searchInputRef"
@@ -48,8 +47,7 @@
             <span class="text-muted small fw-600">No matches found</span>
           </li>
         </ul>
-      </transition>
-    </Teleport>
+    </transition>
   </div>
 </template>
 
@@ -82,7 +80,7 @@ const isOpen = ref(false);
 const containerRef = ref(null);
 const triggerRef = ref(null);
 const dropdownRef = ref(null);
-const dropdownStyle = ref({});
+const dropUp = ref(false);
 const searchQuery = ref("");
 const searchInputRef = ref(null);
 
@@ -110,23 +108,16 @@ const visibleOptions = computed(() => {
   return props.searchable ? filteredOptions.value : normalizedOptions.value;
 });
 
-function updateDropdownPosition() {
+function updateDropdownDirection() {
+  // No hardcoded coordinates — the menu is anchored to the trigger in CSS.
+  // We only decide whether it opens below or above based on viewport space.
   const trigger = triggerRef.value;
   if (!trigger) return;
 
   const rect = trigger.getBoundingClientRect();
   const menuHeight = dropdownRef.value?.offsetHeight ?? 120;
   const spaceBelow = window.innerHeight - rect.bottom;
-  const openAbove = spaceBelow < menuHeight + 12 && rect.top > spaceBelow;
-
-  dropdownStyle.value = {
-    position: "fixed",
-    top: openAbove ? `${rect.top - menuHeight - 8}px` : `${rect.bottom + 8}px`,
-    left: `${rect.left}px`,
-    width: `${rect.width}px`,
-    minWidth: `${Math.max(rect.width, 160)}px`,
-    zIndex: 9999,
-  };
+  dropUp.value = spaceBelow < menuHeight && rect.top > spaceBelow;
 }
 
 function toggleDropdown() {
@@ -161,27 +152,20 @@ function handleDocumentClick(event) {
 
 watch(isOpen, async (open) => {
   if (open) {
+    dropUp.value = false;
     await nextTick();
-    updateDropdownPosition();
-    await nextTick();
-    updateDropdownPosition();
+    updateDropdownDirection();
     if (props.searchable && searchInputRef.value) {
       searchInputRef.value.focus();
     }
     document.addEventListener("click", handleDocumentClick);
-    window.addEventListener("scroll", updateDropdownPosition, true);
-    window.addEventListener("resize", updateDropdownPosition);
   } else {
     document.removeEventListener("click", handleDocumentClick);
-    window.removeEventListener("scroll", updateDropdownPosition, true);
-    window.removeEventListener("resize", updateDropdownPosition);
   }
 });
 
 onUnmounted(() => {
   document.removeEventListener("click", handleDocumentClick);
-  window.removeEventListener("scroll", updateDropdownPosition, true);
-  window.removeEventListener("resize", updateDropdownPosition);
 });
 </script>
 
@@ -196,15 +180,16 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1rem;
+  padding: 10px 16px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 50px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 14px;
   color: var(--text-dark);
-  min-height: 38px;
+  min-height: 40px;
 }
 
 .custom-select-trigger.disabled {
@@ -220,9 +205,7 @@ onUnmounted(() => {
 
 .custom-select-trigger.active {
   border-color: var(--primary);
-  box-shadow:
-    0 0 0 4px rgba(25, 25, 112, 0.12),
-    0 8px 20px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
   transform: translateY(-1px);
 }
 
@@ -243,12 +226,18 @@ onUnmounted(() => {
   transform: rotate(-180deg);
 }
 
-/* Dropdown Menu (teleported to body) */
+/* Dropdown Menu (anchored to the trigger — no hardcoded coordinates) */
 .custom-select-options {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  min-width: 160px;
+  z-index: 2000;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 1rem;
-  padding: 0.5rem !important;
+  border-radius: 12px;
+  padding: 8px !important;
   margin: 0;
   list-style: none;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
@@ -260,19 +249,20 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-.custom-select-options-teleported {
-  position: fixed;
+.custom-select-options.drop-up {
+  top: auto;
+  bottom: calc(100% + 8px);
 }
 
 .custom-select-options li {
-  padding: 0.6rem 1rem;
-  margin-bottom: 0.2rem;
-  border-radius: 0.5rem;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  font-size: 0.9rem;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-main);
   white-space: nowrap;
@@ -317,6 +307,11 @@ onUnmounted(() => {
   transform: translateY(-10px);
 }
 
+.custom-select-options.drop-up.dropdown-fade-enter-from,
+.custom-select-options.drop-up.dropdown-fade-leave-to {
+  transform: translateY(10px);
+}
+
 .search-input-li {
   padding: 0 !important;
   margin-bottom: 0.4rem;
@@ -328,14 +323,15 @@ onUnmounted(() => {
 
 .search-input-premium {
   width: 100%;
-  padding: 0.6rem 0.85rem;
+  padding: 10px 16px;
   border: 1px solid var(--border-light);
-  border-radius: 0.5rem;
+  border-radius: 8px;
   background: var(--bg-light);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   outline: none;
   box-sizing: border-box;
+  min-height: 40px;
 }
 
 .search-input-premium:focus {
@@ -354,12 +350,58 @@ onUnmounted(() => {
   color: var(--text-muted) !important;
 }
 
+[data-theme="dark"] .custom-select-trigger {
+  background: transparent !important;
+  color: #e6edf3 !important;
+}
+
+[data-theme="dark"] .custom-select-trigger .selected-text {
+  color: #e6edf3 !important;
+}
+
+[data-theme="dark"] .custom-select-trigger .arrow {
+  color: #b1bac4 !important;
+  opacity: 1 !important;
+}
+
 [data-theme="dark"] .custom-select-options {
-  background: rgba(30, 41, 59, 0.95);
-  border-color: rgba(255, 255, 255, 0.05);
+  background: #161b22 !important;
+  border-color: #30363d !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] .custom-select-options li {
+  color: #e6edf3 !important;
 }
 
 [data-theme="dark"] .custom-select-options li:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(31, 111, 235, 0.18) !important;
+  color: #79c0ff !important;
+}
+
+[data-theme="dark"] .custom-select-options li.selected,
+[data-theme="dark"] .custom-select-options li.selected:hover {
+  background: #1f6feb !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .custom-select-options li.selected .check-icon {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .search-input-premium {
+  background: #0d1117 !important;
+  border-color: #30363d !important;
+  color: #e6edf3 !important;
+}
+
+[data-theme="dark"] .search-input-premium::placeholder {
+  color: #8b949e !important;
+  opacity: 1 !important;
+}
+
+[data-theme="dark"] .search-input-premium:focus {
+  border-color: #1f6feb !important;
+  background: #0d1117 !important;
 }
 </style>

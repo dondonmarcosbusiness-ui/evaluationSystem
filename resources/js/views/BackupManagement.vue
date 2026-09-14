@@ -158,14 +158,14 @@
       </div>
 
       <!-- Restore Modal -->
-      <div v-if="showRestoreModal" class="modal d-block" style="background: rgba(0,0,0,0.5)">
+      <div ref="restoreModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header border-0">
               <h5 class="modal-title fw-bold">Restore Database</h5>
               <button type="button" class="btn-close" @click="showRestoreModal = false"></button>
             </div>
-            <div class="modal-body py-4">
+            <div class="modal-body">
               <div class="text-center mb-4">
                 <div class="icon-circle bg-danger bg-opacity-10 text-danger mx-auto mb-3">
                   <i class="fas fa-exclamation-triangle fa-2x"></i>
@@ -186,8 +186,8 @@
                 />
               </div>
             </div>
-            <div class="modal-footer border-0 pt-0 pb-4 justify-content-center gap-2">
-              <button class="btn btn-light px-4" @click="showRestoreModal = false">Cancel</button>
+            <div class="modal-footer border-0 justify-content-center gap-2">
+              <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
               <button class="btn btn-danger px-4" @click="restoreDatabase" :disabled="restoring">
                 {{ restoring ? "Restoring..." : "Confirm Restore" }}
               </button>
@@ -204,9 +204,11 @@ import { ref, onMounted, computed } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
+import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 import api from "../services/api";
 import { format } from "date-fns";
 import Swal from "sweetalert2";
+import { confirmAction } from "../composables/useConfirm.js";
 
 const backups = ref([]);
 const loading = ref(true);
@@ -220,6 +222,7 @@ function onTableScroll(e) {
 }
 
 const showRestoreModal = ref(false);
+const { modalEl: restoreModalEl } = useBootstrapModal(showRestoreModal);
 const selectedFile = ref("");
 const verifyPassword = ref("");
 const restoring = ref(false);
@@ -293,13 +296,9 @@ async function downloadBackup(filename) {
 }
 
 async function deleteBackup(filename) {
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Delete Backup?",
-    text: `Are you sure you want to delete ${filename}?`,
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, delete it!",
+    message: `Are you sure you want to delete ${filename}?`,
   });
 
   if (!result.isConfirmed) return;

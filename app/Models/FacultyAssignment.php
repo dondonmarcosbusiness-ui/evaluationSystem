@@ -13,7 +13,8 @@ class FacultyAssignment extends Model
         'subject_id',
         'section_id',
         'academic_year',
-        'semester'
+        'semester',
+        'year_level'
     ];
 
     public function faculty()

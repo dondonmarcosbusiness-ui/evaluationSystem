@@ -1,38 +1,26 @@
 <template>
-  <Transition name="slide-fade">
-    <div v-if="showModal" class="minimal-timeout-overlay">
-      <div class="minimal-timeout-card shadow-lg animate__animated animate__fadeInUp">
-        <div class="card-progress" :style="{ width: (countdown / 30) * 100 + '%' }"></div>
-        
-        <div class="d-flex align-items-center gap-4 px-4 py-3">
-          <!-- Countdown Section -->
-          <div class="minimal-countdown">
-            <div class="number">{{ countdown }}</div>
-            <div class="label">SEC</div>
+  <div ref="timeoutModalEl" class="modal fade timeout-dialog" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+      <div class="modal-content timeout-content overflow-hidden position-relative">
+        <div class="timeout-progress" :style="{ width: (countdown / 30) * 100 + '%' }"></div>
+        <div class="modal-body timeout-body">
+          <div class="timeout-icon">
+            <i class="fas fa-shield-alt"></i>
           </div>
-
-          <!-- Message Section -->
-          <div class="flex-grow-1">
-            <div class="d-flex align-items-center gap-2 mb-1">
-              <i class="fas fa-shield-alt text-primary small"></i>
-              <span class="fw-bold small text-uppercase tracking-wider">Security Alert</span>
-            </div>
-            <h6 class="mb-0 fw-600">Still active? Session will expire shortly.</h6>
+          <h5 class="timeout-title">Session expiring soon</h5>
+          <div class="timeout-count">
+            <span class="timeout-number">{{ countdown }}</span>
+            <span class="timeout-label">seconds remaining</span>
           </div>
-
-          <!-- Actions Section -->
-          <div class="d-flex gap-2">
-            <button class="btn btn-primary btn-sm px-4 rounded-pill fw-bold text-nowrap" @click="stayLoggedIn">
-              Stay Logged In
-            </button>
-            <button class="btn btn-outline-secondary btn-sm px-3 rounded-pill text-nowrap" @click="logoutNow">
-              Logout
-            </button>
-          </div>
+          <p class="timeout-message mb-0">Still active? You'll be signed out due to inactivity.</p>
+        </div>
+        <div class="modal-footer timeout-footer">
+          <button type="button" class="timeout-btn timeout-logout" @click="logoutNow">Logout</button>
+          <button type="button" class="timeout-btn timeout-stay" @click="stayLoggedIn">Stay Logged In</button>
         </div>
       </div>
     </div>
-  </Transition>
+  </div>
 </template>
 
 <script setup>
@@ -40,29 +28,57 @@ import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "../services/api.js";
 import { syncThemeForUser } from "../helpers/theme.js";
+import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 
 const router = useRouter();
 const route = useRoute();
 
-// Config (3 minutes inactivity + 30 seconds warning)
-const INACTIVITY_LIMIT = 3 * 60 * 1000;
+// Configurable via System Settings → Session Timeout.
+// Inactivity limit comes from `session_timeout_minutes` (default 60);
+// a fixed 30-second warning is shown before signing out.
 const WARNING_LIMIT = 30;
+const DEFAULT_MINUTES = 60;
 
 const showModal = ref(false);
+const { modalEl: timeoutModalEl } = useBootstrapModal(showModal, { backdrop: "static", keyboard: false });
 const countdown = ref(WARNING_LIMIT);
-const isAdmin = ref(false);
+const timeoutEnabled = ref(false);
+const inactivityMs = ref(DEFAULT_MINUTES * 60 * 1000);
 
 let inactivityTimer = null;
 let countdownInterval = null;
 let lastReset = 0;
 
-const checkAdminStatus = () => {
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  isAdmin.value = user.role === "admin";
-};
+function isAuthenticated() {
+  return !!localStorage.getItem("token");
+}
+
+function isAdmin() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "{}")?.role === "admin";
+  } catch {
+    return false;
+  }
+}
+
+async function loadTimeoutConfig() {
+  try {
+    const res = await api.get("/settings");
+    const d = res.data || {};
+    const enabled =
+      d.session_timeout_enabled === true ||
+      d.session_timeout_enabled === 1 ||
+      d.session_timeout_enabled === "1" ||
+      d.session_timeout_enabled === "true";
+    const minutes = Number(d.session_timeout_minutes) || DEFAULT_MINUTES;
+    return { enabled, minutes };
+  } catch {
+    return { enabled: false, minutes: DEFAULT_MINUTES };
+  }
+}
 
 const resetInactivityTimer = () => {
-  if (!isAdmin.value || showModal.value) return;
+  if (!timeoutEnabled.value || !isAuthenticated() || !isAdmin() || showModal.value) return;
 
   const now = Date.now();
   // Throttle resets to once every 2 seconds to improve performance
@@ -70,10 +86,10 @@ const resetInactivityTimer = () => {
   lastReset = now;
 
   if (inactivityTimer) clearTimeout(inactivityTimer);
-  
+
   inactivityTimer = setTimeout(() => {
     startWarning();
-  }, INACTIVITY_LIMIT);
+  }, inactivityMs.value);
 };
 
 const startWarning = () => {
@@ -114,17 +130,37 @@ const logoutNow = async () => {
 
 const activityEvents = ["mousemove", "keydown", "click", "scroll", "touchstart", "visibilitychange"];
 
-onMounted(() => {
-  checkAdminStatus();
+// (Re)loads config from the server and re-arms. Called on mount and whenever
+// settings are saved (same-tab live update — no refresh needed to test).
+async function reloadConfig() {
+  if (inactivityTimer) clearTimeout(inactivityTimer);
+  if (!isAuthenticated() || !isAdmin()) {
+    timeoutEnabled.value = false;
+    return;
+  }
+  const cfg = await loadTimeoutConfig();
+  timeoutEnabled.value = cfg.enabled;
+  inactivityMs.value = cfg.minutes * 60 * 1000;
+  if (cfg.enabled) {
+    lastReset = 0;
+    resetInactivityTimer();
+  } else {
+    // Timeout turned off while armed/warning → stand down immediately.
+    if (countdownInterval) clearInterval(countdownInterval);
+    showModal.value = false;
+  }
+}
+
+onMounted(async () => {
   activityEvents.forEach((event) => {
     window.addEventListener(event, resetInactivityTimer, { passive: true });
   });
-  if (isAdmin.value) {
-    resetInactivityTimer();
-  }
+  window.addEventListener("session-timeout:reload", reloadConfig);
+  await reloadConfig();
 });
 
 onUnmounted(() => {
+  window.removeEventListener("session-timeout:reload", reloadConfig);
   activityEvents.forEach((event) => {
     window.removeEventListener(event, resetInactivityTimer);
   });
@@ -133,8 +169,7 @@ onUnmounted(() => {
 });
 
 watch(() => route.path, () => {
-  checkAdminStatus();
-  if (isAdmin.value) {
+  if (timeoutEnabled.value && isAuthenticated() && isAdmin()) {
     resetInactivityTimer();
   } else {
     if (inactivityTimer) clearTimeout(inactivityTimer);
@@ -145,101 +180,117 @@ watch(() => route.path, () => {
 </script>
 
 <style scoped>
-.minimal-timeout-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(4px);
-  z-index: 9999;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 3rem;
-}
-
-.minimal-timeout-card {
-  width: 100%;
-  max-width: 700px;
-  background: white;
-  border-radius: 1rem;
+.timeout-content {
+  border-radius: 1rem !important;
   overflow: hidden;
-  position: relative;
-  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-[data-theme="dark"] .minimal-timeout-card {
-  background: #1e293b;
-  border-color: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.card-progress {
+.timeout-progress {
   position: absolute;
   top: 0;
   left: 0;
   height: 3px;
-  background: #191970;
+  background: var(--danger);
   transition: width 1s linear;
+  z-index: 1;
 }
 
-.minimal-countdown {
+.timeout-body {
+  text-align: center;
+  padding: 1.5rem !important;
+}
+
+.timeout-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 0.9rem;
+  border-radius: 16px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
-  padding: 0.5rem 1rem;
-  border-radius: 0.75rem;
-  min-width: 70px;
+  font-size: 1.35rem;
+  background: rgba(240, 82, 82, 0.1);
+  color: var(--danger);
 }
 
-[data-theme="dark"] .minimal-countdown {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.minimal-countdown .number {
-  font-size: 1.5rem;
+.timeout-title {
+  font-size: 1.05rem;
   font-weight: 800;
-  color: #ef4444;
+  color: var(--text-dark);
+  margin: 0 0 0.35rem;
+}
+
+.timeout-count {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.timeout-number {
+  font-size: 2rem;
+  font-weight: 800;
   line-height: 1;
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
 }
 
-.minimal-countdown .label {
-  font-size: 0.6rem;
+.timeout-label {
+  font-size: 0.75rem;
   font-weight: 700;
-  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
 }
 
-.slide-fade-enter-active {
-  transition: all 0.4s ease-out;
-}
-.slide-fade-leave-active {
-  transition: all 0.3s ease-in;
-}
-.slide-fade-enter-from {
-  transform: translateY(20px);
-  opacity: 0;
-}
-.slide-fade-leave-to {
-  transform: translateY(10px);
-  opacity: 0;
+.timeout-message {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
-@media (max-width: 768px) {
-  .minimal-timeout-card {
-    max-width: 90%;
-  }
-  .minimal-timeout-card .d-flex {
-    flex-direction: column;
-    text-align: center;
-    padding: 2rem !important;
-  }
-  .d-flex.gap-2 {
-    width: 100%;
-    margin-top: 1rem;
-  }
-  .d-flex.gap-2 button {
-    flex: 1;
-  }
+.timeout-dialog .modal-footer.timeout-footer {
+  display: flex;
+  align-items: stretch;
+  padding: 0 !important;
+  border-top: 1px solid var(--border-light);
+}
+
+.timeout-dialog .modal-footer.timeout-footer > * {
+  margin: 0 !important;
+}
+
+.timeout-btn {
+  flex: 1 1 0%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0.9rem 0.5rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, filter 0.15s ease, color 0.15s ease;
+}
+
+.timeout-logout {
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-right: 1px solid var(--border-light);
+}
+
+.timeout-logout:hover {
+  background: var(--bg-light);
+  color: var(--danger);
+}
+
+.timeout-stay {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 800;
+}
+
+.timeout-stay:hover {
+  filter: brightness(1.12);
 }
 </style>

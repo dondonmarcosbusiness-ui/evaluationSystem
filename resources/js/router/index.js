@@ -18,6 +18,7 @@ const OfficeManagement = () => import("../views/OfficeManagement.vue");
 const OfficeQuestionnaireManagement = () => import("../views/OfficeQuestionnaireManagement.vue");
 const OfficeEvaluationForm = () => import("../views/OfficeEvaluationForm.vue");
 const OfficeReports = () => import("../views/OfficeReports.vue");
+const ArchiveReports = () => import("../views/ArchiveReports.vue");
 const QrFeedback = () => import("../views/QrFeedback.vue");
 
 const routes = [
@@ -135,6 +136,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/archive",
+    name: "ArchiveReports",
+    component: ArchiveReports,
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/feedbacks",
     name: "FeedbackManagement",
     component: FeedbackManagement,
@@ -165,7 +172,7 @@ router.beforeEach((to, from, next) => {
     return userPermissions.includes(permission);
   };
 
-  const reportPaths = ["/reports", "/set-report", "/feedbacks"];
+  const reportPaths = ["/reports", "/set-report", "/archive", "/feedbacks"];
   const isReportRoute = reportPaths.includes(to.path);
 
   const applyTheme = () => {

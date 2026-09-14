@@ -110,95 +110,92 @@
       </div>
     </div>
 
-    <!-- Questions Slide-over Drawer -->
-    <div v-if="showDrawer" class="drawer-overlay" @click="closeDrawer"></div>
-    <Transition name="drawer-slide">
-      <div v-if="showDrawer" class="metrics-drawer">
-        <div class="drawer-header p-4 d-flex align-items-center justify-content-between border-bottom sticky-top bg-card shadow-sm">
-          <div class="d-flex align-items-center gap-3">
-            <div class="drawer-icon" :style="{ background: activeCategoryColor + '15', color: activeCategoryColor }">
-              <i class="fas fa-list-ol"></i>
+    <!-- Questions Modal -->
+    <div ref="metricsModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div class="d-flex align-items-center gap-3">
+              <div class="drawer-icon" :style="{ background: activeCategoryColor + '15', color: activeCategoryColor }">
+                <i class="fas fa-list-ol"></i>
+              </div>
+              <div>
+                <h5 class="modal-title">{{ activeCategory?.category_name }}</h5>
+                <span class="small text-muted text-uppercase">Managing Questions</span>
+              </div>
             </div>
-            <div>
-              <h5 class="fw-800 mb-0">{{ activeCategory?.category_name }}</h5>
-              <span class="small text-muted fw-600 ls-1 text-uppercase">Managing Questions</span>
-            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <button class="btn-close-drawer" @click="closeDrawer">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-
-        <div class="drawer-content p-4">
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <h6 class="text-uppercase ls-1 fw-800 small text-muted mb-0">Question List</h6>
-            <button
-              class="btn btn-primary btn-sm px-3 rounded-pill fw-bold shadow-sm text-white"
-              @click="openQuestionModal(activeCategory.id)"
-            >
-              <i class="fas fa-plus me-1"></i>
-              Add Question
-            </button>
-          </div>
-
-          <div v-if="loadingQuestions" class="py-3">
-            <SkeletonLoader variant="list" :rows="3" />
-          </div>
-
-          <div v-else class="metrics-list d-flex flex-column gap-3">
-            <TransitionGroup name="list-stagger">
-              <div
-                v-for="(q, qIdx) in questions"
-                :key="q.id"
-                class="drawer-metric-card"
-                :style="{ '--accent-color': activeCategoryColor }"
+          <div class="modal-body">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h6 class="text-uppercase ls-1 fw-800 small text-muted mb-0">Question List</h6>
+              <button
+                class="btn btn-primary btn-sm px-3 rounded-pill fw-bold shadow-sm text-white"
+                @click="openQuestionModal(activeCategory?.id)"
               >
-                <div class="d-flex gap-3">
-                  <div class="metric-num">{{ qIdx + 1 }}</div>
-                  <div class="flex-grow-1">
-                    <p class="mb-1 fw-600 text-main">{{ q.question_text }}</p>
-                  </div>
-                  <div class="d-flex gap-1 flex-shrink-0">
-                    <button class="btn-action-icon-sm" @click="openQuestionModal(activeCategory.id, q)">
-                      <i class="fas fa-pen"></i>
-                    </button>
-                    <button class="btn-action-icon-sm danger" @click="deleteQuestion(activeCategory.id, q.id)">
-                      <i class="fas fa-trash-alt"></i>
-                    </button>
+                <i class="fas fa-plus me-1"></i>
+                Add Question
+              </button>
+            </div>
+
+            <div v-if="loadingQuestions" class="py-3">
+              <SkeletonLoader variant="list" :rows="3" />
+            </div>
+
+            <div v-else class="metrics-list d-flex flex-column gap-3">
+              <TransitionGroup name="list-stagger">
+                <div
+                  v-for="(q, qIdx) in questions"
+                  :key="q.id"
+                  class="drawer-metric-card"
+                  :style="{ '--accent-color': activeCategoryColor }"
+                >
+                  <div class="d-flex gap-3">
+                    <div class="metric-num">{{ qIdx + 1 }}</div>
+                    <div class="flex-grow-1">
+                      <p class="mb-1 fw-600 text-main">{{ q.question_text }}</p>
+                    </div>
+                    <div class="d-flex gap-1 flex-shrink-0">
+                      <button class="btn-action-icon-sm" @click="openQuestionModal(activeCategory?.id, q)">
+                        <i class="fas fa-pen"></i>
+                      </button>
+                      <button class="btn-action-icon-sm danger" @click="deleteQuestion(activeCategory?.id, q.id)">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </TransitionGroup>
+              </TransitionGroup>
 
-            <div v-if="!questions.length" class="text-center py-5 opacity-50">
-              <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-              <p class="small fw-bold">No questions added yet.</p>
+              <div v-if="!questions.length" class="text-center py-5 opacity-50">
+                <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                <p class="small fw-bold">No questions added yet.</p>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div class="drawer-footer p-4 border-top text-center">
-          <p class="small text-muted mb-0">
-            Weight allocation for this category:
-            <strong>{{ Math.round(activeCategory?.weight * 100) }}%</strong>
-          </p>
+          <div class="modal-footer">
+            <p class="small text-muted mb-0 me-auto">
+              Weight allocation for this category:
+              <strong>{{ Math.round(activeCategory?.weight * 100) }}%</strong>
+            </p>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
         </div>
       </div>
-    </Transition>
+    </div>
 
-    <!-- Shared Modals (Category & Question) -->
-    <Transition name="fade">
-      <div v-if="showCatModal || showQModal" class="glass-backdrop-v2" @click="closeAllModals"></div>
-    </Transition>
-
-    <Transition name="zoom-in">
-      <div v-if="showCatModal" class="glass-modal-centered">
-        <div class="glass-modal-inner card border-0 shadow-lg" style="max-width: 480px">
-          <div class="p-4">
-            <h5 class="fw-800 mb-4 d-flex align-items-center gap-2">
+    <!-- Category Modal -->
+    <div ref="catModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title d-flex align-items-center gap-2">
               <i class="fas fa-folder-plus text-primary"></i>
               {{ editCatId ? "Update Category" : "New Evaluation Category" }}
             </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
             <div class="mb-3">
               <label class="form-label-premium">Category Name</label>
               <input
@@ -237,24 +234,28 @@
               </div>
             </div>
           </div>
-          <div class="p-4 pt-0 d-flex gap-2">
-            <button class="btn btn-light-premium w-100" @click="showCatModal = false">Cancel</button>
-            <button class="btn btn-primary-premium w-100" @click="saveCategory" :disabled="saving">
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" @click="saveCategory" :disabled="saving">
               {{ saving ? "Processing..." : "Save Category" }}
             </button>
           </div>
         </div>
       </div>
-    </Transition>
+    </div>
 
-    <Transition name="zoom-in">
-      <div v-if="showQModal" class="glass-modal-centered">
-        <div class="glass-modal-inner card border-0 shadow-lg" style="max-width: 580px">
-          <div class="p-4">
-            <h5 class="fw-800 mb-4 d-flex align-items-center gap-2">
+    <!-- Question Modal -->
+    <div ref="qModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title d-flex align-items-center gap-2">
               <i class="fas fa-question-circle text-primary"></i>
               {{ editQId ? "Edit Question" : "New Question" }}
             </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
             <div class="mb-3">
               <label class="form-label-premium">Question Text</label>
               <textarea
@@ -265,15 +266,15 @@
               ></textarea>
             </div>
           </div>
-          <div class="p-4 pt-0 d-flex gap-2">
-            <button class="btn btn-light-premium w-100" @click="showQModal = false">Cancel</button>
-            <button class="btn btn-primary-premium w-100" @click="saveQuestion" :disabled="saving">
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" @click="saveQuestion" :disabled="saving">
               {{ saving ? "Processing..." : "Save Question" }}
             </button>
           </div>
         </div>
       </div>
-    </Transition>
+    </div>
   </div>
 </template>
 
@@ -282,6 +283,8 @@ import { ref, computed, onMounted } from "vue";
 import SkeletonLoader from "./SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
+import { confirmAction } from "../composables/useConfirm.js";
+import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 
 const categories = ref([]);
 const questions = ref([]);
@@ -304,6 +307,29 @@ const showQModal = ref(false);
 const activeCatId = ref(null);
 const editQId = ref(null);
 const qForm = ref({ question_text: "" });
+
+const { modalEl: catModalEl } = useBootstrapModal(showCatModal);
+// Modal chaining: only one Bootstrap modal open at a time. Opening a
+// question from the metrics modal parks the parent; the parent returns
+// once the child is fully closed (sequenced via hidden events, no timers).
+const resumeMetrics = ref(false);
+const pendingQuestion = ref(false);
+const { modalEl: qModalEl } = useBootstrapModal(showQModal, {
+  onHidden: () => {
+    if (resumeMetrics.value) {
+      resumeMetrics.value = false;
+      showDrawer.value = true;
+    }
+  },
+});
+const { modalEl: metricsModalEl } = useBootstrapModal(showDrawer, {
+  onHidden: () => {
+    if (pendingQuestion.value) {
+      pendingQuestion.value = false;
+      showQModal.value = true;
+    }
+  },
+});
 
 const totalWeight = computed(() => stats.value.total_weight);
 const totalQuestionsCount = computed(() => stats.value.total_questions);
@@ -362,6 +388,8 @@ function closeDrawer() {
 }
 
 function closeAllModals() {
+  resumeMetrics.value = false;
+  pendingQuestion.value = false;
   showCatModal.value = false;
   showQModal.value = false;
 }
@@ -408,13 +436,9 @@ async function saveCategory() {
 }
 
 async function deleteCategory(id) {
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Are you sure?",
-    text: "Delete this category and ALL associated questions? This action is permanent.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, delete it!",
+    message: "Delete this category and ALL associated questions? This action is permanent.",
   });
 
   if (!result.isConfirmed) return;
@@ -431,6 +455,8 @@ async function deleteCategory(id) {
 }
 
 function openQuestionModal(catId, q = null) {
+  // Ignore re-entry while a chained handoff is already in progress.
+  if (pendingQuestion.value || showQModal.value) return;
   activeCatId.value = catId;
   if (q) {
     editQId.value = q.id;
@@ -439,7 +465,15 @@ function openQuestionModal(catId, q = null) {
     editQId.value = null;
     qForm.value = { question_text: "" };
   }
-  showQModal.value = true;
+  // Chain: park the metrics parent first; the child opens when the
+  // parent's hide transition completes (see metrics modal onHidden).
+  resumeMetrics.value = showDrawer.value;
+  if (showDrawer.value) {
+    pendingQuestion.value = true;
+    showDrawer.value = false;
+  } else {
+    showQModal.value = true;
+  }
 }
 
 async function saveQuestion() {
@@ -466,13 +500,9 @@ async function saveQuestion() {
 }
 
 async function deleteQuestion(catId, qId) {
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Are you sure?",
-    text: "Permanently remove this question?",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, delete it!",
+    message: "Permanently remove this question?",
   });
 
   if (!result.isConfirmed) return;
@@ -649,29 +679,6 @@ async function deleteQuestion(catId, qId) {
   transform: translateX(4px);
 }
 
-/* Slide-over Drawer */
-.drawer-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(4px);
-  z-index: 1050;
-}
-
-.metrics-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  max-width: 500px;
-  background: var(--bg-card);
-  z-index: 1060;
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-}
-
 .drawer-icon {
   width: 44px;
   height: 44px;
@@ -682,27 +689,13 @@ async function deleteQuestion(catId, qId) {
   font-size: 1.1rem;
 }
 
-.btn-close-drawer {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: none;
-  background: var(--bg-light);
-  color: var(--text-muted);
-  transition: all 0.2s;
-}
-
-.btn-close-drawer:hover {
-  background: #fee2e2;
-  color: var(--danger);
-}
-
 .drawer-metric-card {
   background: var(--bg-light);
   padding: 1.25rem;
   border-radius: var(--card-radius);
   border: 1px solid var(--border-light);
   transition: all 0.2s;
+  min-width: 0;
 }
 
 .drawer-metric-card:hover {
@@ -745,34 +738,6 @@ async function deleteQuestion(catId, qId) {
 .btn-action-icon-sm.danger:hover {
   background: var(--danger);
   color: white;
-}
-
-/* Modals Refined */
-.glass-backdrop-v2 {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(12px);
-  z-index: 2000;
-}
-
-.glass-modal-centered {
-  position: fixed;
-  inset: 0;
-  z-index: 2010;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 3rem 1.5rem;
-  overflow-y: auto;
-}
-
-.glass-modal-inner {
-  margin: auto;
-  width: 100%;
-  border-radius: var(--card-radius);
-  background: var(--bg-card);
-  overflow: visible !important;
 }
 
 .form-label-premium {
@@ -862,34 +827,6 @@ async function deleteQuestion(catId, qId) {
 }
 
 /* Animations */
-.drawer-slide-enter-active,
-.drawer-slide-leave-active {
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.drawer-slide-enter-from,
-.drawer-slide-leave-to {
-  transform: translateX(100%);
-}
-
-.zoom-in-enter-active,
-.zoom-in-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.zoom-in-enter-from,
-.zoom-in-leave-to {
-  opacity: 0;
-  transform: scale(0.94) translateY(10px);
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
 .grid-stagger-enter-active {
   transition: all 0.5s ease;
 }
@@ -917,13 +854,6 @@ async function deleteQuestion(catId, qId) {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@media (max-width: 576px) {
-  .metrics-drawer {
-    width: 100%;
-    max-width: 100%;
   }
 }
 </style>

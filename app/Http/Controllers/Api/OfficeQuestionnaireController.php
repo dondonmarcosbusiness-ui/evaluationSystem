@@ -16,7 +16,7 @@ class OfficeQuestionnaireController extends Controller
             $query = OfficeCategory::withCount('questions')->with('questions');
 
             if ($request->has('paginate') && $request->paginate != 'false') {
-                $perPage = $request->input('per_page', 4);
+                $perPage = min(max((int) $request->input('per_page', 4), 1), 100);
                 return response()->json($query->paginate($perPage));
             }
 
@@ -95,7 +95,7 @@ class OfficeQuestionnaireController extends Controller
             $query = OfficeQuestion::where('category_id', $categoryId);
 
             if ($request->has('paginate') && $request->paginate != 'false') {
-                return response()->json($query->paginate($request->input('per_page', 4)));
+                return response()->json($query->paginate(min(max((int) $request->input('per_page', 4), 1), 100)));
             }
 
             return response()->json($query->get());

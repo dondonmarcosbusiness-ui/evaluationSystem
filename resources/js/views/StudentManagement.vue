@@ -108,6 +108,7 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>Course</th>
+                    <th>Year</th>
                     <th>Type</th>
                     <th v-if="props.defaultType !== 'irregular'">Section</th>
                     <th>Status</th>
@@ -147,6 +148,11 @@
                     <td>
                       <span class="badge bg-primary bg-opacity-10 text-primary">
                         {{ student.student?.course || "N/A" }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge bg-secondary bg-opacity-10 text-secondary">
+                        {{ student.student?.year_level ? `${student.student.year_level} Year` : "—" }}
                       </span>
                     </td>
                     <td>
@@ -198,7 +204,7 @@
                     </td>
                   </tr>
                   <tr v-if="!students.length">
-                    <td colspan="9" class="text-center text-muted py-4">No student records yet.</td>
+                    <td colspan="10" class="text-center text-muted py-4">No student records yet.</td>
                   </tr>
                 </tbody>
               </table>
@@ -206,37 +212,38 @@
             </Transition>
 
             <!-- Pagination -->
-            <Pagination :pagination="pagination" @change-page="fetchStudents" />
+            <Pagination
+              :pagination="pagination"
+              :per-page="perPage"
+              @change-page="fetchStudents"
+              @update:per-page="changePerPage"
+            />
           </div>
         </div>
       </div>
 
-      <!-- Add/Edit Modal (Modernized) -->
-      <Transition name="fade">
-        <div v-if="showModal" class="modal-backdrop-custom" @click="closeModal"></div>
-      </Transition>
-
-      <Transition name="slide-up">
-        <div v-if="showModal" class="custom-modal students">
-          <div class="card modal-card">
-            <div class="modal-header-custom">
+      <!-- Add/Edit Modal -->
+      <div ref="studentModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
               <div class="d-flex align-items-center gap-3">
                 <div class="profile-avatar-icon bg-primary bg-opacity-10 text-primary">
                   <i class="fas fa-user-graduate"></i>
                 </div>
                 <div>
-                  <h5 class="fw-800 mb-0">{{ editMode ? "Update Student Profile" : "Register New Student" }}</h5>
+                  <h5 class="modal-title fw-800 mb-0">
+                    {{ editMode ? "Update Student Profile" : "Register New Student" }}
+                  </h5>
                   <p class="text-muted small mb-0">
                     {{ editMode ? "Modify existing enrollment records" : "Enter student background information" }}
                   </p>
                 </div>
               </div>
-              <button class="btn-close-custom" @click="closeModal">
-                <i class="fas fa-times"></i>
-              </button>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body-custom">
+            <div class="modal-body">
               <div v-if="formError" class="alert alert-danger-custom mb-4">
                 <i class="fas fa-exclamation-circle me-2"></i>
                 {{ formError }}
@@ -310,10 +317,18 @@
                     <label class="label-custom">Assigned Section *</label>
                     <CustomSelect
                       v-model="form.section_id"
-                      :options="availableSectionsData.map((s) => ({ label: s.name, value: s.id }))"
+                      :options="availableSectionsData.map((s) => ({ label: s.year_level ? `${s.name} (${s.year_level})` : s.name, value: s.id }))"
                       placeholder="-- Select section --"
                       :disabled="!availableSectionsData.length"
                       @change="onSectionChange"
+                    />
+                  </div>
+                  <div :class="props.defaultType ? 'col-md-6' : 'col-md-4'">
+                    <label class="label-custom">Year Level *</label>
+                    <CustomSelect
+                      v-model="form.year_level"
+                      :options="yearLevelOptions"
+                      placeholder="-- Select year --"
                     />
                   </div>
                 </div>
@@ -344,62 +359,61 @@
               </div>
             </div>
 
-            <div class="modal-footer-custom">
-              <button class="btn btn-light-custom px-4" @click="closeModal">Cancel</button>
-              <button class="btn btn-primary-custom px-4" @click="saveStudent" :disabled="saving">
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary" @click="saveStudent" :disabled="saving">
                 <i class="fas fa-save me-2"></i>
                 {{ saving ? "Finalizing..." : editMode ? "Update Record" : "Save Changes" }}
               </button>
             </div>
           </div>
         </div>
-      </Transition>
+      </div>
 
       <!-- Upload CSV Modal -->
-      <div
-        v-if="showUploadModal"
-        class="modal d-flex"
-        style="
-          background: rgba(0, 0, 0, 0.5);
-          position: fixed;
-          inset: 0;
-          z-index: 2000;
-          align-items: center;
-          justify-content: center;
-        "
-      >
-        <div class="card" style="width: 500px; max-width: 95vw">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <span>
-              <i class="fas fa-file-upload me-2 text-success"></i>
-              Upload CSV
-            </span>
-            <button class="btn-close" @click="showUploadModal = false"></button>
-          </div>
-          <div class="card-body">
-            <div v-if="uploadError" class="alert alert-danger small py-2">
-              {{ uploadError }}
+      <div ref="uploadModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">
+                <i class="fas fa-file-upload me-2 text-success"></i>
+                Upload CSV
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div v-if="uploadSuccess" class="alert alert-success small py-2">
-              {{ uploadSuccess }}
+            <div class="modal-body">
+              <div v-if="uploadError" class="alert alert-danger small py-2">
+                {{ uploadError }}
+              </div>
+              <div v-if="uploadSuccess" class="alert alert-success small py-2">
+                {{ uploadSuccess }}
+              </div>
+              <p class="small text-muted mb-2">
+                Ensure your CSV has exactly these headers:
+                <strong>id number, last name, first name, middle name, course, section</strong>
+                (optional extra column: <strong>year level</strong> — otherwise inherited from the section).
+                . Default password will be the
+                <strong>ID Number</strong>
+                .
+              </p>
+              <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                <button class="btn btn-outline-success btn-sm" @click="downloadTemplate" type="button">
+                  <i class="fas fa-download me-2"></i>
+                  Download CSV Template
+                </button>
+                <small class="text-muted">No need to type headers manually — includes an example row.</small>
+              </div>
+              <input type="file" ref="fileInput" class="form-control" accept=".csv" />
             </div>
-            <p class="small text-muted mb-3">
-              Ensure your CSV has exactly these headers:
-              <strong>id number, last name, first name, middle name, course, section</strong>
-              . Default password will be the
-              <strong>ID Number</strong>
-              .
-            </p>
-            <input type="file" ref="fileInput" class="form-control mb-3" accept=".csv" />
-          </div>
-          <div class="card-footer d-flex justify-content-end gap-2">
-            <button class="btn btn-outline-secondary" @click="showUploadModal = false">Close</button>
-            <button class="btn btn-success" @click="uploadCsv" :disabled="uploading">
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-success" @click="uploadCsv" :disabled="uploading">
               <i class="fas fa-upload me-2"></i>
               {{ uploading ? "Uploading…" : "Upload" }}
             </button>
           </div>
         </div>
+      </div>
       </div>
       <!-- Bulk Actions Toast -->
       <Transition name="toast-slide">
@@ -447,7 +461,9 @@ import Pagination from "../components/Pagination.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
+import { confirmAction } from "../composables/useConfirm.js";
 import EnrollmentModal from "../components/EnrollmentModal.vue";
+import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 
 const props = defineProps({
   defaultType: {
@@ -458,6 +474,12 @@ const props = defineProps({
 
 const students = ref([]);
 const pagination = ref({});
+const perPage = ref(10);
+
+function changePerPage(n) {
+  perPage.value = n;
+  fetchStudents(1);
+}
 const availableCourses = ref([]);
 const loading = ref(true);
 const showModal = ref(false);
@@ -495,12 +517,22 @@ let searchTimeout = null;
 
 // Upload State
 const showUploadModal = ref(false);
+const { modalEl: studentModalEl } = useBootstrapModal(showModal);
+const { modalEl: uploadModalEl } = useBootstrapModal(showUploadModal);
 const fileInput = ref(null);
 const uploading = ref(false);
 const uploadError = ref("");
 const uploadSuccess = ref("");
 
 
+
+const yearLevelOptions = [
+  { label: "1st Year", value: "1st" },
+  { label: "2nd Year", value: "2nd" },
+  { label: "3rd Year", value: "3rd" },
+  { label: "4th Year", value: "4th" },
+  { label: "Irregular", value: "Irregular" },
+];
 
 const blankForm = () => ({
   id_number: "",
@@ -513,6 +545,7 @@ const blankForm = () => ({
   section: "",
   section_id: "",
   student_type: "regular",
+  year_level: "",
 });
 const form = ref(blankForm());
 
@@ -582,6 +615,9 @@ function onSectionChange() {
   const section = availableSectionsData.value.find((s) => s.id === form.value.section_id);
   if (section) {
     form.value.section = section.name;
+    if (!form.value.year_level && section.year_level) {
+      form.value.year_level = section.year_level;
+    }
   } else {
     form.value.section = "";
   }
@@ -597,6 +633,7 @@ async function fetchStudents(page = 1) {
   try {
     const params = new URLSearchParams({
       page,
+      per_page: perPage.value,
       query: filters.value.query,
       course: filters.value.course,
       section_id: filters.value.section_id,
@@ -649,6 +686,7 @@ function openEditModal(student) {
     course: student.student?.course || "",
     section_id: student.student?.section_id || "",
     student_type: student.student?.student_type || "regular",
+    year_level: student.student?.year_level || "",
     password: "",
   };
   formError.value = "";
@@ -687,16 +725,9 @@ async function saveStudent() {
 async function toggleActive(student) {
   const action = student.is_active ? "deactivate" : "activate";
   
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Are you sure?",
-    text: `Do you want to ${action} ${student.name}?`,
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonColor: "#191970",
-    cancelButtonColor: "#64748b",
-    confirmButtonText: `Yes, ${action}!`,
-    background: document.documentElement.getAttribute("data-theme") === "dark" ? "#1e293b" : "#fff",
-    color: document.documentElement.getAttribute("data-theme") === "dark" ? "#f1f5f9" : "#1e293b",
+    message: `Do you want to ${action} ${student.name}?`,
   });
 
   if (!result.isConfirmed) return;
@@ -717,13 +748,9 @@ async function toggleActive(student) {
 }
 
 async function unlinkGoogle(userId) {
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Unlink Google Account?",
-    text: "They will no longer be able to login with Google until they reconnect.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, unlink it!",
+    message: "They will no longer be able to login with Google until they reconnect.",
   });
 
   if (!result.isConfirmed) return;
@@ -738,13 +765,9 @@ async function unlinkGoogle(userId) {
 }
 
 async function deleteStudent(id) {
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Are you sure?",
-    text: "Delete this student and all their data? This cannot be undone.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, delete it!",
+    message: "Delete this student and all their data? This cannot be undone.",
   });
 
   if (!result.isConfirmed) return;
@@ -761,13 +784,9 @@ async function deleteStudent(id) {
 async function bulkDelete() {
   if (!selectedIds.value.length) return;
   
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Bulk Delete?",
-    text: `Delete ${selectedIds.value.length} selected students? This cannot be undone.`,
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, delete all!",
+    message: `Delete ${selectedIds.value.length} selected students? This cannot be undone.`,
   });
 
   if (!result.isConfirmed) return;
@@ -786,13 +805,9 @@ async function bulkChangeStatus(status) {
   if (!selectedIds.value.length) return;
   const action = status ? "activate" : "deactivate";
   
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Bulk Update?",
-    text: `Are you sure you want to bulk ${action} the selected students?`,
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonColor: "#191970",
-    confirmButtonText: `Yes, ${action} them!`,
+    message: `Are you sure you want to bulk ${action} the selected students?`,
   });
 
   if (!result.isConfirmed) return;
@@ -812,6 +827,21 @@ function openUploadModal() {
   uploadSuccess.value = "";
   showUploadModal.value = true;
   if (fileInput.value) fileInput.value.value = null;
+}
+
+function downloadTemplate() {
+  const headers = ["id number", "last name", "first name", "middle name", "course", "section", "year level"];
+  const example = ["2021-00001", "Dela Cruz", "Juan", "Santos", "BSIT", "BSIT 1-A", "1st Year"];
+  const csv = "\uFEFF" + headers.join(",") + "\n" + example.join(",") + "\n";
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "students_template.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 async function uploadCsv() {
@@ -847,22 +877,24 @@ async function uploadCsv() {
 .premium-filter-group {
   display: flex;
   align-items: center;
-  background: var(--bg-light);
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  padding: 0 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 40px;
+  min-height: 40px;
   transition: all 0.2s;
 }
 
 .premium-filter-group:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1);
+  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
 }
 
 .premium-filter-group .input-group-text {
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 0 8px 0 0;
   color: var(--text-muted);
   font-size: 0.85rem;
 }
@@ -870,9 +902,10 @@ async function uploadCsv() {
 .premium-filter-group .form-control {
   background: transparent;
   border: none;
-  padding: 0.6rem 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 600;
+  padding: 0 12px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  min-height: 0;
 }
 
 .premium-filter-group .form-control:focus {
@@ -880,24 +913,35 @@ async function uploadCsv() {
 }
 
 .btn-premium-reset {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-light);
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   color: var(--text-muted);
   transition: all 0.2s;
+}
+
+.btn-premium-reset:hover {
+  background: var(--primary);
+  color: white !important;
+  border-color: var(--primary);
+}
+
+.btn-premium-reset:hover i {
+  color: white !important;
 }
 
 /* Deep override for CustomSelect when used in filters */
 .premium-filter-group :deep(.custom-select-trigger) {
   border: none !important;
   background: transparent !important;
-  padding: 0.6rem 0.5rem !important;
-  font-size: 0.85rem !important;
+  padding: 0 12px 0 0 !important;
+  font-size: 14px !important;
+  min-height: 0 !important;
   box-shadow: none !important;
 }
 
@@ -911,65 +955,7 @@ async function uploadCsv() {
   opacity: 0;
 }
 
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.slide-up-enter-from,
-.slide-up-leave-to {
-  opacity: 0;
-  transform: translateY(30px);
-}
-
 /* --- Premium Modal (Student Theme) --- */
-.modal-backdrop-custom {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(8px);
-  z-index: 2000;
-}
-
-.custom-modal {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  z-index: 2001;
-  pointer-events: none;
-  overflow-y: auto;
-  padding: 3rem 1rem;
-}
-
-.glass-modal-inner {
-  width: 100%;
-  border-radius: var(--card-radius);
-  background: var(--bg-card);
-  overflow: visible !important;
-}
-
-.custom-modal .card {
-  margin: auto;
-  pointer-events: all;
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--card-radius);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  width: 600px;
-  max-width: 95vw;
-  overflow: visible;
-}
-
-.modal-header-custom {
-  padding: 1.75rem 2rem;
-  border-bottom: 1px solid var(--border-light);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .profile-avatar-icon {
   width: 52px;
   height: 52px;
@@ -978,20 +964,6 @@ async function uploadCsv() {
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-}
-
-.modal-body-custom {
-  padding: 2rem;
-  overflow: visible;
-}
-
-.modal-footer-custom {
-  padding: 1.25rem 2rem;
-  background: rgba(0, 0, 0, 0.02);
-  border-top: 1px solid var(--border-light);
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
 }
 
 .form-section-modern .section-label {
@@ -1062,45 +1034,6 @@ async function uploadCsv() {
   padding-left: 2.75rem;
 }
 
-.btn-primary-custom {
-  background: #191970 !important;
-  color: white !important;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  font-weight: 700;
-  transition: all 0.2s ease;
-}
-
-.btn-primary-custom:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 15px -5px rgba(25, 25, 112, 0.5);
-  background: #232380 !important;
-}
-
-.btn-light-custom {
-  background: var(--border-light);
-  color: var(--text-main);
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  font-weight: 700;
-}
-
-.btn-close-custom {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 1.25rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-close-custom:hover {
-  color: var(--danger);
-  transform: rotate(90deg);
-}
-
 .alert-danger-custom {
   padding: 1rem;
   background: rgba(239, 68, 68, 0.05);
@@ -1109,15 +1042,6 @@ async function uploadCsv() {
   color: #ef4444;
   font-size: 0.85rem;
   font-weight: 600;
-}
-
-[data-theme="dark"] .modal-backdrop-custom {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-[data-theme="dark"] .modal-header-custom,
-[data-theme="dark"] .modal-footer-custom {
-  border-color: rgba(255, 255, 255, 0.05);
 }
 
 /* Bulk Actions Toast */
@@ -1303,7 +1227,48 @@ thead th:last-child { border-right: none; }
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 [data-theme="dark"] .glass-header th {
-  background: rgba(30, 41, 59, 0.6);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: #161b22 !important;
+  background-color: #161b22 !important;
+  color: #b1bac4 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
+/* Dark-mode readability for header, filters, table, and upload modal */
+[data-theme="dark"] h5.text-main i.text-primary {
+  color: #79c0ff !important;
+  opacity: 1 !important;
+}
+[data-theme="dark"] .badge.bg-primary.bg-opacity-10.text-primary {
+  background: rgba(31, 111, 235, 0.18) !important;
+  color: #79c0ff !important;
+  border: 1px solid rgba(121, 192, 255, 0.25) !important;
+}
+[data-theme="dark"] .premium-filter-group .input-group-text,
+[data-theme="dark"] .premium-filter-group .input-group-text i {
+  color: #79c0ff !important;
+  opacity: 1 !important;
+}
+[data-theme="dark"] .premium-filter-group .form-control {
+  color: #e6edf3 !important;
+}
+[data-theme="dark"] .premium-filter-group .form-control::placeholder {
+  color: #8b949e !important;
+  opacity: 1 !important;
+}
+[data-theme="dark"] td.small.fw-bold.text-primary {
+  color: #79c0ff !important;
+}
+[data-theme="dark"] .btn-outline-success i,
+[data-theme="dark"] .btn-primary i,
+[data-theme="dark"] .btn-success i {
+  color: inherit !important;
+}
+[data-theme="dark"] .modal-title i.text-success {
+  color: #3fb950 !important;
+  opacity: 1 !important;
+}
+[data-theme="dark"] .modal-body .small.text-muted strong {
+  color: #e6edf3 !important;
 }
 </style>

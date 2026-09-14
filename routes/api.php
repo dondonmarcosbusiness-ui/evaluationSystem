@@ -80,6 +80,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('courses', [CourseController::class, 'store']);
         Route::put('courses/{course}', [CourseController::class, 'update']);
         Route::delete('courses/{course}', [CourseController::class, 'destroy']);
+        Route::post('courses/{course}/subjects', [CourseController::class, 'storeSubject']);
+        Route::post('courses/{course}/subjects/import', [CourseController::class, 'importSubjects']);
+        Route::post('courses/{course}/subjects/bulk-delete', [CourseController::class, 'bulkDestroySubjects']);
+        Route::post('courses/{course}/sections', [CourseController::class, 'storeSection']);
+        Route::delete('courses/{course}/subjects/{subject}', [CourseController::class, 'destroySubject']);
+        Route::delete('courses/{course}/sections/{section}', [CourseController::class, 'destroySection']);
     });
 
     // Faculty Assignments
@@ -114,6 +120,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Reports
     Route::get('reports/dashboard', [ReportController::class, 'dashboardStats']);
+    Route::get('reports/periods', [ReportController::class, 'academicPeriods']);
     Route::get('reports/faculty-summary', [ReportController::class, 'facultySummary']);
     Route::get('reports/evaluatee/{id}', [ReportController::class, 'getEvaluateeDetailedReport']);
     Route::get('reports/ai-insights/{id}', [ReportController::class, 'getAiInsights']);

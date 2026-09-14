@@ -66,9 +66,9 @@
               </div>
 
               <!-- Reset -->
-              <div class="col-md-2 d-flex gap-2">
-                <button class="btn btn-light-custom flex-grow-1" @click="resetFilters">
-                  <i class="fas fa-redo-alt me-1"></i> Reset
+              <div class="col-md-2 d-flex align-items-center">
+                <button class="refresh-pill-btn" @click="resetFilters" title="Reset Filters">
+                  <i class="fas fa-undo"></i>
                 </button>
               </div>
             </div>
@@ -188,27 +188,34 @@
             </div>
             
             <!-- Pagination -->
-            <Pagination :pagination="pagination" @change-page="fetchFeedbacks" />
+            <Pagination
+              :pagination="pagination"
+              :per-page="perPage"
+              @change-page="fetchFeedbacks"
+              @update:per-page="changePerPage"
+            />
           </div>
         </div>
       </div>
 
       <!-- Feedback Details Modal -->
-      <Transition name="slide-up">
-        <div v-if="showDetailModal" class="custom-modal feedback-detail" :class="{ 'is-fullscreen': isFullscreen }">
-          <div class="modal-card">
-            <div class="modal-header-custom primary text-center d-flex flex-column align-items-center justify-content-center position-relative w-100">
-              <h4 class="fw-800 text-white mb-1">Evaluation Detail</h4>
-              <p class="text-white opacity-75 small mb-0">Full feedback and quantitative breakdown</p>
-              <button class="btn-close-custom position-absolute" style="right: 4rem; top: 1.5rem;" @click="isFullscreen = !isFullscreen" :title="isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'">
-                <i :class="isFullscreen ? 'fas fa-compress' : 'fas fa-expand'"></i>
-              </button>
-              <button class="btn-close-custom position-absolute" style="right: 1.5rem; top: 1.5rem;" @click="showDetailModal = false; isFullscreen = false">
-                <i class="fas fa-times"></i>
-              </button>
+      <div ref="detailModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" :class="isFullscreen ? 'modal-fullscreen' : 'modal-xl'">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div>
+                <h5 class="modal-title">Evaluation Detail</h5>
+                <p class="text-muted small mb-0">Full feedback and quantitative breakdown</p>
+              </div>
+              <div class="d-flex gap-2 ms-auto">
+                <button type="button" class="btn btn-sm btn-outline-secondary" @click="isFullscreen = !isFullscreen" :title="isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'">
+                  <i :class="isFullscreen ? 'fas fa-compress' : 'fas fa-expand'"></i>
+                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
             </div>
 
-            <div class="modal-body-custom p-4">
+            <div class="modal-body">
               <div v-if="detailLoading" class="py-4">
                 <SkeletonLoader variant="list" :rows="4" />
               </div>
@@ -319,15 +326,12 @@
               </div>
             </div>
 
-            <div class="modal-footer-custom bg-light bg-opacity-25 border-top p-3 d-flex justify-content-end">
-              <button class="btn btn-primary px-5 rounded-pill shadow-sm" @click="showDetailModal = false">Close</button>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
           </div>
         </div>
-      </Transition>
-      <Transition name="fade">
-        <div v-if="showDetailModal" class="modal-backdrop-custom" @click="showDetailModal = false"></div>
-      </Transition>
+      </div>
 
       <!-- Hidden Print Area -->
       <div id="print-area" class="d-none">
@@ -373,6 +377,8 @@ import Pagination from "../components/Pagination.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
+import { useBootstrapModal } from "../composables/useBootstrapModal.js";
+import { DEFAULT_SEMESTERS, defaultAcademicYears, asStringArray, fetchAcademicConfig, courseDepartments } from "../helpers/academic.js";
 
 const can = inject("can");
 const route = useRoute();
@@ -382,11 +388,18 @@ const user = ref(JSON.parse(localStorage.getItem("user") || "{}") || {});
 const evaluateeType = ref('faculty');
 const feedbacks = ref([]);
 const pagination = ref({});
+const perPage = ref(10);
+
+function changePerPage(n) {
+  perPage.value = n;
+  fetchFeedbacks(1);
+}
 const loading = ref(false);
 const detailLoading = ref(false);
 const showAdvanced = ref(false);
 const showDetailModal = ref(false);
 const isFullscreen = ref(false);
+const { modalEl: detailModalEl } = useBootstrapModal(showDetailModal);
 const currentDetail = ref(null);
 const facultyList = ref([]);
 const departments = ref([]);
@@ -439,12 +452,12 @@ const ratingOptions = [
   { label: "1 - Poor", value: "1" },
 ];
 
-const semesterOptions = [
+const semesterList = ref([...DEFAULT_SEMESTERS]);
+
+const semesterOptions = computed(() => [
   { label: "All Semesters", value: "all" },
-  { label: "1st Semester", value: "1st Semester" },
-  { label: "2nd Semester", value: "2nd Semester" },
-  { label: "Summer", value: "Summer" }
-];
+  ...semesterList.value.map((s) => ({ label: s, value: s })),
+]);
 
 const yearOptions = computed(() => [
   { label: "All Years", value: "all" },
@@ -477,6 +490,9 @@ onMounted(() => {
     evaluateeType.value = getTypeFromRoute();
   }
   fetchMeta();
+  fetchAcademicConfig().then((c) => {
+    semesterList.value = c.semesters;
+  });
 });
 
 // Methods
@@ -485,7 +501,7 @@ async function fetchFeedbacks(page = 1) {
   try {
     const params = {
       page,
-      per_page: 10,
+      per_page: perPage.value,
       evaluatee_type: evaluateeType.value,
       ...filters.value
     };
@@ -503,26 +519,26 @@ async function fetchFeedbacks(page = 1) {
 async function fetchMeta() {
   try {
     const listUrl = "/faculty/all";
-    const [listRes, setRes] = await Promise.all([
+    const [listRes, setRes, coursesRes] = await Promise.all([
       api.get(listUrl),
-      api.get("/settings")
+      api.get("/settings"),
+      api.get("/courses")
     ]);
     
     const data = Array.isArray(listRes.data) ? listRes.data : (listRes.data?.data || []);
     facultyList.value = data;
     
-    // Extract unique departments (faculty only)
-    const depts = data.map(f => f.department).filter(d => d);
-    departments.value = [...new Set(depts)].sort();
+    // Department filter options come from the Course List (single source of
+    // truth) — never from faculty records, which can hold stale departments
+    // whose courses were deleted.
+    departments.value = courseDepartments(coursesRes.data);
     
-    // Setup years
-    const currentYear = new Date().getFullYear();
-    const startYear = 2023;
-    const yearList = [];
-    for(let y = currentYear + 1; y >= startYear; y--) {
-      yearList.push(`${y}-${y+1}`);
+    // Year options come from System Settings so the filter only offers
+    // configured academic years (plus the active year as a safety net).
+    years.value = asStringArray(setRes.data.academic_year_options, defaultAcademicYears());
+    if (setRes.data.active_academic_year && !years.value.includes(setRes.data.active_academic_year)) {
+      years.value.push(setRes.data.active_academic_year);
     }
-    years.value = yearList;
 
     // Default to active period if not "all"
     if (setRes.data.active_semester) {
@@ -673,6 +689,36 @@ function formatDate(dateStr) {
 </script>
 
 <style scoped>
+.refresh-pill-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.refresh-pill-btn:hover {
+  background: var(--primary);
+  color: white !important;
+  border-color: var(--primary);
+}
+
+.refresh-pill-btn:hover i {
+  color: white !important;
+}
+
+[data-theme="dark"] .refresh-pill-btn {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.6);
+}
+
 .feedback-row {
   cursor: pointer;
   transition: all 0.2s ease;
@@ -683,85 +729,6 @@ function formatDate(dateStr) {
   transform: translateY(-1px);
 }
 
-.custom-modal {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  z-index: 10001;
-  pointer-events: none;
-  overflow-y: auto;
-  padding: 3rem 1rem;
-}
-
-.custom-modal .modal-card {
-  margin: auto;
-  pointer-events: all;
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--card-radius) !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  width: 1100px;
-  max-width: 95vw;
-  overflow: hidden;
-  transition: width 0.25s ease, max-width 0.25s ease, height 0.25s ease;
-}
-
-/* Fullscreen state */
-.custom-modal.is-fullscreen {
-  padding: 0;
-  align-items: stretch;
-}
-
-.custom-modal.is-fullscreen .modal-card {
-  width: 100%;
-  max-width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: none;
-  border: none;
-}
-
-.custom-modal.is-fullscreen .modal-body-custom {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.modal-backdrop-custom {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(8px);
-  z-index: 10000;
-}
-
-.modal-header-custom {
-  padding: 1.75rem 2rem;
-  border-bottom: 1px solid var(--border-light);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-header-custom.primary {
-  background: #191970;
-  padding: 1.5rem 2rem;
-}
-
-.modal-body-custom {
-  padding: 2rem;
-}
-
-.modal-footer-custom {
-  padding: 1.5rem 2rem;
-  border-top: 1px solid var(--border-light);
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-}
-
 .profile-avatar-icon {
   width: 52px;
   height: 52px;
@@ -770,26 +737,6 @@ function formatDate(dateStr) {
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-}
-
-.btn-close-custom {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: #ffffff;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-close-custom:hover {
-  background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-  transform: rotate(90deg);
 }
 
 fieldset.legend-border {
@@ -849,15 +796,15 @@ fieldset.legend-border legend.legend-title {
 }
 
 @media print {
-  .no-print, .sidebar, .navbar, .filter-bar, .pagination, .btn-link, .modal-footer-custom, .custom-modal .btn-close-custom {
+  .no-print, .sidebar, .navbar, .filter-bar, .pagination, .btn-link, .modal-footer, .modal .btn-close {
     display: none !important;
   }
   .main-wrapper { margin-left: 0 !important; padding: 0 !important; }
   .content-area { padding: 0 !important; }
   .card { border: none !important; box-shadow: none !important; }
   .d-none { display: block !important; }
-  .custom-modal { position: static !important; display: block !important; padding: 0 !important; }
-  .custom-modal .modal-card { width: 100% !important; border: none !important; box-shadow: none !important; }
+  .modal { position: static !important; display: block !important; padding: 0 !important; }
+  .modal .modal-content { width: 100% !important; border: none !important; box-shadow: none !important; }
 }
 
 /* Sticky Table Header with Glassmorphism */

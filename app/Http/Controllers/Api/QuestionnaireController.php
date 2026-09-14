@@ -31,7 +31,7 @@ class QuestionnaireController extends Controller
         }
 
         if ($request->has('paginate') && $request->paginate != 'false') {
-            $perPage = $request->input('per_page', 4);
+            $perPage = min(max((int) $request->input('per_page', 4), 1), 100);
             return response()->json($query->paginate($perPage));
         }
 
@@ -105,7 +105,7 @@ class QuestionnaireController extends Controller
         $query = Question::where('category_id', $categoryId);
 
         if ($request->has('paginate') && $request->paginate != 'false') {
-            $perPage = $request->input('per_page', 4);
+            $perPage = min(max((int) $request->input('per_page', 4), 1), 100);
             return response()->json($query->paginate($perPage));
         }
 

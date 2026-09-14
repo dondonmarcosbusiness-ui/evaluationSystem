@@ -38,10 +38,34 @@
                 <h5 class="value mb-0 mt-1">{{ totalQuestionsCount }}</h5>
               </div>
             </div>
-            <button class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openCategoryModal()">
-              <i class="fas fa-plus-circle me-2"></i>
-              New Sector
-            </button>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <div class="view-toggle-group" role="group" aria-label="View mode">
+                <button
+                  type="button"
+                  class="view-toggle-btn"
+                  :class="{ active: viewMode === 'cards' }"
+                  @click="viewMode = 'cards'"
+                  title="Card view"
+                  aria-label="Card view"
+                >
+                  <i class="fas fa-grip"></i>
+                </button>
+                <button
+                  type="button"
+                  class="view-toggle-btn"
+                  :class="{ active: viewMode === 'table' }"
+                  @click="viewMode = 'table'"
+                  title="Table view"
+                  aria-label="Table view"
+                >
+                  <i class="fas fa-table-list"></i>
+                </button>
+              </div>
+              <button class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openCategoryModal()">
+                <i class="fas fa-plus-circle me-2"></i>
+                New Sector
+              </button>
+            </div>
           </div>
         </div>
 
@@ -49,8 +73,8 @@
           <SkeletonLoader variant="cards" :rows="6" />
         </div>
 
-        <!-- Grid of Sectors -->
-        <div v-else class="row g-4 fade-in-up">
+        <!-- Grid of Sectors (Cards view) -->
+        <div v-else-if="viewMode === 'cards'" class="row g-4 fade-in-up">
           <TransitionGroup name="grid-stagger">
             <div v-for="(cat, idx) in categories" :key="cat.id" class="col-md-6 col-lg-4 col-xl-4">
               <div
@@ -129,106 +153,192 @@
           </div>
         </div>
 
-        <!-- Metrics Slide-over Drawer -->
-        <div v-if="showDrawer" class="drawer-overlay" @click="closeDrawer"></div>
-        <Transition name="drawer-slide">
-          <div v-if="showDrawer" class="metrics-drawer">
-            <div
-              class="drawer-header p-4 d-flex align-items-center justify-content-between border-bottom sticky-top bg-card shadow-sm"
-            >
-              <div class="d-flex align-items-center gap-3">
-                <div
-                  class="drawer-icon"
-                  :style="{ background: activeCategoryColor + '15', color: activeCategoryColor }"
-                >
-                  <i class="fas fa-list-ol"></i>
-                </div>
-                <div>
-                  <h5 class="fw-800 mb-0">{{ activeCategory?.category_name }}</h5>
-                  <span class="small text-muted fw-600 ls-1 text-uppercase">Managing Metrics</span>
-                </div>
-              </div>
-              <button class="btn-close-drawer" @click="closeDrawer">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
-
-            <div class="drawer-content p-4">
-              <div class="d-flex justify-content-between align-items-center mb-4">
-                <h6 class="text-uppercase ls-1 fw-800 small text-muted mb-0">Criteria List</h6>
-                <button
-                  class="btn btn-primary btn-sm px-3 rounded-pill fw-bold shadow-sm text-white"
-                  @click="openQuestionModal(activeCategory.id)"
-                >
-                  <i class="fas fa-plus me-1"></i>
-                  Add Metric
-                </button>
-              </div>
-
-              <div v-if="loadingQuestions" class="py-3">
-                <SkeletonLoader variant="list" :rows="3" />
-              </div>
-
-              <div v-else class="metrics-list d-flex flex-column gap-3">
-                <TransitionGroup name="list-stagger">
-                  <div
-                    v-for="(q, qIdx) in questions"
-                    :key="q.id"
-                    class="drawer-metric-card"
-                    :style="{ '--accent-color': activeCategoryColor }"
+        <!-- Table of Sectors (Table view) -->
+        <div v-else-if="viewMode === 'table'" class="fade-in-up">
+          <div class="sector-table-card">
+            <div class="table-responsive">
+              <table class="table sector-table mb-0 align-middle">
+                <thead>
+                  <tr>
+                    <th style="width: 48px">#</th>
+                    <th>Sector</th>
+                    <th>Tagalog Translation</th>
+                    <th style="width: 180px">Weight</th>
+                    <th style="width: 110px" class="text-center">Metrics</th>
+                    <th style="width: 190px" class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(cat, idx) in categories"
+                    :key="cat.id"
+                    class="sector-table-row"
+                    @click="handleCategoryClick(cat)"
                   >
-                    <div class="d-flex gap-3">
-                      <div class="metric-num">{{ qIdx + 1 }}</div>
-                      <div class="flex-grow-1">
-                        <p class="mb-1 fw-600 text-main">{{ q.question_text }}</p>
-                        <p class="mb-0 small text-primary fw-bold" v-if="q.question_text_tl">
-                          <i class="fas fa-language me-1"></i> {{ q.question_text_tl }}
-                        </p>
-                        <p class="mb-0 small text-danger fw-bold" v-else>
-                          <i class="fas fa-exclamation-circle me-1"></i> Missing Tagalog translation
-                        </p>
+                    <td class="text-muted fw-700">{{ idx + 1 }}</td>
+                    <td>
+                      <div class="d-flex align-items-center gap-3">
+                        <div class="sector-icon-box sector-icon-box-sm" style="background: rgba(25, 25, 112, 0.1); color: #191970">
+                          <i class="fas fa-folder-open"></i>
+                        </div>
+                        <span class="fw-800 text-main">{{ cat.category_name }}</span>
                       </div>
-                      <div class="d-flex gap-1 flex-shrink-0">
-                        <button class="btn-action-icon-sm" @click="openQuestionModal(activeCategory.id, q)">
-                          <i class="fas fa-pen"></i>
+                    </td>
+                    <td>
+                      <span class="small fw-bold text-primary text-truncate d-inline-block" style="max-width: 240px" v-if="cat.category_name_tl" :title="cat.category_name_tl">
+                        {{ cat.category_name_tl }}
+                      </span>
+                      <span class="small fw-bold text-danger" v-else>
+                        <i class="fas fa-language me-1"></i> No Tagalog translation
+                      </span>
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="progress-minimal flex-grow-1">
+                          <div
+                            class="progress-bar"
+                            :style="{ width: Math.round(cat.weight * 100) + '%', background: '#0A278A' }"
+                          ></div>
+                        </div>
+                        <span class="small fw-800 text-primary" style="min-width: 38px">{{ Math.round(cat.weight * 100) }}%</span>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <span class="metric-badge">
+                        <i class="fas fa-list-check me-1"></i>
+                        {{ cat.questions_count || 0 }}
+                      </span>
+                    </td>
+                    <td class="text-end">
+                      <div class="d-inline-flex gap-1 justify-content-end">
+                        <button class="btn-manage-sm" @click.stop="handleCategoryClick(cat)">
+                          Manage
+                          <i class="fas fa-chevron-right ms-1"></i>
                         </button>
-                        <button class="btn-action-icon-sm danger" @click="deleteQuestion(activeCategory.id, q.id)">
+                        <button class="btn-action-minimal" @click.stop="openCategoryModal(cat)" title="Edit sector">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)" title="Delete sector">
                           <i class="fas fa-trash-alt"></i>
                         </button>
                       </div>
-                    </div>
-                  </div>
-                </TransitionGroup>
-
-                <div v-if="!questions.length" class="text-center py-5 opacity-50">
-                  <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                  <p class="small fw-bold">No metrics added yet.</p>
-                </div>
-              </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            <div class="drawer-footer p-4 border-top text-center">
-              <p class="small text-muted mb-0">
-                Weight allocation for this sector:
-                <strong>{{ Math.round(activeCategory?.weight * 100) }}%</strong>
+            <!-- Empty State for Table -->
+            <div v-if="!categories.length" class="text-center py-5">
+              <div class="mb-4">
+                <i class="fas fa-layer-group fa-4x opacity-10"></i>
+              </div>
+              <h4 class="fw-800">Start Building Your Evaluation</h4>
+              <p class="text-muted mb-4">
+                You haven't added any evaluation sectors yet. Create your first one to begin adding questions.
               </p>
+              <button class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
+                Create First Sector
+              </button>
             </div>
           </div>
-        </Transition>
+        </div>
 
-        <!-- Shared Modals (Category & Question) -->
-        <Transition name="fade">
-          <div v-if="showCatModal || showQModal" class="glass-backdrop-v2" @click="closeAllModals"></div>
-        </Transition>
+        <!-- Metrics Modal -->
+        <div ref="metricsModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header">
+                <div class="d-flex align-items-center gap-3">
+                  <div
+                    class="drawer-icon"
+                    :style="{ background: activeCategoryColor + '15', color: activeCategoryColor }"
+                  >
+                    <i class="fas fa-list-ol"></i>
+                  </div>
+                  <div>
+                    <h5 class="modal-title">{{ activeCategory?.category_name }}</h5>
+                    <span class="small text-muted text-uppercase">Managing Metrics</span>
+                  </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                  <h6 class="text-uppercase ls-1 fw-800 small text-muted mb-0">Criteria List</h6>
+                  <button
+                    class="btn btn-primary btn-sm px-3 rounded-pill fw-bold shadow-sm text-white"
+                    @click="openQuestionModal(activeCategory?.id)"
+                  >
+                    <i class="fas fa-plus me-1"></i>
+                    Add Metric
+                  </button>
+                </div>
 
-        <Transition name="zoom-in">
-          <div v-if="showCatModal" class="glass-modal-centered">
-            <div class="glass-modal-inner card border-0 shadow-lg" style="max-width: 480px">
-              <div class="p-4">
-                <h5 class="fw-800 mb-4 d-flex align-items-center gap-2">
+                <div v-if="loadingQuestions" class="py-3">
+                  <SkeletonLoader variant="list" :rows="3" />
+                </div>
+
+                <div v-else class="metrics-list">
+                  <TransitionGroup name="list-stagger">
+                    <div
+                      v-for="(q, qIdx) in questions"
+                      :key="q.id"
+                      class="drawer-metric-card"
+                      :style="{ '--accent-color': activeCategoryColor }"
+                    >
+                      <div class="d-flex gap-3">
+                        <div class="metric-num">{{ qIdx + 1 }}</div>
+                        <div class="flex-grow-1">
+                          <p class="mb-1 fw-600 text-main">{{ q.question_text }}</p>
+                          <p class="mb-0 small text-primary fw-bold" v-if="q.question_text_tl">
+                            <i class="fas fa-language me-1"></i> {{ q.question_text_tl }}
+                          </p>
+                          <p class="mb-0 small text-danger fw-bold" v-else>
+                            <i class="fas fa-exclamation-circle me-1"></i> Missing Tagalog translation
+                          </p>
+                        </div>
+                        <div class="d-flex gap-1 flex-shrink-0">
+                          <button class="btn-action-icon-sm" @click="openQuestionModal(activeCategory?.id, q)">
+                            <i class="fas fa-pen"></i>
+                          </button>
+                          <button class="btn-action-icon-sm danger" @click="deleteQuestion(activeCategory?.id, q.id)">
+                            <i class="fas fa-trash-alt"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </TransitionGroup>
+
+                  <div v-if="!questions.length" class="text-center py-5 opacity-50">
+                    <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                    <p class="small fw-bold">No metrics added yet.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <p class="small text-muted mb-0 me-auto">
+                  Weight allocation for this sector:
+                  <strong>{{ Math.round(activeCategory?.weight * 100) }}%</strong>
+                </p>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category Modal -->
+        <div ref="catModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title d-flex align-items-center gap-2">
                   <i class="fas fa-folder-plus text-primary"></i>
                   {{ editCatId ? "Update Sector" : "New Evaluation Sector" }}
                 </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
                 <div class="mb-3">
                   <label class="form-label-premium">Sector Name (English)</label>
                   <input
@@ -275,24 +385,28 @@
                   </div>
                 </div>
               </div>
-              <div class="p-4 pt-0 d-flex gap-2">
-                <button class="btn btn-light-premium w-100" @click="showCatModal = false">Cancel</button>
-                <button class="btn btn-primary-premium w-100" @click="saveCategory" :disabled="saving">
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" @click="saveCategory" :disabled="saving">
                   {{ saving ? "Processing..." : "Save Sector" }}
                 </button>
               </div>
             </div>
           </div>
-        </Transition>
+        </div>
 
-        <Transition name="zoom-in">
-          <div v-if="showQModal" class="glass-modal-centered">
-            <div class="glass-modal-inner card border-0 shadow-lg" style="max-width: 580px">
-              <div class="p-4">
-                <h5 class="fw-800 mb-4 d-flex align-items-center gap-2">
+        <!-- Question Modal -->
+        <div ref="qModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title d-flex align-items-center gap-2">
                   <i class="fas fa-question-circle text-primary"></i>
                   {{ editQId ? "Edit Item" : "New Metric Question" }}
                 </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
                 <div class="mb-3">
                   <label class="form-label-premium">Instructional Prompt (English)</label>
                   <textarea
@@ -312,15 +426,15 @@
                   ></textarea>
                 </div>
               </div>
-              <div class="p-4 pt-0 d-flex gap-2">
-                <button class="btn btn-light-premium w-100" @click="showQModal = false">Cancel</button>
-                <button class="btn btn-primary-premium w-100" @click="saveQuestion" :disabled="saving">
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" @click="saveQuestion" :disabled="saving">
                   {{ saving ? "Publishing..." : "Publish Metric" }}
                 </button>
               </div>
             </div>
           </div>
-        </Transition>
+        </div>
       </div>
     </div>
   </div>
@@ -335,6 +449,8 @@ import Pagination from "../components/Pagination.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
+import { confirmAction } from "../composables/useConfirm.js";
+import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 
 const route = useRoute();
 const categories = ref([]);
@@ -345,6 +461,7 @@ const loading = ref(true);
 const loadingQuestions = ref(false);
 const saving = ref(false);
 const showDrawer = ref(false);
+const viewMode = ref("cards");
 
 const showCatModal = ref(false);
 const editCatId = ref(null);
@@ -359,6 +476,29 @@ const showQModal = ref(false);
 const activeCatId = ref(null);
 const editQId = ref(null);
 const qForm = ref({ question_text: "", question_text_tl: "" });
+
+const { modalEl: catModalEl } = useBootstrapModal(showCatModal);
+// Modal chaining: only one Bootstrap modal open at a time. Opening a
+// question from the metrics modal parks the parent; the parent returns
+// once the child is fully closed (sequenced via hidden events, no timers).
+const resumeMetrics = ref(false);
+const pendingQuestion = ref(false);
+const { modalEl: qModalEl } = useBootstrapModal(showQModal, {
+  onHidden: () => {
+    if (resumeMetrics.value) {
+      resumeMetrics.value = false;
+      showDrawer.value = true;
+    }
+  },
+});
+const { modalEl: metricsModalEl } = useBootstrapModal(showDrawer, {
+  onHidden: () => {
+    if (pendingQuestion.value) {
+      pendingQuestion.value = false;
+      showQModal.value = true;
+    }
+  },
+});
 
 const totalWeight = computed(() => stats.value.total_weight);
 const totalQuestionsCount = computed(() => stats.value.total_questions);
@@ -377,10 +517,13 @@ onMounted(() => {
 watch(
   () => route.path,
   () => {
+    resumeMetrics.value = false;
+    pendingQuestion.value = false;
+    showQModal.value = false;
     showDrawer.value = false;
     fetchStats();
     fetchCategories();
-  }
+  },
 );
 
 async function fetchStats() {
@@ -429,6 +572,8 @@ function closeDrawer() {
 }
 
 function closeAllModals() {
+  resumeMetrics.value = false;
+  pendingQuestion.value = false;
   showCatModal.value = false;
   showQModal.value = false;
 }
@@ -479,13 +624,9 @@ async function saveCategory() {
 }
 
 async function deleteCategory(id) {
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Are you sure?",
-    text: "Delete this sector and ALL associated metrics? This action is permanent.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, delete it!",
+    message: "Delete this sector and ALL associated metrics? This action is permanent.",
   });
 
   if (!result.isConfirmed) return;
@@ -502,6 +643,8 @@ async function deleteCategory(id) {
 }
 
 function openQuestionModal(catId, q = null) {
+  // Ignore re-entry while a chained handoff is already in progress.
+  if (pendingQuestion.value || showQModal.value) return;
   activeCatId.value = catId;
   if (q) {
     editQId.value = q.id;
@@ -513,7 +656,15 @@ function openQuestionModal(catId, q = null) {
     editQId.value = null;
     qForm.value = { question_text: "", question_text_tl: "" };
   }
-  showQModal.value = true;
+  // Chain: park the metrics parent first; the child opens when the
+  // parent's hide transition completes (see metrics modal onHidden).
+  resumeMetrics.value = showDrawer.value;
+  if (showDrawer.value) {
+    pendingQuestion.value = true;
+    showDrawer.value = false;
+  } else {
+    showQModal.value = true;
+  }
 }
 
 async function saveQuestion() {
@@ -541,13 +692,9 @@ async function saveQuestion() {
 }
 
 async function deleteQuestion(catId, qId) {
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Are you sure?",
-    text: "Permanently remove this metric?",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, delete it!",
+    message: "Permanently remove this metric?",
   });
 
   if (!result.isConfirmed) return;
@@ -601,6 +748,123 @@ async function deleteQuestion(catId, qId) {
   width: 1px;
   height: 32px;
   background: var(--border-light);
+}
+
+/* View toggle (compact icon-only segmented control) */
+.view-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  background: #eef0f6;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.view-toggle-btn {
+  border: none;
+  background: transparent;
+  color: #9aa1b5;
+  font-size: 0.85rem;
+  width: 32px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  transition: all 0.2s ease;
+}
+
+.view-toggle-btn:hover {
+  color: var(--primary);
+}
+
+.view-toggle-btn.active {
+  background: #fff;
+  color: #191970;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+}
+
+/* Sector Table view */
+.sector-table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+}
+
+.sector-table thead th {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  background: var(--bg-light);
+  border-bottom: 1px solid var(--border-light);
+  padding: 0.85rem 1rem;
+  white-space: nowrap;
+}
+
+.sector-table tbody td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+
+.sector-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.sector-table-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sector-table-row:hover {
+  background: rgba(25, 25, 112, 0.03);
+}
+
+.sector-icon-box-sm {
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+  border-radius: 0.9rem;
+}
+
+.metric-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-light);
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  white-space: nowrap;
+}
+
+.btn-manage-sm {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-manage-sm:hover {
+  background: rgba(25, 25, 112, 0.08);
+  transform: translateX(2px);
+}
+
+.text-main {
+  color: var(--text-dark);
 }
 
 /* Sector Grid Card */
@@ -725,27 +989,14 @@ async function deleteQuestion(catId, qId) {
   transform: translateX(4px);
 }
 
-/* Slide-over Drawer */
-.drawer-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(4px);
-  z-index: 1050;
+.drawer-header {
+  flex-shrink: 0;
 }
 
-.metrics-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  max-width: 500px;
-  background: var(--bg-card);
-  z-index: 1060;
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
+.drawer-content {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
 }
 
 .drawer-icon {
@@ -758,33 +1009,43 @@ async function deleteQuestion(catId, qId) {
   font-size: 1.1rem;
 }
 
-.btn-close-drawer {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: none;
-  background: var(--bg-light);
-  color: var(--text-muted);
-  transition: all 0.2s;
-}
-
-.btn-close-drawer:hover {
-  background: #fee2e2;
-  color: var(--danger);
-}
-
 .drawer-metric-card {
   background: var(--bg-light);
   padding: 1.25rem;
   border-radius: var(--card-radius);
   border: 1px solid var(--border-light);
   transition: all 0.2s;
+  height: 100%;
+  min-width: 0;
 }
 
 .drawer-metric-card:hover {
   border-color: var(--accent-color);
   background: var(--bg-card);
-  transform: translateX(-4px);
+  transform: translateY(-2px);
+}
+
+.drawer-metric-card .flex-grow-1 {
+  min-width: 0;
+}
+
+.drawer-metric-card p {
+  overflow-wrap: break-word;
+}
+
+.metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .metrics-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+  }
 }
 
 .metric-num {
@@ -823,34 +1084,6 @@ async function deleteQuestion(catId, qId) {
   color: white;
 }
 
-/* Modals Refined */
-.glass-backdrop-v2 {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(12px);
-  z-index: 2000;
-}
-
-.glass-modal-centered {
-  position: fixed;
-  inset: 0;
-  z-index: 2010;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 3rem 1.5rem;
-  overflow-y: auto;
-}
-
-.glass-modal-inner {
-  margin: auto;
-  width: 100%;
-  border-radius: var(--card-radius);
-  background: var(--bg-card);
-  overflow: visible !important;
-}
-
 .form-label-premium {
   display: block;
   font-size: 0.75rem;
@@ -863,13 +1096,18 @@ async function deleteQuestion(catId, qId) {
 
 .form-control-premium {
   width: 100%;
-  padding: 1rem 1.25rem;
-  border-radius: 1.25rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 1rem;
   background: var(--bg-light);
   border: 1px solid var(--border-light);
   color: var(--text-dark);
   font-weight: 600;
   transition: all 0.3s;
+}
+
+.form-control-premium.sm {
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
 }
 
 .form-control-premium:focus {
@@ -938,34 +1176,6 @@ async function deleteQuestion(catId, qId) {
 }
 
 /* Animations */
-.drawer-slide-enter-active,
-.drawer-slide-leave-active {
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.drawer-slide-enter-from,
-.drawer-slide-leave-to {
-  transform: translateX(100%);
-}
-
-.zoom-in-enter-active,
-.zoom-in-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.zoom-in-enter-from,
-.zoom-in-leave-to {
-  opacity: 0;
-  transform: scale(0.94) translateY(10px);
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
 .grid-stagger-enter-active {
   transition: all 0.5s ease;
 }
@@ -993,13 +1203,6 @@ async function deleteQuestion(catId, qId) {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@media (max-width: 576px) {
-  .metrics-drawer {
-    width: 100%;
-    max-width: 100%;
   }
 }
 </style>

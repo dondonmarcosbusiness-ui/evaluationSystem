@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class Section extends Model
 {
     use HasUuids;
-    protected $fillable = ['name', 'course_id'];
+    protected $fillable = ['name', 'course_id', 'year_level'];
 
     public function course()
     {

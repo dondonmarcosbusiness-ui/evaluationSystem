@@ -33,7 +33,7 @@ class OfficeController extends Controller
                 return response()->json($query->get());
             }
 
-            return response()->json($query->paginate(10));
+            return response()->json($query->paginate(min(max((int) $request->input('per_page', 10), 1), 100)));
         } catch (\Exception $e) {
             Log::error('Office index error: ' . $e->getMessage());
             return response()->json(['message' => 'System error'], 500);

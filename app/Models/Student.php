@@ -16,6 +16,7 @@ class Student extends Model
         'section',
         'section_id',
         'student_type',
+        'year_level',
     ];
 
     public function user()

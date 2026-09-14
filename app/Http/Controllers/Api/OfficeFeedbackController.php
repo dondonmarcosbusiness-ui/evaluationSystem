@@ -35,7 +35,7 @@ class OfficeFeedbackController extends Controller
                 return response()->json($query->get());
             }
 
-            return response()->json($query->paginate(15));
+            return response()->json($query->paginate(min(max((int) $request->input('per_page', 15), 1), 100)));
         } catch (\Exception $e) {
             Log::error('Office feedback index error: ' . $e->getMessage());
             return response()->json(['message' => 'System error'], 500);

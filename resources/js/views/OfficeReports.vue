@@ -19,7 +19,7 @@
               <div class="col-6 col-md-3">
                 <div class="stat-card shadow-none p-3 h-100">
                   <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                    <div class="stat-icon">
                       <i class="fas fa-building"></i>
                     </div>
                     <div>
@@ -32,7 +32,7 @@
               <div class="col-6 col-md-3">
                 <div class="stat-card shadow-none p-3 h-100">
                   <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-info bg-opacity-10 text-info">
+                    <div class="stat-icon">
                       <i class="fas fa-comments"></i>
                     </div>
                     <div>
@@ -45,7 +45,7 @@
               <div class="col-6 col-md-3">
                 <div class="stat-card shadow-none p-3 h-100">
                   <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                    <div class="stat-icon">
                       <i class="fas fa-thumbs-up"></i>
                     </div>
                     <div>
@@ -67,7 +67,7 @@
               <div class="col-6 col-md-3">
                 <div class="stat-card shadow-none p-3 h-100">
                   <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon bg-success bg-opacity-10 text-success">
+                    <div class="stat-icon">
                       <i class="fas fa-calendar-day"></i>
                     </div>
                     <div>
@@ -93,16 +93,6 @@
                   >
                     {{ summaryList.length }} Offices
                   </span>
-                </div>
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                  <button
-                    class="btn btn-primary btn-sm d-flex align-items-center gap-2"
-                    @click="exportCsv"
-                    :disabled="exporting"
-                  >
-                    <i class="fas fa-download"></i>
-                    <span class="d-none d-xl-inline">{{ exporting ? 'Exporting...' : 'Export CSV' }}</span>
-                  </button>
                 </div>
               </div>
             </div>
@@ -172,22 +162,14 @@
 
           <!-- Detailed Report Section -->
           <template v-else>
-            <!-- Back Button & Export -->
-            <div class="d-flex justify-content-between align-items-center mb-4 mx-3 mx-md-0">
+            <!-- Back Button -->
+            <div class="d-flex justify-content-start align-items-center mb-4 mx-3 mx-md-0">
               <button
                 class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2 rounded-pill"
                 @click="selectedOffice = null"
               >
                 <i class="fas fa-arrow-left"></i>
                 Back to Summary
-              </button>
-              <button
-                class="btn btn-primary btn-sm d-flex align-items-center gap-2"
-                @click="exportCsv"
-                :disabled="exporting"
-              >
-                <i class="fas fa-download"></i>
-                <span>{{ exporting ? 'Exporting...' : 'Export CSV' }}</span>
               </button>
             </div>
 
@@ -443,7 +425,12 @@
                         </table>
                         </div>
                       </div>
-                      <Pagination :pagination="feedbackPagination" @change-page="fetchFeedbacks" />
+                      <Pagination
+                        :pagination="feedbackPagination"
+                        :per-page="feedbackPerPage"
+                        @change-page="fetchFeedbacks"
+                        @update:per-page="changeFeedbackPerPage"
+                      />
                     </div>
                     <div v-else key="empty" class="text-center py-5 text-muted">
                       <i class="fas fa-inbox fa-2x opacity-25 mb-2"></i>
@@ -490,7 +477,6 @@ const loadingDashboard = ref(true);
 const loadingSummary = ref(true);
 const loadingDetail = ref(false);
 const loadingFeedbacks = ref(false);
-const exporting = ref(false);
 const tableScrolled = ref(false);
 
 function onTableScroll(e) {
@@ -506,6 +492,12 @@ const detailFilters = ref({ date_from: "", date_to: "", visitor_type: "" });
 
 const feedbackList = ref([]);
 const feedbackPagination = ref({});
+const feedbackPerPage = ref(10);
+
+function changeFeedbackPerPage(n) {
+  feedbackPerPage.value = n;
+  fetchFeedbacks(1);
+}
 
 const categorySatisfaction = computed(() => detailReport.value?.category_satisfaction || []);
 
@@ -630,7 +622,7 @@ async function fetchFeedbacks(page = 1) {
   loadingFeedbacks.value = true;
   feedbackList.value = [];
 
-  const params = { page };
+  const params = { page, per_page: feedbackPerPage.value };
   if (detailFilters.value.date_from) params.date_from = detailFilters.value.date_from;
   if (detailFilters.value.date_to) params.date_to = detailFilters.value.date_to;
   if (detailFilters.value.visitor_type) params.visitor_type = detailFilters.value.visitor_type;
@@ -651,38 +643,6 @@ function resetDetailFilters() {
   detailFilters.value = { date_from: "", date_to: "", visitor_type: "" };
   if (selectedOffice.value) {
     loadDetailedReport(selectedOffice.value);
-  }
-}
-
-async function exportCsv() {
-  exporting.value = true;
-  const params = {};
-  if (selectedOffice.value) params.office_id = selectedOffice.value.id;
-  if (detailFilters.value.date_from) params.date_from = detailFilters.value.date_from;
-  if (detailFilters.value.date_to) params.date_to = detailFilters.value.date_to;
-  if (detailFilters.value.visitor_type) params.visitor_type = detailFilters.value.visitor_type;
-
-  try {
-    const res = await api.get("/office-reports/export/csv", {
-      params,
-      responseType: "blob",
-    });
-    const blob = new Blob([res.data], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    const filename = selectedOffice.value
-      ? `office-report-${selectedOffice.value.name.toLowerCase().replace(/\s+/g, "-")}.csv`
-      : "office-reports.csv";
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (e) {
-    console.error("Export failed:", e);
-  } finally {
-    exporting.value = false;
   }
 }
 
@@ -737,14 +697,15 @@ onMounted(async () => {
 
 .filter-input {
   width: 100%;
-  height: 42px;
-  padding: 0.5rem 1rem;
-  border-radius: 50px;
-  border: 1.5px solid var(--border-color);
+  height: 40px;
+  min-height: 40px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
   background: var(--bg-card);
   color: var(--text-main);
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: none;
 }
@@ -756,7 +717,7 @@ onMounted(async () => {
 .filter-input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3.5px rgba(25, 25, 112, 0.12);
+  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
   background: var(--bg-card);
   color: var(--text-main);
 }
@@ -779,14 +740,14 @@ onMounted(async () => {
 }
 
 .filter-select :deep(.custom-select-trigger) {
-  height: 42px;
-  min-height: 42px;
-  border-radius: 50px;
-  border: 1.5px solid var(--border-color);
+  height: 40px;
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
   background: var(--bg-card);
-  font-size: 0.85rem;
-  font-weight: 600;
-  padding: 0.5rem 1.15rem;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 16px;
   color: var(--text-main);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -798,14 +759,15 @@ onMounted(async () => {
 
 .filter-select :deep(.custom-select-trigger.active) {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3.5px rgba(25, 25, 112, 0.12);
+  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
 }
 
 .filter-btn {
-  height: 42px;
+  height: 40px;
+  min-height: 40px;
   padding: 0.5rem 1.25rem;
-  border-radius: 50px;
-  font-size: 0.85rem;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -817,7 +779,7 @@ onMounted(async () => {
 
 .filter-btn-apply {
   background: var(--primary);
-  border: 1.5px solid var(--primary);
+  border: 1px solid var(--primary);
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(25, 25, 112, 0.25);
 }
@@ -836,14 +798,14 @@ onMounted(async () => {
 
 .filter-btn-reset {
   background: var(--bg-card);
-  border: 1.5px solid var(--border-color);
+  border: 1px solid var(--border-color);
   color: var(--text-muted);
 }
 
 .filter-btn-reset:hover {
-  background: rgba(0, 0, 0, 0.04);
-  border-color: var(--border-color);
-  color: var(--text-main);
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white !important;
   transform: translateY(-1px);
 }
 

@@ -25,22 +25,28 @@ class EnrollmentController extends Controller
 
     public function store(Request $request, $studentId)
     {
-        $request->validate([
+        $validated = $request->validate([
             'subject_id' => 'required|exists:subjects,id',
             'instructor_id' => 'required|exists:faculty,id',
             'semester' => 'required|string',
             'academic_year' => 'required|string',
+            'year_level' => \App\Support\YearLevel::rule(false),
         ]);
+
+        if (empty($validated['year_level'])) {
+            $validated['year_level'] = \App\Models\Subject::whereKey($validated['subject_id'])->value('year_level');
+        }
 
         try {
             $enrollment = Enrollment::updateOrCreate(
                 [
                     'student_id' => $studentId,
-                    'subject_id' => $request->subject_id,
-                    'instructor_id' => $request->instructor_id,
-                    'semester' => $request->semester,
-                    'academic_year' => $request->academic_year,
-                ]
+                    'subject_id' => $validated['subject_id'],
+                    'instructor_id' => $validated['instructor_id'],
+                    'semester' => $validated['semester'],
+                    'academic_year' => $validated['academic_year'],
+                ],
+                ['year_level' => $validated['year_level']]
             );
 
             return response()->json([

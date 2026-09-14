@@ -1,32 +1,43 @@
 <template>
   <nav
-    v-if="pagination && pagination.last_page > 1"
-    class="pagination-container d-flex align-items-center justify-content-between"
+    v-if="showPerPage || (pagination && pagination.last_page > 1)"
+    class="pagination-container d-flex align-items-center justify-content-between gap-3 flex-wrap"
   >
-    <!-- Previous -->
-    <button
-      class="pagination-btn"
-      :class="{ disabled: pagination.current_page === 1 }"
-      :disabled="pagination.current_page === 1"
-      @click.prevent="changePage(pagination.current_page - 1)"
-    >
-      Previous
-    </button>
+    <!-- Rows per page -->
+    <label v-if="showPerPage" class="per-page-wrap">
+      <span class="per-page-label">Rows:</span>
+      <select class="per-page-select" :value="perPage" @change="changePerPage($event.target.value)">
+        <option v-for="n in perPageOptions" :key="n" :value="n">{{ n }}</option>
+      </select>
+    </label>
+    <span v-else></span>
 
-    <!-- Page indicator -->
-    <div class="pagination-info">
-      Page {{ pagination.current_page }} of {{ pagination.last_page }}
+    <div v-if="pagination && pagination.last_page > 1" class="d-flex align-items-center gap-2">
+      <!-- Previous -->
+      <button
+        class="pagination-btn"
+        :class="{ disabled: pagination.current_page === 1 }"
+        :disabled="pagination.current_page === 1"
+        @click.prevent="changePage(pagination.current_page - 1)"
+      >
+        Previous
+      </button>
+
+      <!-- Page indicator -->
+      <div class="pagination-info">
+        Page {{ pagination.current_page }} of {{ pagination.last_page }}
+      </div>
+
+      <!-- Next -->
+      <button
+        class="pagination-btn"
+        :class="{ disabled: pagination.current_page === pagination.last_page }"
+        :disabled="pagination.current_page === pagination.last_page"
+        @click.prevent="changePage(pagination.current_page + 1)"
+      >
+        Next
+      </button>
     </div>
-
-    <!-- Next -->
-    <button
-      class="pagination-btn"
-      :class="{ disabled: pagination.current_page === pagination.last_page }"
-      :disabled="pagination.current_page === pagination.last_page"
-      @click.prevent="changePage(pagination.current_page + 1)"
-    >
-      Next
-    </button>
   </nav>
 </template>
 
@@ -36,13 +47,32 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  perPage: {
+    type: Number,
+    default: 10,
+  },
+  perPageOptions: {
+    type: Array,
+    default: () => [10, 20, 50, 100],
+  },
+  showPerPage: {
+    type: Boolean,
+    default: true,
+  },
 });
 
-const emit = defineEmits(["change-page"]);
+const emit = defineEmits(["change-page", "update:per-page"]);
 
 const changePage = (page) => {
   if (page >= 1 && page <= props.pagination.last_page && page !== props.pagination.current_page) {
     emit("change-page", page);
+  }
+};
+
+const changePerPage = (value) => {
+  const n = parseInt(value, 10);
+  if (Number.isFinite(n) && n !== props.perPage) {
+    emit("update:per-page", n);
   }
 };
 </script>
@@ -57,13 +87,16 @@ const changePage = (page) => {
 }
 
 .pagination-btn {
+  flex-shrink: 0;
+  min-height: 32px;
+  min-width: 32px;
   background: transparent;
   border: none;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--primary);
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
   transition: all 0.2s ease-in-out;
   cursor: pointer;
   outline: none;
@@ -89,13 +122,15 @@ const changePage = (page) => {
   letter-spacing: 0.01em;
 }
 
+/* Rows-per-page styles live globally in app.css (3e) so custom pagers match. */
+
 [data-theme="dark"] .pagination-btn {
-  color: var(--primary-dark);
+  color: #79c0ff;
 }
 
 [data-theme="dark"] .pagination-btn:hover:not(:disabled):not(.disabled) {
-  color: var(--text-white);
-  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  background: rgba(31, 111, 235, 0.22);
 }
 
 [data-theme="dark"] .pagination-btn:disabled,

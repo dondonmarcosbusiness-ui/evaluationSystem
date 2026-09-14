@@ -50,7 +50,7 @@ class StudentController extends Controller
                     });
                 })
                 ->orderBy('name')
-                ->paginate(10);
+                ->paginate(min(max((int) $request->input('per_page', 10), 1), 100));
 
             return response()->json($students);
         } catch (\Exception $e) {
@@ -72,6 +72,7 @@ class StudentController extends Controller
             'section' => 'nullable',
             'section_id' => 'required|exists:sections,id',
             'student_type' => 'required|in:regular,irregular',
+            'year_level' => \App\Support\YearLevel::rule(true),
         ]);
 
         $idNumber = $request->id_number;
@@ -101,6 +102,7 @@ class StudentController extends Controller
                 'section' => $sectionName,
                 'section_id' => $request->section_id,
                 'student_type' => $request->student_type,
+                'year_level' => $request->year_level,
             ]);
 
             $user->assignRole('Student');
@@ -137,6 +139,7 @@ class StudentController extends Controller
             'section' => 'nullable',
             'section_id' => 'required|exists:sections,id',
             'student_type' => 'required|in:regular,irregular',
+            'year_level' => \App\Support\YearLevel::rule(false),
         ]);
 
         try {
@@ -156,15 +159,17 @@ class StudentController extends Controller
                 if ($sec) $sectionName = $sec->name;
             }
 
-            $user->student()->updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'course' => $request->course,
-                    'section' => $sectionName,
-                    'section_id' => $request->section_id,
-                    'student_type' => $request->student_type,
-                ]
-            );
+            $studentData = [
+                'course' => $request->course,
+                'section' => $sectionName,
+                'section_id' => $request->section_id,
+                'student_type' => $request->student_type,
+            ];
+            if ($request->has('year_level')) {
+                $studentData['year_level'] = $request->year_level;
+            }
+
+            $user->student()->updateOrCreate(['user_id' => $user->id], $studentData);
             if ($request->email && $request->email !== $user->email) {
                 $request->validate(['email' => 'unique:users']);
                 $user->update(['email' => $request->email]);
@@ -214,7 +219,9 @@ class StudentController extends Controller
         ]);
 
         $file = $request->file('file');
-        $csvData = file_get_contents($file);
+        // Strip a UTF-8 BOM (our CSV template — and Excel — include one,
+        // otherwise the first header never matches).
+        $csvData = preg_replace('/^\xEF\xBB\xBF/', '', file_get_contents($file));
         $rows = array_map('str_getcsv', explode("\n", $csvData));
         $header = array_shift($rows);
 
@@ -251,6 +258,8 @@ class StudentController extends Controller
                 continue;
             }
 
+            $hasYearColumn = in_array('year level', $header, true);
+
             $validator = Validator::make($data, [
                 'id number' => 'required|string',
                 'last name' => 'required|string',
@@ -260,6 +269,13 @@ class StudentController extends Controller
             ]);
 
             if ($validator->fails()) {
+                $failed++;
+                continue;
+            }
+
+            // Optional "Year Level" CSV column; otherwise inherit the matched section's year.
+            $csvYear = $hasYearColumn ? trim($data['year level'] ?? '') : '';
+            if ($csvYear !== '' && !in_array($csvYear, \App\Support\YearLevel::VALUES, true)) {
                 $failed++;
                 continue;
             }
@@ -299,6 +315,7 @@ class StudentController extends Controller
                     'section' => $sectionName,
                     'section_id' => $matchingSection?->id,
                     'student_type' => 'regular',
+                    'year_level' => $csvYear !== '' ? $csvYear : $matchingSection?->year_level,
                 ]);
 
                 if ($role) {

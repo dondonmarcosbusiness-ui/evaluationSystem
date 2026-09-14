@@ -26,7 +26,7 @@ class FacultyController extends Controller
                 ->when($request->query('department'), function ($q, $dept) {
                     $q->where('department', $dept);
                 })
-                ->paginate(10);
+                ->paginate(min(max((int) $request->input('per_page', 10), 1), 100));
 
             return response()->json($faculty);
         } catch (\Exception $e) {
@@ -182,7 +182,9 @@ class FacultyController extends Controller
         ]);
 
         $file = $request->file('file');
-        $csvData = file_get_contents($file);
+        // Strip a UTF-8 BOM (our CSV template — and Excel — include one,
+        // otherwise the first header never matches).
+        $csvData = preg_replace('/^\xEF\xBB\xBF/', '', file_get_contents($file));
         $rows = array_map('str_getcsv', explode("\n", $csvData));
         $header = array_shift($rows);
 

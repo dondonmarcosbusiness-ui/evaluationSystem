@@ -11,6 +11,7 @@ use App\Models\FacultyAssignment;
 use App\Rules\EvaluateeExists;
 use App\Rules\ValidEvaluateeType;
 use App\Services\EvaluationAnswerRepairService;
+use App\Support\YearLevel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +23,42 @@ class EvaluationController extends Controller
     public function __construct(\App\Services\AiService $aiService)
     {
         $this->aiService = $aiService;
+    }
+
+    /**
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function resolvePeriod(Request $request): array
+    {
+        $settings = \App\Models\Setting::cachedAll();
+        $semester = $request->input('semester', $request->query('semester'));
+        $academicYear = $request->input('academic_year', $request->query('academic_year'));
+        if ($semester === null) {
+            $semester = $settings->get('active_semester');
+        }
+        if ($academicYear === null) {
+            $academicYear = $settings->get('active_academic_year');
+        }
+        if ($semester === 'all') {
+            $semester = null;
+        }
+        if ($academicYear === 'all') {
+            $academicYear = null;
+        }
+        foreach (['semester' => $semester, 'academicYear' => $academicYear] as $k => $v) {
+            if (is_string($v) && trim($v) === '') {
+                $$k = null;
+            } elseif (!is_string($v) && $v !== null) {
+                $$k = (string) $v;
+            }
+        }
+        if (!is_string($semester)) {
+            $semester = null;
+        }
+        if (!is_string($academicYear)) {
+            $academicYear = null;
+        }
+        return [$semester, $academicYear];
     }
 
     public function getEvaluatees(Request $request)
@@ -125,6 +162,16 @@ class EvaluationController extends Controller
             }
 
             $assignments = $query->get();
+
+            // Year scoping: same-named sections across years must not collide.
+            // Untagged (null) or Irregular years on either side act as wildcards.
+            $studentYear = $user->student ? $user->student->year_level : null;
+            $assignments = $assignments->filter(function ($assignment) use ($studentYear) {
+                $assignmentYear = $assignment->year_level
+                    ?? $assignment->subject->year_level
+                    ?? $assignment->section->year_level;
+                return YearLevel::matches($assignmentYear, $studentYear);
+            });
 
             foreach ($assignments as $assignment) {
                 $f = $assignment->faculty;
@@ -291,15 +338,22 @@ class EvaluationController extends Controller
             ])->exists();
         }
 
-        $assignmentExists = FacultyAssignment::where([
+        $assignment = FacultyAssignment::where([
             'faculty_id' => $facultyId,
             'section_id' => $studentSectionId,
             'semester' => $semester,
             'academic_year' => $academicYear
-        ])->exists();
+        ])->first();
 
-        if ($assignmentExists) {
-            return true;
+        if ($assignment) {
+            $studentYear = $user->student ? $user->student->year_level : null;
+            $assignmentYear = $assignment->year_level;
+            if ($assignmentYear === null) {
+                $assignmentYear = $assignment->subject->year_level ?? $assignment->section->year_level;
+            }
+            if (YearLevel::matches($assignmentYear, $studentYear)) {
+                return true;
+            }
         }
 
         // Check if General Education faculty
@@ -321,9 +375,10 @@ class EvaluationController extends Controller
             $evaluateeType = $request->input('evaluatee_type', 'faculty');
             $departmentFilter = $request->query('department');
 
-            $settings = \App\Models\Setting::cachedAll();
-            $activeSemester = $settings->get('active_semester');
-            $activeAcademicYear = $settings->get('active_academic_year');
+            // Explicit ?semester / ?academic_year win (plain strings so archived /
+            // legacy values stay queryable); 'all' disables that filter. Absent
+            // params fall back to the active period for backwards compatibility.
+            [$activeSemester, $activeAcademicYear] = $this->resolvePeriod($request);
 
             $query = DB::table('evaluation_answers')
                 ->join('evaluations', 'evaluation_answers.evaluation_id', '=', 'evaluations.id')

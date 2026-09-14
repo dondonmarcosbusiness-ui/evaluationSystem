@@ -50,6 +50,12 @@
             <button class="refresh-pill-btn" @click="resetFilters" title="Reset Filters">
               <i class="fas fa-undo" :class="{ 'fa-spin': loading }"></i>
             </button>
+
+            <!-- Legacy history lives on the dedicated archive page -->
+            <router-link to="/archive" class="small fw-bold ms-auto" title="Review past semesters and academic years">
+              <i class="fas fa-box-archive me-1"></i>
+              View archive
+            </router-link>
           </div>
         </div>
 
@@ -203,72 +209,59 @@
             </div>
           </div>
 
-          <!-- Floating AI Button (FAB) — admins only, not faculty dashboards -->
-          <div v-if="canUseAiInsights" class="ai-fab-container no-print">
+          <!-- AI Insights Button (FAB) — admins only, not faculty dashboards -->
+          <div v-if="canUseAiInsights" v-show="!showAiOverlay" class="ai-fab-container no-print">
             <button
               class="ai-fab"
-              :class="{ 'has-insights': aiInsights, loading: loadingAi, active: showAiOverlay }"
+              :class="{ 'has-insights': aiInsights, loading: loadingAi }"
               @click="toggleAiOverlay"
-              :title="showAiOverlay ? 'Close Insights' : 'View AI Insights'"
+              title="View AI Insights"
             >
               <i v-if="loadingAi" class="fas fa-spinner fa-spin"></i>
-              <i v-else-if="showAiOverlay" class="fas fa-times"></i>
               <AiSparkleIcon v-else :size="28" variant="white" />
-              <span v-if="!aiInsights && !loadingAi && !showAiOverlay" class="ai-badge">Get AI Insights</span>
+              <span v-if="!aiInsights && !loadingAi" class="ai-badge">Get AI Insights</span>
             </button>
           </div>
 
-          <div v-if="showAiOverlay && canUseAiInsights" class="ai-top-overlay no-print" :class="{ 'is-visible': isMorphing }" @click.self="toggleAiOverlay">
+          <!-- AI Insights Modal (Bootstrap, no morph animation) -->
+          <div v-if="canUseAiInsights" ref="aiModalEl" class="modal fade no-print" tabindex="-1" aria-hidden="true">
             <div
-              class="ai-morph-panel"
-              :class="{ expanded: isMorphing, 'is-full-screen': isAiFullScreen }"
-              :style="fabRect ? {
-                '--fab-top': fabRect.top + 'px',
-                '--fab-left': fabRect.left + 'px',
-                '--fab-w': fabRect.width + 'px',
-                '--fab-h': fabRect.height + 'px',
-                '--fab-cx': (fabRect.left + fabRect.width / 2) + 'px',
-                '--fab-cy': (fabRect.top + fabRect.height / 2) + 'px',
-              } : {}"
+              class="modal-dialog modal-dialog-centered modal-dialog-scrollable"
+              :class="isAiFullScreen ? 'modal-fullscreen' : 'modal-xl'"
             >
-                <div class="ai-overlay-content border-0 h-100 w-100">
-                  <div
-                    class="ai-overlay-header ai-gradient-header py-3 px-4 d-flex justify-content-between align-items-center"
-                  >
-                    <div class="d-flex align-items-center gap-3">
-                      <div
-                        class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
-                        style="width: 42px; height: 42px"
-                      >
-                        <AiSparkleIcon :size="22" />
-                      </div>
-                      <h5 class="mb-0 fw-800 text-main">AI Feedback Analysis & Suggestions</h5>
+              <div class="modal-content">
+                <div class="modal-header">
+                  <div class="d-flex align-items-center gap-3">
+                    <div
+                      class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                      style="width: 42px; height: 42px"
+                    >
+                      <AiSparkleIcon :size="22" />
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                      <button
-                        v-if="aiInsights && !loadingAi"
-                        class="btn btn-sm btn-light py-1 px-3 rounded-pill fw-bold text-primary"
-                        @click="loadAiInsights"
-                      >
-                        <i class="fas fa-sync-alt me-1"></i>
-                        Refresh
-                      </button>
-                      <button
-                        class="btn btn-sm btn-light rounded-pill px-3 fw-bold d-flex align-items-center justify-content-center"
-                        style="height: 32px"
-                        @click="toggleAiFullScreen"
-                      >
-                        <i class="fas" :class="isAiFullScreen ? 'fa-compress' : 'fa-expand'"></i>
-                      </button>
-                      <button
-                        class="btn-close"
-                        style="margin-bottom: 2px"
-                        @click="toggleAiOverlay"
-                      ></button>
-                    </div>
+                    <h5 class="modal-title fw-800">AI Feedback Analysis & Suggestions</h5>
                   </div>
+                  <div class="d-flex align-items-center gap-2 ms-auto">
+                    <button
+                      v-if="aiInsights && !loadingAi"
+                      class="btn btn-sm btn-light py-1 px-3 rounded-pill fw-bold text-primary"
+                      @click="loadAiInsights"
+                    >
+                      <i class="fas fa-sync-alt me-1"></i>
+                      Refresh
+                    </button>
+                    <button
+                      class="btn btn-sm btn-light rounded-circle p-0 fw-bold d-flex align-items-center justify-content-center"
+                      style="width: 32px; height: 32px"
+                      @click="toggleAiFullScreen"
+                      :title="isAiFullScreen ? 'Exit fullscreen' : 'Fullscreen'"
+                    >
+                      <i class="fas" :class="isAiFullScreen ? 'fa-compress' : 'fa-expand'"></i>
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                </div>
 
-                  <div class="ai-overlay-body p-4">
+                <div class="modal-body ai-modal-body">
                     <div v-if="loadingAi" class="text-center py-5">
                       <div class="spinner-border text-primary mb-3" style="width: 3.5rem; height: 3.5rem"></div>
                       <h4 class="fw-bold">Generating Analytics...</h4>
@@ -533,10 +526,10 @@
                         Start Analyzing
                       </button>
                     </div>
-                  </div>
                 </div>
               </div>
             </div>
+          </div>
         </div>
 
         <!-- Empty State -->
@@ -565,7 +558,9 @@ import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
 import AiSparkleIcon from "../components/AiSparkleIcon.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
+import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 import api from "../services/api.js";
+import { courseDepartments } from "../helpers/academic.js";
 
 const can = inject("can");
 const route = useRoute();
@@ -582,8 +577,7 @@ const tableScrolled = ref(false);
 const showAiOverlay = ref(false);
 const isAiFullScreen = ref(false);
 const aiError = ref(null);
-const fabRect = ref(null);
-const isMorphing = ref(false);
+const { modalEl: aiModalEl } = useBootstrapModal(showAiOverlay);
 
 function onTableScroll(e) {
   tableScrolled.value = e.target.scrollTop > 0;
@@ -598,12 +592,10 @@ const departmentOptions = computed(() => [
   ...departments.value.map(d => ({ label: d, value: d }))
 ]);
 
-const departments = computed(() => {
-  const depts = (facultyList.value || [])
-    .map(f => f.department)
-    .filter(d => d);
-  return [...new Set(depts)].sort();
-});
+// Department filter options come from the Course List (single source of
+// truth) — never from faculty records, which can hold stale departments
+// whose courses were deleted.
+const departments = ref([]);
 
 async function resetFilters() {
   searchQuery.value = "";
@@ -612,31 +604,9 @@ async function resetFilters() {
   await loadResults();
 }
 
-function toggleAiOverlay(event) {
-  if (!showAiOverlay.value) {
-    const btn = event?.currentTarget?.closest('.ai-fab');
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
-      fabRect.value = {
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      };
-      showAiOverlay.value = true;
-      requestAnimationFrame(() => {
-        isMorphing.value = true;
-      });
-    } else {
-      showAiOverlay.value = true;
-    }
-  } else {
-    isMorphing.value = false;
-    setTimeout(() => {
-      showAiOverlay.value = false;
-      isAiFullScreen.value = false;
-    }, 250);
-  }
+function toggleAiOverlay() {
+  showAiOverlay.value = !showAiOverlay.value;
+  if (!showAiOverlay.value) isAiFullScreen.value = false;
 }
 
 function toggleAiFullScreen() {
@@ -688,8 +658,12 @@ const facultyOptions = computed(() => {
 async function fetchEvaluateesList() {
   try {
     // Only faculty lists are supported now (staff reports removed)
-    const res = await api.get("/faculty/all");
-    facultyList.value = res.data;
+    const [facultyRes, coursesRes] = await Promise.all([
+      api.get("/faculty/all"),
+      api.get("/courses")
+    ]);
+    facultyList.value = facultyRes.data;
+    departments.value = courseDepartments(coursesRes.data);
   } catch (e) {
     console.error("Error fetching evaluatees list:", e);
   }
@@ -974,21 +948,23 @@ function badgeClass(interpretation) {
 .search-pill-container {
   display: flex;
   align-items: center;
-  background: white;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 50px;
-  padding: 0.5rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 16px;
+  height: 40px;
+  min-height: 40px;
   transition: all 0.3s ease;
 }
 
 [data-theme="dark"] .search-pill-container {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
 }
 
 .search-pill-container:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1);
+  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
 }
 
 .search-icon {
@@ -1006,37 +982,49 @@ function badgeClass(interpretation) {
 .search-input-field {
   background: transparent;
   border: none;
-  color: #1e293b;
+  color: var(--text-main);
   width: 100%;
-  font-size: 0.95rem;
-  font-weight: 400;
+  font-size: 14px;
+  font-weight: 500;
   outline: none;
 }
 
 [data-theme="dark"] .search-input-field {
-  color: white;
+  color: var(--text-main);
 }
 
 .search-input-field::placeholder {
-  color: #94a3b8;
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 [data-theme="dark"] .search-input-field::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .refresh-pill-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  background: rgba(0, 0, 0, 0.05);
-  color: rgba(0, 0, 0, 0.6);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   cursor: pointer;
+}
+
+.refresh-pill-btn:hover {
+  background: var(--primary);
+  color: white !important;
+  border-color: var(--primary);
+}
+
+.refresh-pill-btn:hover i {
+  color: white !important;
 }
 
 [data-theme="dark"] .refresh-pill-btn {
@@ -1056,19 +1044,12 @@ function badgeClass(interpretation) {
   position: fixed;
   bottom: 2.5rem;
   right: 2.5rem;
-  z-index: 2100;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.ai-fab-container:has(~ .ai-top-overlay.is-visible) {
-  opacity: 0;
-  transform: scale(0.5);
-  pointer-events: none;
+  z-index: 1040;
 }
 
 .ai-fab {
-  width: 65px;
-  height: 65px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: var(--primary);
   color: white;
@@ -1077,50 +1058,34 @@ function badgeClass(interpretation) {
   align-items: center;
   justify-content: center;
   font-size: 1.75rem;
-  box-shadow: 0 10px 30px -5px rgba(25, 25, 112, 0.5);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 12px 28px -8px rgba(25, 25, 112, 0.55);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
   cursor: pointer;
   position: relative;
-  animation: fabPulse 2.5s ease-in-out infinite;
-}
-
-@keyframes fabPulse {
-  0%, 100% {
-    box-shadow: 0 10px 30px -5px rgba(25, 25, 112, 0.5);
-  }
-  50% {
-    box-shadow: 0 10px 30px -5px rgba(25, 25, 112, 0.5), 0 0 0 12px rgba(25, 25, 112, 0.15);
-  }
 }
 
 .ai-fab:hover {
-  transform: scale(1.1) rotate(5deg);
+  transform: translateY(-3px);
   background: #232380;
+  box-shadow: 0 16px 32px -8px rgba(25, 25, 112, 0.6);
 }
 
-.ai-fab.active {
-  transform: rotate(90deg);
-  background: #374151;
-  box-shadow: none;
-}
-
-.ai-fab.loading i {
-  animation: spin 2s linear infinite;
+.ai-fab:active {
+  transform: translateY(0) scale(0.96);
 }
 
 .ai-badge {
   position: absolute;
-  top: -45px;
-  right: -10px;
-  background: #f87171;
+  bottom: calc(100% + 10px);
+  right: 0;
+  background: var(--primary);
   color: white;
-  font-size: 0.7rem;
-  font-weight: 800;
-  padding: 0.4rem 0.8rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(248, 113, 113, 0.4);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px -4px rgba(25, 25, 112, 0.5);
   white-space: nowrap;
-  animation: floatBubble 3s ease-in-out infinite;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1129,150 +1094,16 @@ function badgeClass(interpretation) {
 .ai-badge::after {
   content: "";
   position: absolute;
-  bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 6px 6px 0;
+  bottom: -5px;
+  right: 22px;
+  border-width: 5px 5px 0;
   border-style: solid;
-  border-color: #f87171 transparent transparent;
+  border-color: var(--primary) transparent transparent;
 }
 
-@keyframes floatBubble {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-5px) scale(1.05);
-  }
-}
-
-.ai-top-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0);
-  backdrop-filter: blur(0px);
-  z-index: 9999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1.5rem;
-  transition: background 0.25s ease, backdrop-filter 0.25s ease;
-  pointer-events: none;
-}
-
-.ai-top-overlay.is-visible {
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(12px);
-  pointer-events: auto;
-}
-
-.ai-morph-panel {
-  position: fixed;
-  top: var(--fab-top, 50%);
-  left: var(--fab-left, 50%);
-  width: var(--fab-w, 65px);
-  height: var(--fab-h, 65px);
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 10px 30px -5px rgba(25, 25, 112, 0.5);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 10000;
-}
-
-.ai-morph-panel.expanded {
-  top: 50%;
-  left: 50%;
-  width: min(1200px, calc(100vw - 3rem));
-  height: min(90vh, calc(100vh - 3rem));
-  transform: translate(-50%, -50%);
-  border-radius: var(--card-radius);
-  background: var(--bg-card);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-}
-
-.ai-morph-panel.is-full-screen.expanded {
-  width: 98vw;
-  height: 96vh;
-}
-
-.ai-morph-panel::before {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: inherit;
-  padding: 3px;
-  background: conic-gradient(from 0deg, transparent 20%, #191970, #191970, #8b5cf6, transparent 80%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  z-index: -1;
-}
-
-.ai-morph-panel.expanded::before {
-  opacity: 1;
-  transition: opacity 0.25s ease 0.3s;
-}
-
-@keyframes rotateBorder {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.ai-morph-panel .ai-overlay-content {
-  background: var(--bg-card);
-  border-radius: inherit;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 0.2s ease 0.15s;
-}
-
-.ai-morph-panel.expanded .ai-overlay-content {
-  opacity: 1;
-}
-
-.ai-gradient-header {
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.ai-overlay-body {
-  overflow-y: auto;
-  flex: 1;
+/* AI modal body keeps the soft tinted backdrop */
+.ai-modal-body {
   background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%);
-  position: relative;
-}
-
-.ai-overlay-body::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at top right, rgba(139, 92, 246, 0.03), transparent 400px),
-    radial-gradient(circle at bottom left, rgba(25, 25, 112, 0.03), transparent 400px);
-  pointer-events: none;
-}
-
-.ai-overlay-body::-webkit-scrollbar {
-  width: 8px;
-}
-.ai-overlay-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-.ai-overlay-body::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
 }
 
 .suggestion-scroll::-webkit-scrollbar {
@@ -1489,31 +1320,6 @@ thead th:last-child { border-right: none; }
     width: 56px;
     height: 56px;
     font-size: 1.5rem;
-  }
-
-  .ai-top-overlay {
-    padding: 0.5rem;
-    align-items: flex-end;
-  }
-
-  .ai-animated-border-wrapper {
-    height: 95vh;
-    max-height: 95vh;
-    border-radius: 12px 12px 0 0;
-  }
-
-  .ai-overlay-header {
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    padding: 1rem !important;
-  }
-
-  .ai-overlay-header h5 {
-    font-size: 0.95rem;
-  }
-
-  .ai-overlay-body {
-    padding: 1rem !important;
   }
 }
 </style>

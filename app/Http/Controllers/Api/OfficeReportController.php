@@ -89,6 +89,19 @@ class OfficeReportController extends Controller
                 ->pluck('count', 'visitor_type')
                 ->map(fn($count) => (int) $count);
 
+            // Daily per-type counts for the GitHub-style visitor heatmap (last 26 weeks).
+            $heatmapDays = 182;
+            $heatmapStart = now()->subDays($heatmapDays - 1)->startOfDay();
+            $heatmapRows = OfficeFeedback::where('submitted_at', '>=', $heatmapStart)
+                ->selectRaw('DATE(submitted_at) as day, visitor_type, count(*) as count')
+                ->groupBy(DB::raw('DATE(submitted_at)'), 'visitor_type')
+                ->get();
+
+            $visitorHeatmap = [];
+            foreach ($heatmapRows as $row) {
+                $visitorHeatmap[$row->day][$row->visitor_type] = (int) $row->count;
+            }
+
             return response()->json([
                 'total_offices' => $totalOffices,
                 'active_offices' => $activeOffices,
@@ -102,6 +115,9 @@ class OfficeReportController extends Controller
                 'recent_feedback' => $recentFeedback,
                 'monthly_stats' => $monthlyStats,
                 'visitor_type_distribution' => $visitorTypeDistribution,
+                'visitor_heatmap' => $visitorHeatmap,
+                'visitor_heatmap_start' => $heatmapStart->toDateString(),
+                'visitor_heatmap_days' => $heatmapDays,
             ]);
         } catch (\Exception $e) {
             Log::error('Office dashboard stats error: ' . $e->getMessage());
@@ -157,7 +173,7 @@ class OfficeReportController extends Controller
             $feedbacks = (clone $base)
                 ->with('answers.question')
                 ->orderByDesc('submitted_at')
-                ->paginate(20);
+                ->paginate(min(max((int) $request->input('per_page', 20), 1), 100));
 
             $ids = (clone $base)->pluck('id');
 
@@ -246,7 +262,7 @@ class OfficeReportController extends Controller
                 ->when($request->query('visitor_type'), fn($q, $v) => $q->where('visitor_type', $v))
                 ->orderByDesc('submitted_at');
 
-            return response()->json($query->paginate(15));
+            return response()->json($query->paginate(min(max((int) $request->input('per_page', 15), 1), 100)));
         } catch (\Exception $e) {
             Log::error('Office report feedbacks error: ' . $e->getMessage());
             return response()->json(['message' => 'System error'], 500);

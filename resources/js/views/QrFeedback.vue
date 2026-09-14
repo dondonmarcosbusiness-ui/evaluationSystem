@@ -162,10 +162,10 @@ async function submitFeedback() {
 .office-icon { width: 56px; height: 56px; border-radius: 16px; background: rgba(25, 25, 112, 0.1); color: #191970; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
 .form-section { background: #fff; border-radius: 16px; padding: 1.25rem; border: 1px solid #e2e8f0; }
 .label-custom { display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.65rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; }
-.input-custom { width: 100%; padding: 0.75rem 1.15rem; border-radius: 0!important; border: 2px solid #e2e8f0; background: #fff; color: #1e293b; font-size: 0.9rem; transition: all 0.2s ease; }
-.input-custom:focus { outline: none; border-color: #191970; box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1); }
+.input-custom { width: 100%; padding: 10px 16px; border-radius: 8px !important; border: 1px solid #e2e8f0; background: #fff; color: #1e293b; font-size: 14px; min-height: 40px; transition: all 0.2s ease; }
+.input-custom:focus { outline: none; border-color: #191970; box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15); }
 .visitor-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-.visitor-btn { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.75rem 0.5rem; border: 2px solid #e2e8f0; border-radius: 12px; background: #fff; cursor: pointer; transition: all 0.2s; font-size: 0.75rem; font-weight: 600; color: #6b7280; }
+.visitor-btn { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.75rem 0.5rem; border: 2px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; transition: all 0.2s; font-size: 0.75rem; font-weight: 600; color: #6b7280; }
 .visitor-btn i { font-size: 1.1rem; }
 .visitor-btn.active { border-color: #191970; background: rgba(25, 25, 112, 0.05); color: #191970; }
 .category-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
@@ -174,11 +174,11 @@ async function submitFeedback() {
 .question-row:last-child { border-bottom: none; }
 .question-text { font-size: 0.85rem; font-weight: 500; color: #1e293b; }
 .yesno-group { display: flex; gap: 8px; }
-.yesno-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1.25rem; border: 2px solid #e2e8f0; border-radius: 10px; background: #fff; color: #6b7280; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.yesno-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1.25rem; border: 2px solid #e2e8f0; border-radius: 8px; background: #fff; color: #6b7280; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
 .yesno-btn:hover { border-color: #191970; color: #1e293b; }
 .yesno-btn.yes.active { border-color: #22c55e; background: rgba(34, 197, 94, 0.08); color: #16a34a; }
 .yesno-btn.no.active { border-color: #ef4444; background: rgba(239, 68, 68, 0.08); color: #dc2626; }
 .success-icon { font-size: 4rem; color: #22c55e; }
 .error-icon { font-size: 4rem; color: #ef4444; }
-.alert { border-radius: 12px; }
+.alert { border-radius: 8px; }
 </style>

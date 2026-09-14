@@ -81,6 +81,16 @@
               />
             </div>
 
+            <!-- Year Level Filter -->
+            <div style="width: 170px">
+              <CustomSelect
+                v-model="selectedYearFilter"
+                :options="yearLevelOptions"
+                placeholder="All Year Levels"
+                @change="loadResults"
+              />
+            </div>
+
             <!-- Main Faculty Selector -->
             <div style="width: 350px">
               <CustomSelect
@@ -99,13 +109,13 @@
             <div class="flex-grow-1"></div>
 
             <button
-              class="btn btn-primary d-flex align-items-center gap-2 shadow-sm px-4 text-white"
+              class="btn btn-primary d-flex align-items-center justify-content-center text-white"
               @click="printReport"
               :disabled="!detailedResults || loading"
-              style="background-color: #191970; border-color: #191970; border-radius: 50px; height: 42px"
+              title="Print Report"
+              style="background-color: #191970; border-color: #191970; border-radius: 8px; width: 42px; height: 42px; flex-shrink: 0"
             >
               <i class="fas fa-print text-white"></i>
-              <span class="fw-bold text-white">Print Report</span>
             </button>
           </div>
         </div>
@@ -139,12 +149,12 @@
             <div class="col-12 col-md-4">
               <div class="stat-card p-3 h-100 shadow-none">
                 <div class="d-flex align-items-center gap-3">
-                  <div class="stat-icon orange">
-                    <i class="fas fa-star text-warning"></i>
+                  <div class="stat-icon">
+                    <i class="fas fa-star"></i>
                   </div>
                   <div>
                     <div class="stat-label">Overall SET Rating</div>
-                    <div class="stat-value text-warning">
+                    <div class="stat-value">
                       {{ detailedResults.overall_set_rating.toFixed(2) }}
                     </div>
                   </div>
@@ -154,12 +164,12 @@
             <div class="col-12 col-md-4">
               <div class="stat-card p-3 h-100 shadow-none">
                 <div class="d-flex align-items-center gap-3">
-                  <div class="stat-icon blue">
-                    <i class="fas fa-users text-primary"></i>
+                  <div class="stat-icon">
+                    <i class="fas fa-users"></i>
                   </div>
                   <div>
                     <div class="stat-label">Total Respondents</div>
-                    <div class="stat-value text-primary">
+                    <div class="stat-value">
                       {{ detailedResults.total_students }}
                     </div>
                   </div>
@@ -169,12 +179,12 @@
             <div class="col-12 col-md-4">
               <div class="stat-card p-3 h-100 shadow-none">
                 <div class="d-flex align-items-center gap-3">
-                  <div class="stat-icon green">
-                    <i class="fas fa-calculator text-success"></i>
+                  <div class="stat-icon">
+                    <i class="fas fa-calculator"></i>
                   </div>
                   <div>
                     <div class="stat-label">Weighted Score</div>
-                    <div class="stat-value text-success">
+                    <div class="stat-value">
                       {{ Number(detailedResults.total_weighted_score).toLocaleString() }}
                     </div>
                   </div>
@@ -381,6 +391,7 @@ import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
+import { courseDepartments } from "../helpers/academic.js";
 
 const can = inject("can");
 const route = useRoute();
@@ -402,7 +413,17 @@ function onTableScroll(e) {
 // Filters
 const searchQuery = ref("");
 const selectedDepartmentFilter = ref("all");
+const selectedYearFilter = ref("all");
 const systemSettings = ref(null);
+
+const yearLevelOptions = [
+  { label: "All Year Levels", value: "all" },
+  { label: "1st Year", value: "1st" },
+  { label: "2nd Year", value: "2nd" },
+  { label: "3rd Year", value: "3rd" },
+  { label: "4th Year", value: "4th" },
+  { label: "Irregular", value: "Irregular" },
+];
 
 const safeFacultyList = computed(() => {
   return (facultyList.value || []).filter((f) => f && f.id);
@@ -480,12 +501,12 @@ const facultyOptions = computed(() => {
 });
 
 const departmentOptions = computed(() => {
-  const depts = (facultyList.value || [])
-    .map(f => f.department)
-    .filter(d => d);
+  // Department filter options come from the Course List (single source of
+  // truth) — never from faculty records, which can hold stale departments
+  // whose courses were deleted.
   return [
     { label: "All Departments", value: "all" },
-    ...[...new Set(depts)].sort().map(d => ({ label: d, value: d }))
+    ...courseDepartments(safeCoursesList.value).map(d => ({ label: d, value: d }))
   ];
 });
 
@@ -575,6 +596,9 @@ async function loadResults() {
     if (evaluateeType.value === "faculty" && selectedDepartmentFilter.value && selectedDepartmentFilter.value !== "all") {
       params.department = selectedDepartmentFilter.value;
     }
+    if (selectedYearFilter.value && selectedYearFilter.value !== "all") {
+      params.year_level = selectedYearFilter.value;
+    }
     const res = await api.get(`/reports/evaluatee/${selectedFacultyId.value}`, { params });
     detailedResults.value = res.data;
   } catch (e) {
@@ -587,6 +611,7 @@ async function loadResults() {
 async function resetFilters() {
   searchQuery.value = "";
   selectedDepartmentFilter.value = "all";
+  selectedYearFilter.value = "all";
   selectedFacultyId.value = "all";
   await loadResults();
 }
@@ -831,21 +856,23 @@ function getRatingBadge(rating) {
 .search-pill-container {
   display: flex;
   align-items: center;
-  background: white;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 50px;
-  padding: 0.5rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 16px;
+  height: 40px;
+  min-height: 40px;
   transition: all 0.3s ease;
 }
 
 [data-theme="dark"] .search-pill-container {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
 }
 
 .search-pill-container:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.1);
+  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
 }
 
 .search-icon {
@@ -863,50 +890,55 @@ function getRatingBadge(rating) {
 .search-input-field {
   background: transparent;
   border: none;
-  color: #1e293b;
+  color: var(--text-main);
   width: 100%;
-  font-size: 0.95rem;
-  font-weight: 400;
+  font-size: 14px;
+  font-weight: 500;
   outline: none;
 }
 
 [data-theme="dark"] .search-input-field {
-  color: white;
+  color: var(--text-main);
 }
 
 .search-input-field::placeholder {
-  color: #94a3b8;
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 [data-theme="dark"] .search-input-field::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .refresh-pill-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  background: rgba(0, 0, 0, 0.05);
-  color: rgba(0, 0, 0, 0.6);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   cursor: pointer;
 }
 
 [data-theme="dark"] .refresh-pill-btn {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
 }
 
 .refresh-pill-btn:hover {
-  background: rgba(25, 25, 112, 0.1);
-  color: var(--primary);
+  background: var(--primary);
+  color: white !important;
   border-color: var(--primary);
-  transform: rotate(-30deg);
+}
+
+.refresh-pill-btn:hover i {
+  color: white !important;
 }
 .ls-1 {
   letter-spacing: 1px;

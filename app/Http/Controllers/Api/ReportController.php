@@ -49,6 +49,134 @@ class ReportController extends Controller
         $query->where($table . '.evaluatee_id', $ownEvaluatee['id']);
     }
 
+    /**
+     * Resolve the reporting period. Explicit ?semester / ?academic_year query
+     * params win (plain strings, never validated against the Settings option
+     * lists so archived/legacy values stay queryable); 'all' disables that
+     * filter. Absent params fall back to the active period for BC.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function resolvePeriod(Request $request): array
+    {
+        $settings = \App\Models\Setting::cachedAll();
+        $semester = $request->input('semester', $request->query('semester'));
+        $academicYear = $request->input('academic_year', $request->query('academic_year'));
+        if ($semester === null) {
+            $semester = $settings->get('active_semester');
+        }
+        if ($academicYear === null) {
+            $academicYear = $settings->get('active_academic_year');
+        }
+        if ($semester === 'all') {
+            $semester = null;
+        }
+        if ($academicYear === 'all') {
+            $academicYear = null;
+        }
+        if (is_string($semester)) {
+            $semester = trim($semester);
+            if ($semester === '') {
+                $semester = null;
+            }
+        } elseif ($semester !== null) {
+            $semester = (string) $semester;
+        }
+        if (is_string($academicYear)) {
+            $academicYear = trim($academicYear);
+            if ($academicYear === '') {
+                $academicYear = null;
+            }
+        } elseif ($academicYear !== null) {
+            $academicYear = (string) $academicYear;
+        }
+        // Settings value cast may return arrays for malformed rows; only strings are valid periods.
+        if (!is_string($semester)) {
+            $semester = null;
+        }
+        if (!is_string($academicYear)) {
+            $academicYear = null;
+        }
+        return [$semester, $academicYear];
+    }
+
+    /**
+     * Union of configured, archived, and actually-used academic periods.
+     * Powers the dedicated archive page filters and the Settings "in use"
+     * counts, so a semester/year removed from the active dropdowns can
+     * still be reviewed through history.
+     */
+    public function academicPeriods()
+    {
+        $settings = \App\Models\Setting::cachedAll();
+        $asList = function ($v) {
+            if (is_array($v)) {
+                return array_values(array_filter(array_map('trim', array_filter($v, 'is_string')), fn($s) => $s !== ''));
+            }
+            if (is_string($v) && trim($v) !== '') {
+                $decoded = json_decode($v, true);
+                if (is_array($decoded)) {
+                    return array_values(array_filter(array_map('trim', array_filter($decoded, 'is_string')), fn($s) => $s !== ''));
+                }
+                return [trim($v)];
+            }
+            return [];
+        };
+
+        $semesters = $asList($settings->get('semester_options'));
+        $archivedSemesters = $asList($settings->get('archived_semester_options'));
+        $years = $asList($settings->get('academic_year_options'));
+        $archivedYears = $asList($settings->get('archived_academic_year_options'));
+
+        $used = DB::table('evaluations')
+            ->select('semester', 'academic_year', DB::raw('COUNT(*) as evaluations_count'))
+            ->whereNotNull('semester')->where('semester', '!=', '')
+            ->whereNotNull('academic_year')->where('academic_year', '!=', '')
+            ->groupBy('semester', 'academic_year')
+            ->orderBy('academic_year', 'desc')
+            ->orderBy('semester')
+            ->get();
+
+        $usedSemesters = [];
+        $usedYears = [];
+        $semesterUsage = [];
+        $yearUsage = [];
+        foreach ($used as $row) {
+            if (!in_array($row->semester, $usedSemesters, true)) {
+                $usedSemesters[] = $row->semester;
+            }
+            if (!in_array($row->academic_year, $usedYears, true)) {
+                $usedYears[] = $row->academic_year;
+            }
+            $semesterUsage[$row->semester] = ($semesterUsage[$row->semester] ?? 0) + (int) $row->evaluations_count;
+            $yearUsage[$row->academic_year] = ($yearUsage[$row->academic_year] ?? 0) + (int) $row->evaluations_count;
+        }
+
+        $merge = function (array ...$lists) {
+            $out = [];
+            foreach ($lists as $list) {
+                foreach ($list as $v) {
+                    if (!in_array($v, $out, true)) {
+                        $out[] = $v;
+                    }
+                }
+            }
+            return $out;
+        };
+
+        return response()->json([
+            'active_semester' => $settings->get('active_semester'),
+            'active_academic_year' => $settings->get('active_academic_year'),
+            'semesters' => $merge($semesters, $archivedSemesters, $usedSemesters),
+            'academic_years' => $merge($years, $archivedYears, $usedYears),
+            'archived_semesters' => $archivedSemesters,
+            'archived_academic_years' => $archivedYears,
+            'used_periods' => $used,
+            'semester_usage' => $semesterUsage,
+            'academic_year_usage' => $yearUsage,
+        ]);
+    }
+
     public function dashboardStats(Request $request)
     {
         $user = $request->user();
@@ -57,8 +185,7 @@ class ReportController extends Controller
         $scopedEvaluateeId = ($ownEvaluatee && $ownEvaluatee['type'] === $evaluateeType) ? $ownEvaluatee['id'] : null;
 
         $settings = \App\Models\Setting::cachedAll();
-        $activeSemester = $settings->get('active_semester');
-        $activeAcademicYear = $settings->get('active_academic_year');
+        [$activeSemester, $activeAcademicYear] = $this->resolvePeriod($request);
 
         $query = DB::table('evaluation_answers')
             ->join('evaluation_questions', 'evaluation_answers.question_id', '=', 'evaluation_questions.id')
@@ -193,12 +320,10 @@ class ReportController extends Controller
         ]);
     }
 
-    public function facultySummary()
+    public function facultySummary(Request $request)
     {
-        // Fetch active period settings
-        $settings = \App\Models\Setting::cachedAll();
-        $activeSemester = $settings->get('active_semester');
-        $activeAcademicYear = $settings->get('active_academic_year');
+        // Explicit ?semester / ?academic_year win; absent params fall back to active period.
+        [$activeSemester, $activeAcademicYear] = $this->resolvePeriod($request);
 
         $scores = DB::table('evaluation_answers')
             ->join('evaluations', 'evaluation_answers.evaluation_id', '=', 'evaluations.id')
@@ -236,10 +361,8 @@ class ReportController extends Controller
         $isAll = $facultyId === 'all';
         $departmentFilter = $request->query('department');
         
-        // Fetch active period settings
-        $settings = \App\Models\Setting::cachedAll();
-        $activeSemester = $settings->get('active_semester');
-        $activeAcademicYear = $settings->get('active_academic_year');
+        // Explicit ?semester / ?academic_year win; absent params fall back to active period.
+        [$activeSemester, $activeAcademicYear] = $this->resolvePeriod($request);
 
         if (!$isAll) {
             $faculty = Faculty::with('user')->findOrFail($facultyId);
@@ -280,6 +403,15 @@ class ReportController extends Controller
             $query->where('faculty.department', $departmentFilter);
         }
 
+        // Filter by respondent year level; untagged students match every year.
+        $yearLevelFilter = $request->query('year_level');
+        if ($yearLevelFilter && $yearLevelFilter !== 'all') {
+            $query->where(function ($q) use ($yearLevelFilter) {
+                $q->where('students.year_level', $yearLevelFilter)
+                    ->orWhereNull('students.year_level');
+            });
+        }
+
         // Double check filtering in main query if joinSub doesn't already cover it sufficiently for records
         if ($activeSemester) {
             $query->where('evaluations.semester', $activeSemester);
@@ -290,12 +422,13 @@ class ReportController extends Controller
 
         $groupedStats = $query->select(
                 'students.course as student_course',
+                'students.year_level as student_year',
                 'evaluations.subject_code',
                 'evaluations.year_section',
                 DB::raw('COUNT(evaluations.student_id) as no_of_students'),
-                DB::raw('ROUND(AVG(ea.avg_rating) * 20, 2) as average_set_rating') 
+                DB::raw('ROUND(AVG(ea.avg_rating) * 20, 2) as average_set_rating')
             )
-            ->groupBy('students.course', 'evaluations.subject_code', 'evaluations.year_section')
+            ->groupBy('students.course', 'students.year_level', 'evaluations.subject_code', 'evaluations.year_section')
             ->get();
 
         $courseSummaries = [];
@@ -318,6 +451,7 @@ class ReportController extends Controller
             $courseSummaries[$courseInfo]['rows'][] = [
                 'course_code' => $stat->subject_code,
                 'year_section' => $stat->year_section,
+                'student_year' => $stat->student_year,
                 'no_of_students' => $stat->no_of_students,
                 'average_set_rating' => $stat->average_set_rating,
                 'weighted_set_score' => $weightedScore
@@ -380,9 +514,8 @@ class ReportController extends Controller
         $departmentFilter = $request->query('department');
         $evaluateeType    = $request->input('evaluatee_type', 'faculty');
 
-        $settings           = \App\Models\Setting::cachedAll();
-        $activeSemester     = $settings->get('active_semester');
-        $activeAcademicYear = $settings->get('active_academic_year');
+        // Explicit ?semester / ?academic_year win; absent params fall back to active period.
+        [$activeSemester, $activeAcademicYear] = $this->resolvePeriod($request);
 
         // Build stats query
         $currentStatsQuery = DB::table('evaluation_answers')
@@ -583,7 +716,7 @@ class ReportController extends Controller
             )
             ->groupBy('faculty.id', 'users.name', 'faculty.department')
             ->orderBy('created_at', 'desc')
-            ->paginate($request->per_page ?? 10);
+            ->paginate(min(max((int) ($request->per_page ?? 10), 1), 100));
 
         $facultyIds = $feedbacks->pluck('id')->all();
 

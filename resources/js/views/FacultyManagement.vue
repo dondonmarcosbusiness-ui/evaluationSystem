@@ -87,7 +87,7 @@
                     <th>Course</th>
                     <th>Position</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th class="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -136,34 +136,42 @@
                     <td>{{ f.position }}</td>
                     <td>
                       <span class="badge-status" :class="f.user?.is_active ? 'active' : 'inactive'">
-                        <i class="fas fa-circle me-1" style="font-size: 0.5rem; vertical-align: middle"></i>
+                        <i class="fas fa-circle me-1"></i>
                         {{ f.user?.is_active ? "Active" : "Inactive" }}
                       </span>
                     </td>
-                    <td>
-                      <div class="d-flex gap-2 justify-content-start flex-nowrap align-items-center">
-                        <button class="btn-icon-action primary" @click="openEditModal(f)" title="Edit Faculty">
-                          <i class="fas fa-edit"></i>
-                        </button>
+                    <td class="text-center">
+                      <div
+                        class="dropdown action-dropdown"
+                        :class="{ show: openMenuId === f.id, 'drop-up': i >= faculty.length - 2 }"
+                      >
                         <button
-                          class="btn-icon-action"
-                          :class="f.user?.is_active ? 'warning' : 'success'"
-                          @click="toggleActive(f)"
-                          :title="f.user?.is_active ? 'Deactivate' : 'Activate'"
+                          class="action-trigger"
+                          @click.stop="toggleMenu(f.id)"
+                          title="Actions"
+                          aria-label="Row actions"
                         >
-                          <i :class="f.user?.is_active ? 'fas fa-ban' : 'fas fa-check-circle'"></i>
+                          <i class="fas fa-ellipsis-v"></i>
                         </button>
-                        <button class="btn-icon-action info" @click="openRBACModal(f.user)" title="Manage Access">
-                          <i class="fas fa-user-shield"></i>
-                        </button>
-                        <button class="btn-icon-action danger" @click="deleteFaculty(f.id)" title="Delete Faculty">
-                          <i class="fas fa-trash"></i>
-                        </button>
+                        <div v-show="openMenuId === f.id" class="action-menu">
+                          <button class="action-menu-item" @click="openEditModal(f)">
+                            <span>Edit</span>
+                          </button>
+                          <button class="action-menu-item" @click="toggleActive(f)">
+                            <span>{{ f.user?.is_active ? "Deactivate" : "Activate" }}</span>
+                          </button>
+                          <button class="action-menu-item" @click="openRBACModal(f.user)">
+                            <span>Manage Access</span>
+                          </button>
+                          <button class="action-menu-item danger" @click="deleteFaculty(f.id)">
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
                   <tr v-if="!faculty.length">
-                    <td colspan="9" class="text-center text-muted py-4">No faculty records yet.</td>
+                    <td colspan="10" class="text-center text-muted py-4">No faculty records yet.</td>
                   </tr>
                 </tbody>
               </table>
@@ -171,26 +179,29 @@
             </Transition>
 
             <!-- Pagination -->
-            <Pagination :pagination="pagination" @change-page="fetchFaculty" />
+            <Pagination
+              :pagination="pagination"
+              :per-page="perPage"
+              @change-page="fetchFaculty"
+              @update:per-page="changePerPage"
+            />
           </div>
         </div>
       </div>
 
-      <!-- Add/Edit Modal (Modernized) -->
-      <Transition name="fade">
-        <div v-if="showModal" class="modal-backdrop-custom" @click="closeModal"></div>
-      </Transition>
-
-      <Transition name="slide-up">
-        <div v-if="showModal" class="custom-modal faculty">
-          <div class="card modal-card">
-            <div class="modal-header-custom indigo">
+      <!-- Add/Edit Modal -->
+      <div ref="facultyModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
               <div class="d-flex align-items-center gap-3">
                 <div class="profile-avatar-icon bg-indigo bg-opacity-10 text-indigo">
                   <i class="fas fa-chalkboard-teacher"></i>
                 </div>
                 <div>
-                  <h5 class="fw-800 mb-0">{{ editMode ? "Update Faculty Profile" : "Register Faculty Member" }}</h5>
+                  <h5 class="modal-title fw-800 mb-0">
+                    {{ editMode ? "Update Faculty Profile" : "Register Faculty Member" }}
+                  </h5>
                   <p class="text-muted small mb-0">
                     {{
                       editMode
@@ -200,12 +211,10 @@
                   </p>
                 </div>
               </div>
-              <button class="btn-close-custom" @click="closeModal">
-                <i class="fas fa-times"></i>
-              </button>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body-custom">
+            <div class="modal-body">
               <div v-if="formError" class="alert alert-danger-custom mb-4">
                 <i class="fas fa-exclamation-circle me-2"></i>
                 {{ formError }}
@@ -352,62 +361,60 @@
               </div>
             </div>
 
-            <div class="modal-footer-custom bg-light bg-opacity-25">
-              <button class="btn btn-light-custom px-4" @click="closeModal">Discard</button>
-              <button class="btn btn-indigo-custom px-4" @click="saveFaculty" :disabled="saving">
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
+              <button type="button" class="btn btn-primary" @click="saveFaculty" :disabled="saving">
                 <i class="fas fa-save me-2"></i>
                 {{ saving ? "Processing..." : editMode ? "Save Changes" : "Register Faculty" }}
               </button>
             </div>
           </div>
         </div>
-      </Transition>
+      </div>
 
       <!-- Upload CSV Modal -->
-      <div
-        v-if="showUploadModal"
-        class="modal d-flex"
-        style="
-          background: rgba(0, 0, 0, 0.5);
-          position: fixed;
-          inset: 0;
-          z-index: 2000;
-          align-items: center;
-          justify-content: center;
-        "
-      >
-        <div class="card" style="width: 500px; max-width: 95vw">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <span>
-              <i class="fas fa-file-upload me-2 text-success"></i>
-              Upload CSV
-            </span>
-            <button class="btn-close" @click="showUploadModal = false"></button>
-          </div>
-          <div class="card-body">
-            <div v-if="uploadError" class="alert alert-danger small py-2">
-              {{ uploadError }}
+      <div ref="uploadModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">
+                <i class="fas fa-file-upload me-2 text-success"></i>
+                Upload CSV
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div v-if="uploadSuccess" class="alert alert-success small py-2">
-              {{ uploadSuccess }}
+            <div class="modal-body">
+              <div v-if="uploadError" class="alert alert-danger small py-2">
+                {{ uploadError }}
+              </div>
+              <div v-if="uploadSuccess" class="alert alert-success small py-2">
+                {{ uploadSuccess }}
+              </div>
+              <p class="small text-muted mb-2">
+                Ensure your CSV has exactly these headers:
+                <strong>id number, last name, first name, middle name, position, department, course</strong>
+                . Default password will be the
+                <strong>ID Number</strong>
+                .
+              </p>
+              <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                <button class="btn btn-outline-success btn-sm" @click="downloadTemplate" type="button">
+                  <i class="fas fa-download me-2"></i>
+                  Download CSV Template
+                </button>
+                <small class="text-muted">No need to type headers manually — includes an example row.</small>
+              </div>
+              <input type="file" ref="fileInput" class="form-control" accept=".csv" />
             </div>
-            <p class="small text-muted mb-3">
-              Ensure your CSV has exactly these headers:
-              <strong>id number, last name, first name, middle name, position, department, course</strong>
-              . Default password will be the
-              <strong>ID Number</strong>
-              .
-            </p>
-            <input type="file" ref="fileInput" class="form-control mb-3" accept=".csv" />
-          </div>
-          <div class="card-footer d-flex justify-content-end gap-2">
-            <button class="btn btn-outline-secondary" @click="showUploadModal = false">Close</button>
-            <button class="btn btn-success" @click="uploadCsv" :disabled="uploading">
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-success" @click="uploadCsv" :disabled="uploading">
               <i class="fas fa-upload me-2"></i>
               {{ uploading ? "Uploading…" : "Upload" }}
             </button>
           </div>
         </div>
+      </div>
       </div>
       <!-- Bulk Actions Toast -->
       <Transition name="toast-slide">
@@ -447,7 +454,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
@@ -456,9 +463,12 @@ import Pagination from "../components/Pagination.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
+import { confirmAction } from "../composables/useConfirm.js";
+import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 
 const faculty = ref([]);
 const pagination = ref({});
+const perPage = ref(10);
 const availableCourses = ref([]);
 const loading = ref(true);
 const showModal = ref(false);
@@ -468,6 +478,15 @@ const saving = ref(false);
 const formError = ref("");
 const selectedIds = ref([]);
 const tableScrolled = ref(false);
+const openMenuId = ref(null);
+
+function toggleMenu(id) {
+  openMenuId.value = openMenuId.value === id ? null : id;
+}
+
+function closeMenu() {
+  openMenuId.value = null;
+}
 
 function onTableScroll(e) {
   tableScrolled.value = e.target.scrollTop > 0;
@@ -483,6 +502,8 @@ let searchTimeout = null;
 
 // Upload State
 const showUploadModal = ref(false);
+const { modalEl: facultyModalEl } = useBootstrapModal(showModal);
+const { modalEl: uploadModalEl } = useBootstrapModal(showUploadModal);
 const fileInput = ref(null);
 const uploading = ref(false);
 const uploadError = ref("");
@@ -614,13 +635,24 @@ function clearFilters() {
 onMounted(() => {
   fetchFaculty();
   fetchCourses();
+  document.addEventListener("click", closeMenu);
 });
 
-async function fetchFaculty(page = 1) {
-  loading.value = true;
+onUnmounted(() => {
+  document.removeEventListener("click", closeMenu);
+});
+
+function changePerPage(n) {
+  perPage.value = n;
+  fetchFaculty(1);
+}
+
+async function fetchFaculty(page = 1) {  loading.value = true;
+  closeMenu();
   try {
     const params = new URLSearchParams({
       page,
+      per_page: perPage.value,
       query: filters.value.query,
       department: filters.value.department,
     });
@@ -652,6 +684,7 @@ function openAddModal() {
 }
 
 function openEditModal(f) {
+  closeMenu();
   editMode.value = true;
   editId.value = f.id;
   let coursesArr = [];
@@ -679,6 +712,7 @@ function closeModal() {
 }
 
 function openRBACModal(user) {
+  closeMenu();
   selectedUser.value = user;
   showRBACModal.value = true;
 }
@@ -717,17 +751,12 @@ async function saveFaculty() {
 }
 
 async function toggleActive(f) {
+  closeMenu();
   const action = f.user?.is_active ? "deactivate" : "activate";
   
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Are you sure?",
-    text: `Do you want to ${action} ${f.user?.name}?`,
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonColor: "#191970",
-    confirmButtonText: `Yes, ${action}!`,
-    background: document.documentElement.getAttribute("data-theme") === "dark" ? "#1e293b" : "#fff",
-    color: document.documentElement.getAttribute("data-theme") === "dark" ? "#f1f5f9" : "#1e293b",
+    message: `Do you want to ${action} ${f.user?.name}?`,
   });
 
   if (!result.isConfirmed) return;
@@ -748,13 +777,9 @@ async function toggleActive(f) {
 }
 
 async function unlinkGoogle(userId) {
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Unlink Google Account?",
-    text: "They will no longer be able to login with Google until they reconnect.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, unlink it!",
+    message: "They will no longer be able to login with Google until they reconnect.",
   });
 
   if (!result.isConfirmed) return;
@@ -769,13 +794,10 @@ async function unlinkGoogle(userId) {
 }
 
 async function deleteFaculty(id) {
-  const result = await Swal.fire({
+  closeMenu();
+  const result = await confirmAction({
     title: "Are you sure?",
-    text: "Delete this faculty and all their data? This cannot be undone.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, delete it!",
+    message: "Delete this faculty and all their data? This cannot be undone.",
   });
 
   if (!result.isConfirmed) return;
@@ -792,13 +814,9 @@ async function deleteFaculty(id) {
 async function bulkDelete() {
   if (!selectedIds.value.length) return;
   
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Bulk Delete?",
-    text: `Delete ${selectedIds.value.length} selected faculty? This cannot be undone.`,
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Yes, delete all!",
+    message: `Delete ${selectedIds.value.length} selected faculty? This cannot be undone.`,
   });
 
   if (!result.isConfirmed) return;
@@ -817,13 +835,9 @@ async function bulkChangeStatus(status) {
   if (!selectedIds.value.length) return;
   const action = status ? "activate" : "deactivate";
   
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Bulk Update?",
-    text: `Are you sure you want to bulk ${action} the selected faculty?`,
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonColor: "#191970",
-    confirmButtonText: `Yes, ${action} them!`,
+    message: `Are you sure you want to bulk ${action} the selected faculty?`,
   });
 
   if (!result.isConfirmed) return;
@@ -843,6 +857,21 @@ function openUploadModal() {
   uploadSuccess.value = "";
   showUploadModal.value = true;
   if (fileInput.value) fileInput.value.value = null;
+}
+
+function downloadTemplate() {
+  const headers = ["id number", "last name", "first name", "middle name", "position", "department", "course"];
+  const example = ["2021-F001", "Dela Cruz", "Maria", "Santos", "Instructor I", "IT Department", "BSIT"];
+  const csv = "\uFEFF" + headers.join(",") + "\n" + example.join(",") + "\n";
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "faculty_template.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 async function uploadCsv() {
@@ -885,17 +914,6 @@ async function uploadCsv() {
   opacity: 0;
 }
 
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.slide-up-enter-from,
-.slide-up-leave-to {
-  opacity: 0;
-  transform: translateY(30px);
-}
-
 /* --- Premium Modal (Faculty Theme - Indigo) --- */
 :root {
   --indigo: #232380;
@@ -908,46 +926,6 @@ async function uploadCsv() {
   color: var(--indigo) !important;
 }
 
-.modal-backdrop-custom {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(8px);
-  z-index: 2000;
-}
-
-.custom-modal {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  z-index: 2001;
-  pointer-events: none;
-  overflow-y: auto;
-  padding: 3rem 1rem;
-}
-
-.custom-modal .card {
-  margin: auto;
-  pointer-events: all;
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--card-radius);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  width: 620px;
-  max-width: 95vw;
-  overflow: visible;
-}
-
-.modal-header-custom {
-  padding: 1.75rem 2rem;
-  border-bottom: 1px solid var(--border-light);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .profile-avatar-icon {
   width: 52px;
   height: 52px;
@@ -956,22 +934,6 @@ async function uploadCsv() {
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-}
-
-.modal-body-custom {
-  padding: 2rem;
-  overflow: visible;
-}
-
-.modal-footer-custom {
-  padding: 1.25rem 2rem;
-  background: rgba(0, 0, 0, 0.02);
-  border-top: 1px solid var(--border-light);
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  border-bottom-left-radius: var(--card-radius);
-  border-bottom-right-radius: var(--card-radius);
 }
 
 .form-section-modern .section-label {
@@ -1042,45 +1004,6 @@ async function uploadCsv() {
   padding-left: 2.75rem;
 }
 
-.btn-indigo-custom {
-  background: #191970 !important;
-  color: white !important;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  font-weight: 700;
-  transition: all 0.2s ease;
-}
-
-.btn-indigo-custom:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 15px -5px rgba(25, 25, 112, 0.5);
-  background: #232380 !important;
-}
-
-.btn-light-custom {
-  background: var(--border-light);
-  color: var(--text-main);
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  font-weight: 700;
-}
-
-.btn-close-custom {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 1.25rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-close-custom:hover {
-  color: var(--danger);
-  transform: rotate(90deg);
-}
-
 .course-selection-box {
   max-height: 200px;
   overflow-y: auto;
@@ -1121,15 +1044,6 @@ async function uploadCsv() {
   color: #ef4444;
   font-size: 0.85rem;
   font-weight: 600;
-}
-
-[data-theme="dark"] .modal-backdrop-custom {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-[data-theme="dark"] .modal-header-custom,
-[data-theme="dark"] .modal-footer-custom {
-  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .badge-all-course {

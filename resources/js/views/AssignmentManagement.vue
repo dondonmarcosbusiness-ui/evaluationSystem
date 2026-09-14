@@ -5,11 +5,12 @@
       <Navbar><template #title>Faculty Assignments</template></Navbar>
 
       <div class="content-area">
-        <!-- Premium Filters & Action Bar -->
-        <div class="stats-bar-premium mb-5 fade-in-up">
-          <div
-            class="d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-3 rounded-4 shadow-sm bg-card border border-light"
-          >
+        <!-- Premium Filters & Action Bar + Year Tabs (attached, sticky) -->
+        <div class="assignment-toolbar-sticky mb-4 fade-in-up">
+          <div class="stats-bar-premium">
+            <div
+              class="d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-3 rounded-top-4 shadow-sm bg-card border border-light border-bottom-0"
+            >
             <div class="d-flex align-items-center gap-3 flex-wrap">
               <div class="search-premium-box v2">
                 <i class="fas fa-search"></i>
@@ -42,6 +43,22 @@
             <button class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openAddModal">
               <i class="fas fa-plus-circle me-2"></i>
               New Assignment
+            </button>
+          </div>
+          </div>
+
+          <!-- Year Level Tab Menu (stuck directly below filters, no gap) -->
+          <div class="year-tab-menu year-tab-menu-attached underline-tabs">
+            <button
+              v-for="tab in yearTabs"
+              :key="tab.value"
+              type="button"
+              class="year-tab"
+              :class="{ active: filters.year_level === tab.value }"
+              @click="selectYearTab(tab.value)"
+            >
+              <i :class="tab.icon" class="tab-ico"></i>
+              <span>{{ tab.label }}</span>
             </button>
           </div>
         </div>
@@ -87,8 +104,15 @@
           </TransitionGroup>
 
           <!-- Pagination -->
-          <div v-if="totalFacultyPages > 1" class="col-12 mt-4 d-flex justify-content-center">
+          <div class="col-12 mt-4 d-flex justify-content-between align-items-center gap-3 flex-wrap">
+            <label class="per-page-wrap">
+              <span class="per-page-label">Rows:</span>
+              <select class="per-page-select" :value="facultyPerPage" @change="changePerPage($event.target.value)">
+                <option v-for="n in [10, 20, 50, 100]" :key="n" :value="n">{{ n }}</option>
+              </select>
+            </label>
             <div
+              v-if="totalFacultyPages > 1"
               class="pagination-premium d-flex align-items-center gap-3 bg-card p-2 rounded-pill shadow-sm border border-light"
             >
               <button class="btn btn-icon-sm" :disabled="facultyPage === 1" @click="facultyPage--">
@@ -109,84 +133,80 @@
           </div>
         </div>
 
-        <!-- Faculty Load Drawer -->
-        <div v-if="showDrawer" class="drawer-overlay" @click="closeDrawer"></div>
-        <Transition name="drawer-slide">
-          <div v-if="showDrawer" class="load-drawer">
-            <div
-              class="drawer-header p-4 d-flex align-items-center justify-content-between border-bottom sticky-top bg-card shadow-sm"
-            >
-              <div class="d-flex align-items-center gap-3">
-                <div class="drawer-icon-v3">
-                  <i class="fas fa-chalkboard-teacher"></i>
+        <!-- Faculty Load Modal -->
+        <div ref="loadModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="drawer-icon-v3">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                  </div>
+                  <div>
+                    <h5 class="modal-title fw-800 mb-0">{{ activeFacultyGroup?.facultyName }}</h5>
+                    <span class="small text-muted fw-600 ls-1 text-uppercase">Academic Load Management</span>
+                  </div>
                 </div>
-                <div>
-                  <h5 class="fw-800 mb-0">{{ activeFacultyGroup?.facultyName }}</h5>
-                  <span class="small text-muted fw-600 ls-1 text-uppercase">Academic Load Management</span>
-                </div>
-              </div>
-              <button class="btn-close-drawer" @click="closeDrawer">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
-
-            <div class="drawer-content p-4">
-              <div class="mb-4 d-flex justify-content-between align-items-center">
-                <h6 class="text-uppercase ls-1 fw-800 small text-muted mb-0">Assigned Courses</h6>
-                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
-                  {{ activeFacultyGroup?.assignments.length }} Items
-                </span>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
 
-              <div class="load-list d-flex flex-column gap-3">
-                <div v-for="a in activeFacultyGroup?.assignments" :key="a.id" class="load-item-card">
-                  <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                      <span class="load-code-tag">{{ a.subject?.code }}</span>
-                      <h6 class="fw-800 mb-1 mt-2">{{ a.subject?.name }}</h6>
-                      <div class="d-flex align-items-center gap-2 text-muted small fw-600">
-                        <i class="fas fa-users-rectangle"></i>
-                        <span>Section {{ a.section?.name }}</span>
+              <div class="modal-body">
+                <div class="mb-4 d-flex justify-content-between align-items-center">
+                  <h6 class="text-uppercase ls-1 fw-800 small text-muted mb-0">Assigned Courses</h6>
+                  <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
+                    {{ activeFacultyGroup?.assignments.length }} Items
+                  </span>
+                </div>
+
+                <div class="load-list d-flex flex-column gap-3">
+                  <div v-for="a in activeFacultyGroup?.assignments" :key="a.id" class="load-item-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                      <div>
+                        <span class="load-code-tag">{{ a.subject?.code }}</span>
+                        <h6 class="fw-800 mb-1 mt-2">{{ a.subject?.name }}</h6>
+                        <div class="d-flex align-items-center gap-2 text-muted small fw-600">
+                          <i class="fas fa-users-rectangle"></i>
+                          <span>Section {{ a.section?.name }}</span>
+                        </div>
+                      </div>
+                      <button class="btn-unlink-minimal" @click="deleteAssignment(a.id)">
+                        <i class="fas fa-unlink"></i>
+                      </button>
+                    </div>
+                    <div class="pt-2 border-top border-light-subtle d-flex justify-content-between align-items-center">
+                      <div class="small text-muted fw-600">
+                        <i class="fas fa-calendar-alt me-1 opacity-50"></i>
+                        {{ a.academic_year }} • {{ a.semester }} •
+                        {{ a.year_level ?? a.subject?.year_level ?? a.section?.year_level ?? "All years" }}
+                      </div>
+                      <div class="small fw-700 text-primary">
+                        {{ a.subject?.course?.name }}
                       </div>
                     </div>
-                    <button class="btn-unlink-minimal" @click="deleteAssignment(a.id)">
-                      <i class="fas fa-unlink"></i>
-                    </button>
                   </div>
-                  <div class="pt-2 border-top border-light-subtle d-flex justify-content-between align-items-center">
-                    <div class="small text-muted fw-600">
-                      <i class="fas fa-calendar-alt me-1 opacity-50"></i>
-                      {{ a.academic_year }} • {{ a.semester }}
-                    </div>
-                    <div class="small fw-700 text-primary">
-                      {{ a.subject?.course?.name }}
-                    </div>
-                  </div>
-                </div>
 
-                <div v-if="!activeFacultyGroup?.assignments.length" class="text-center py-5 opacity-50">
-                  <i class="fas fa-calendar-xmark fa-3x mb-3"></i>
-                  <p class="small fw-bold">No assignments for this faculty.</p>
+                  <div v-if="!activeFacultyGroup?.assignments.length" class="text-center py-5 opacity-50">
+                    <i class="fas fa-calendar-xmark fa-3x mb-3"></i>
+                    <p class="small fw-bold">No assignments for this faculty.</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </Transition>
+        </div>
 
         <!-- Assignment Modal -->
-        <Transition name="fade">
-          <div v-if="showModal" class="glass-backdrop-v2" @click="showModal = false"></div>
-        </Transition>
-
-        <Transition name="zoom-in">
-          <div v-if="showModal" class="glass-modal-centered">
-            <div class="glass-modal-inner card border-0 shadow-lg" style="max-width: 520px">
-              <div class="p-4">
-                <h5 class="fw-800 mb-4 d-flex align-items-center gap-2">
+        <div ref="assignmentModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title fw-800 d-flex align-items-center gap-2">
                   <i class="fas fa-plus-circle text-primary"></i>
                   New Faculty Assignment
                 </h5>
-
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
                 <div v-if="formError" class="alert-premium-error mb-4">
                   <i class="fas fa-exclamation-circle me-2"></i>
                   {{ formError }}
@@ -203,6 +223,17 @@
                       @change="onFacultyChange"
                     />
                   </div>
+                  <div class="col-md-6">
+                    <label class="form-label-premium">Year Level</label>
+                    <CustomSelect
+                      v-model="form.year_level"
+                      :options="yearModalOptions"
+                      placeholder="Select Year"
+                    />
+                  </div>
+                  <div class="col-md-6 d-flex align-items-end">
+                    <p class="small text-muted mb-2">Subjects & sections narrow to the chosen year.</p>
+                  </div>
                   <div class="col-12">
                     <label class="form-label-premium">Target Subject</label>
                     <CustomSelect
@@ -210,6 +241,7 @@
                       :options="subjectOptions"
                       placeholder="Select Subject"
                       :disabled="!form.faculty_id"
+                      @change="onSubjectChange"
                     />
                   </div>
                   <div class="col-12">
@@ -227,19 +259,24 @@
                   </div>
                   <div class="col-md-6">
                     <label class="form-label-premium">Semester</label>
-                    <CustomSelect v-model="form.semester" :options="['1st Semester', '2nd Semester', 'Summer']" />
+                    <CustomSelect v-model="form.semester" :options="semesterList" />
                   </div>
                 </div>
               </div>
-              <div class="p-4 pt-0 d-flex gap-2">
-                <button class="btn btn-light-premium w-100" @click="showModal = false">Cancel</button>
-                <button class="btn btn-primary-premium w-100" @click="saveAssignment" :disabled="saving">
+              <div class="modal-footer">
+                <button type="button" class="btn btn-light-premium flex-fill" data-bs-dismiss="modal">Cancel</button>
+                <button
+                  type="button"
+                  class="btn btn-primary-premium flex-fill"
+                  @click="saveAssignment"
+                  :disabled="saving"
+                >
                   {{ saving ? "Deploying..." : "Finalize Assignment" }}
                 </button>
               </div>
             </div>
           </div>
-        </Transition>
+        </div>
       </div>
     </div>
   </div>
@@ -251,30 +288,46 @@ import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
+import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
+import { confirmAction } from "../composables/useConfirm.js";
+import { DEFAULT_SEMESTERS, fetchAcademicConfig } from "../helpers/academic.js";
 
 const assignments = ref([]);
 const pagination = ref({});
 const loading = ref(true);
 const showModal = ref(false);
 const showDrawer = ref(false);
+const { modalEl: assignmentModalEl } = useBootstrapModal(showModal);
+const { modalEl: loadModalEl } = useBootstrapModal(showDrawer);
 const saving = ref(false);
 const formError = ref("");
-const meta = ref({ faculty: [], subjects: [], sections: [], courses: [] });
+const meta = ref({ faculty: [], subjects: [], sections: [], courses: [], year_levels: [] });
 const globalSettings = ref({ academic_year: "", semester: "1st Semester" });
 const activeFacultyId = ref(null);
+const fallbackYearLevels = ["1st", "2nd", "3rd", "4th", "Irregular"];
 
-const filters = ref({ query: "", department: "", academic_year: "", semester: "" });
+const filters = ref({ query: "", department: "", academic_year: "", semester: "", year_level: "" });
 let searchTimeout = null;
 
 const facultyPage = ref(1);
-const facultyPerPage = 8;
+const facultyPerPage = ref(10);
+
+function changePerPage(n) {
+  const size = parseInt(n, 10);
+  if (!Number.isFinite(size) || size === facultyPerPage.value) return;
+  facultyPerPage.value = size;
+  fetchAssignments(1);
+}
 
 onMounted(() => {
   fetchAssignments();
   fetchMeta();
   fetchSettings();
+  fetchAcademicConfig().then((c) => {
+    semesterList.value = c.semesters;
+  });
 });
 
 function getCourseName(courseId) {
@@ -282,11 +335,32 @@ function getCourseName(courseId) {
   return course ? course.name : "Unknown";
 }
 
-const form = ref({ faculty_id: "", subject_id: "", section_id: "", academic_year: "", semester: "1st Semester" });
+const form = ref({
+  faculty_id: "",
+  subject_id: "",
+  section_id: "",
+  academic_year: "",
+  semester: "1st Semester",
+  year_level: "",
+});
 
 function onFacultyChange() {
   form.value.subject_id = "";
   form.value.section_id = "";
+}
+
+// Untagged (null) or Irregular years are visible under every year filter.
+function matchesYear(itemYear, wanted) {
+  if (!wanted) return true;
+  if (!itemYear || itemYear === "Irregular" || wanted === "Irregular") return true;
+  return itemYear === wanted;
+}
+
+function onSubjectChange() {
+  const sub = meta.value.subjects.find((s) => s.id === form.value.subject_id);
+  if (sub?.year_level && !form.value.year_level) {
+    form.value.year_level = sub.year_level;
+  }
 }
 
 const filteredSubjects = computed(() => {
@@ -296,9 +370,11 @@ const filteredSubjects = computed(() => {
   const matchingCourses = meta.value.courses.filter(
     (c) => c.department === fac.department || c.name === fac.course || fac.department === "General Education",
   );
-  if (matchingCourses.length === 0) return meta.value.subjects;
-  const validIds = matchingCourses.map((c) => c.id);
-  return meta.value.subjects.filter((s) => validIds.includes(s.course_id));
+  let list =
+    matchingCourses.length === 0
+      ? meta.value.subjects
+      : meta.value.subjects.filter((s) => matchingCourses.map((c) => c.id).includes(s.course_id));
+  return list.filter((s) => matchesYear(s.year_level, form.value.year_level));
 });
 
 const filteredSections = computed(() => {
@@ -308,9 +384,11 @@ const filteredSections = computed(() => {
   const matchingCourses = meta.value.courses.filter(
     (c) => c.department === fac.department || c.name === fac.course || fac.department === "General Education",
   );
-  if (matchingCourses.length === 0) return meta.value.sections;
-  const validIds = matchingCourses.map((c) => c.id);
-  return meta.value.sections.filter((s) => validIds.includes(s.course_id));
+  let list =
+    matchingCourses.length === 0
+      ? meta.value.sections
+      : meta.value.sections.filter((s) => matchingCourses.map((c) => c.id).includes(s.course_id));
+  return list.filter((s) => matchesYear(s.year_level, form.value.year_level));
 });
 
 const facultyGroups = computed(() => {
@@ -333,10 +411,10 @@ const facultyGroups = computed(() => {
 const activeFacultyGroup = computed(
   () => facultyGroups.value.find((g) => g.facultyId === activeFacultyId.value) || null,
 );
-const totalFacultyPages = computed(() => Math.ceil(facultyGroups.value.length / facultyPerPage));
+const totalFacultyPages = computed(() => Math.ceil(facultyGroups.value.length / facultyPerPage.value));
 const paginatedFacultyGroups = computed(() => {
-  const start = (facultyPage.value - 1) * facultyPerPage;
-  return facultyGroups.value.slice(start, start + facultyPerPage);
+  const start = (facultyPage.value - 1) * facultyPerPage.value;
+  return facultyGroups.value.slice(start, start + facultyPerPage.value);
 });
 
 const availableDepartments = computed(() => {
@@ -357,30 +435,61 @@ const deptOptions = computed(() => [
   ...availableDepartments.value.map((d) => ({ label: d, value: d })),
 ]);
 
-const semesterOptions = [
+const semesterList = ref([...DEFAULT_SEMESTERS]);
+
+const semesterOptions = computed(() => [
   { label: "All Semesters", value: "" },
-  { label: "1st Semester", value: "1st Semester" },
-  { label: "2nd Semester", value: "2nd Semester" },
-  { label: "Summer", value: "Summer" },
-];
+  ...semesterList.value.map((s) => ({ label: s, value: s })),
+]);
 
 const facultyOptions = computed(() => [
   { label: "Select a Faculty Member", value: "" },
   ...meta.value.faculty.map((f) => ({ label: f.user?.name || "Unknown", value: f.id })),
 ]);
 
+const yearList = computed(() => meta.value.year_levels?.length ? meta.value.year_levels : fallbackYearLevels);
+
+const yearTabs = computed(() => [
+  { label: "All Years", value: "", icon: "fas fa-home" },
+  ...yearList.value.map((y) => ({
+    label: y === "Irregular" ? "Irregular" : `${y} Year`,
+    value: y,
+    icon:
+      y === "1st"
+        ? "fas fa-chart-line"
+        : y === "2nd"
+          ? "fas fa-list-ul"
+          : y === "3rd"
+            ? "fas fa-layer-group"
+            : y === "4th"
+              ? "fas fa-graduation-cap"
+              : "fas fa-inbox",
+  })),
+]);
+
+function selectYearTab(value) {
+  if (filters.value.year_level === value) return;
+  filters.value.year_level = value;
+  fetchAssignments(1);
+}
+
+const yearModalOptions = computed(() => yearList.value.map((y) => ({ label: `${y} Year`, value: y })));
+
 const subjectOptions = computed(() => [
   { label: "Select a Subject", value: "" },
-  ...filteredSubjects.value.map((s) => ({ label: `${s.code} - ${s.name}`, value: s.id })),
+  ...filteredSubjects.value.map((s) => ({
+    label: `${s.code} - ${s.name} (${s.year_level ?? "All years"})`,
+    value: s.id,
+  })),
 ]);
 
 const sectionOptions = computed(() => [
   { label: "Select a Section", value: "" },
-  ...filteredSections.value.map((s) => ({ label: s.name, value: s.id })),
+  ...filteredSections.value.map((s) => ({ label: `${s.name} (${s.year_level ?? "All years"})`, value: s.id })),
 ]);
 
 function clearFilters() {
-  filters.value = { query: "", department: "", academic_year: "", semester: "" };
+  filters.value = { query: "", department: "", academic_year: "", semester: "", year_level: "" };
   fetchAssignments(1);
 }
 
@@ -389,10 +498,12 @@ async function fetchAssignments(page = 1) {
   try {
     const params = new URLSearchParams({
       page,
+      per_page: facultyPerPage.value,
       query: filters.value.query,
       department: filters.value.department,
       academic_year: filters.value.academic_year,
       semester: filters.value.semester,
+      year_level: filters.value.year_level,
     });
     const res = await api.get(`/assignments?${params.toString()}`);
     assignments.value = res.data.data;
@@ -431,10 +542,6 @@ function handleFacultyClick(group) {
   showDrawer.value = true;
 }
 
-function closeDrawer() {
-  showDrawer.value = false;
-}
-
 function openAddModal() {
   formError.value = "";
   form.value = {
@@ -443,6 +550,7 @@ function openAddModal() {
     section_id: "",
     academic_year: globalSettings.value.academic_year,
     semester: globalSettings.value.semester,
+    year_level: "",
   };
   showModal.value = true;
 }
@@ -463,14 +571,9 @@ async function saveAssignment() {
 }
 
 async function deleteAssignment(id) {
-  const result = await Swal.fire({
+  const result = await confirmAction({
     title: "Unlink?",
-    text: "Remove this academic load?",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#EF4444",
-    cancelButtonColor: "#64748B",
-    confirmButtonText: "Yes, Unlink",
+    message: "Remove this academic load?",
   });
   if (result.isConfirmed) {
     try {
@@ -484,6 +587,86 @@ async function deleteAssignment(id) {
 </script>
 
 <style scoped>
+/* Sticky toolbar: filters + tabs attached with no gap */
+.assignment-toolbar-sticky {
+  position: sticky;
+  top: 65px;
+  z-index: 1020;
+}
+.assignment-toolbar-sticky .stats-bar-premium {
+  margin: 0 !important;
+}
+.assignment-toolbar-sticky .rounded-top-4 {
+  border-top-left-radius: 1rem !important;
+  border-top-right-radius: 1rem !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* Underline tab menu — like Dashboard / Transactions / Products / Messages */
+.assignment-toolbar-sticky .year-tab-menu-attached.underline-tabs {
+  margin: 0 !important;
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 28px !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-top: 0 !important;
+  border-radius: 0 0 1rem 1rem !important;
+  padding: 0 20px !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+.assignment-toolbar-sticky .year-tab-menu-attached.underline-tabs::-webkit-scrollbar {
+  display: none !important;
+}
+.assignment-toolbar-sticky .underline-tabs .year-tab {
+  flex: 0 0 auto !important;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 14px 4px 13px !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  color: #64748b !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+.assignment-toolbar-sticky .underline-tabs .year-tab .tab-ico {
+  font-size: 0.95rem;
+  opacity: 0.85;
+}
+.assignment-toolbar-sticky .underline-tabs .year-tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background-color 0.15s ease;
+}
+.assignment-toolbar-sticky .underline-tabs .year-tab:hover {
+  background: transparent !important;
+  color: var(--text-main) !important;
+}
+.assignment-toolbar-sticky .underline-tabs .year-tab.active {
+  background: transparent !important;
+  color: var(--success) !important;
+}
+.assignment-toolbar-sticky .underline-tabs .year-tab.active::after {
+  background: var(--success);
+}
+.assignment-toolbar-sticky .underline-tabs .year-tab.active .tab-ico {
+  opacity: 1;
+}
+
 .ls-1 {
   letter-spacing: 0.05em;
 }
@@ -501,43 +684,64 @@ async function deleteAssignment(id) {
 }
 .search-premium-box.v2 i {
   position: absolute;
-  left: 0.85rem;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 .search-premium-box.v2 input {
   width: 100%;
-  padding: 0.6rem 0.85rem 0.6rem 2.2rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border-light);
-  background: var(--bg-light);
-  font-size: 0.85rem;
-  font-weight: 600;
+  height: 40px;
+  min-height: 40px;
+  padding: 10px 16px 10px 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 500;
+}
+.search-premium-box.v2 input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+.search-premium-box.v2 input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
 }
 
 .filter-dropdown-premium select {
-  padding: 0.6rem 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border-light);
-  background: var(--bg-light);
-  font-size: 0.85rem;
-  font-weight: 700;
+  padding: 10px 40px 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  font-size: 14px;
+  font-weight: 500;
   color: var(--text-dark);
   cursor: pointer;
   min-width: 160px;
+  min-height: 40px;
+}
+.filter-dropdown-premium select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
 }
 .filter-dropdown-premium.sm select {
   min-width: 120px;
 }
 
 .btn-reset-premium {
-  width: 36px;
-  height: 36px;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border-light);
-  background: var(--bg-light);
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
   color: var(--text-muted);
   transition: all 0.2s;
 }
@@ -546,6 +750,11 @@ async function deleteAssignment(id) {
   color: white;
   border-color: var(--primary);
 }
+.btn-reset-premium:hover i {
+  color: white !important;
+}
+
+
 
 /* Faculty Grid Card */
 .faculty-card-premium {
@@ -636,28 +845,7 @@ async function deleteAssignment(id) {
   transform: translateX(4px);
 }
 
-/* Load Drawer */
-.drawer-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(4px);
-  z-index: 1050;
-}
-.load-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  max-width: 500px;
-  background: var(--bg-card);
-  z-index: 1060;
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-}
-
+/* Faculty Load Modal (Bootstrap 5) */
 .drawer-icon-v3 {
   width: 44px;
   height: 44px;
@@ -705,46 +893,6 @@ async function deleteAssignment(id) {
 .btn-unlink-minimal:hover {
   background: var(--danger);
   color: white;
-}
-
-.btn-close-drawer {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: none;
-  background: var(--bg-light);
-  color: var(--text-muted);
-  transition: all 0.2s;
-}
-.btn-close-drawer:hover {
-  background: #fee2e2;
-  color: var(--danger);
-}
-
-/* Modal Premium */
-.glass-backdrop-v2 {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(12px);
-  z-index: 2000;
-}
-.glass-modal-centered {
-  position: fixed;
-  inset: 0;
-  z-index: 2010;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 3rem 1.5rem;
-  overflow-y: auto;
-}
-.glass-modal-inner {
-  margin: auto;
-  width: 100%;
-  border-radius: var(--card-radius);
-  background: var(--bg-card);
-  overflow: visible !important;
 }
 
 .form-label-premium {
@@ -838,15 +986,6 @@ async function deleteAssignment(id) {
 }
 
 /* Transitions */
-.drawer-slide-enter-active,
-.drawer-slide-leave-active {
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.drawer-slide-enter-from,
-.drawer-slide-leave-to {
-  transform: translateX(100%);
-}
-
 .fade-in-up {
   animation: fadeInUp 0.6s ease-out;
 }

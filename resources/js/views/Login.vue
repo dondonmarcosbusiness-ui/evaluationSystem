@@ -37,7 +37,7 @@
             {{
               isSettingUp
                 ? "Please provide your details to finish setting up your account."
-                : "Sign in to the Faculty Evaluation System."
+                : "Sign in with Google to continue."
             }}
           </p>
         </div>
@@ -52,6 +52,42 @@
         </div>
 
         <div v-if="!isSettingUp">
+          <button
+            type="button"
+            @click="loginWithGoogle"
+            class="btn btn-light w-100 fw-bold d-flex align-items-center justify-content-center gap-3 google-btn"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
+            </svg>
+            Continue with Google
+          </button>
+
+          <div class="separator position-relative text-center my-4">
+            <hr class="text-muted opacity-25" />
+            <span
+              class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small fw-semibold"
+              style="letter-spacing: 0.05em"
+            >
+              OR SIGN IN WITH ID
+            </span>
+          </div>
+
           <form @submit.prevent="login" class="mb-4">
             <div class="mb-4">
               <label class="form-label fw-semibold text-dark small mb-2">ID Number or Email</label>
@@ -102,42 +138,6 @@
               <i v-if="!loading" class="fas fa-arrow-right fs-6 ms-1"></i>
             </button>
           </form>
-
-          <div class="separator position-relative text-center my-4">
-            <hr class="text-muted opacity-25" />
-            <span
-              class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small fw-semibold"
-              style="letter-spacing: 0.05em"
-            >
-              OR CONTINUE WITH
-            </span>
-          </div>
-
-          <button
-            type="button"
-            @click="loginWithGoogle"
-            class="btn btn-light w-100 fw-bold d-flex align-items-center justify-content-center gap-3 google-btn"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                fill="#4285F4"
-              />
-              <path
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                fill="#34A853"
-              />
-              <path
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                fill="#FBBC05"
-              />
-              <path
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                fill="#EA4335"
-              />
-            </svg>
-            Google Account
-          </button>
         </div>
 
         <div v-else class="fade-in">
@@ -258,7 +258,9 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import api from "../services/api.js";
 
-const basePath = window.location.pathname.startsWith("/evaluation_system/public") ? "/evaluation_system/public" : "";
+const basePath = window.location.pathname.toLowerCase().startsWith("/evaluation_system/public")
+  ? window.location.pathname.substring(0, "/evaluation_system/public".length)
+  : "";
 const router = useRouter();
 const form = ref({
   login: "",
@@ -436,51 +438,49 @@ function loginWithGoogle() {
   max-width: 440px;
 }
 
-/* Enhanced Inputs */
+/* Flat inputs — one border on the wrapper, borderless segments inside.
+   This guarantees a single clean outline with no doubled/join artifacts. */
 .login-input-group {
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
-  border-radius: 0.85rem;
-  transition: all 0.3s ease;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  border-radius: 4px;
+  box-shadow: none;
+  overflow: hidden;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .login-input-group:focus-within {
-  box-shadow: 0 0 0 4px rgba(25, 25, 112, 0.15);
+  border-color: var(--primary);
+  background-color: #ffffff;
+  box-shadow: none;
 }
 
 .login-input-group .form-control,
 .login-input-group .input-group-text {
-  border-color: #e2e8f0;
-  background-color: #f8fafc;
-  transition: all 0.3s ease;
-}
-
-.login-input-group:focus-within .form-control,
-.login-input-group:focus-within .input-group-text {
-  border-color: var(--primary);
-  background-color: #ffffff;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
 
 .login-input-group .form-control:focus {
-  box-shadow: none;
-  border-color: var(--primary);
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-color: transparent !important;
 }
 
 .login-input-group .form-control {
   font-size: 0.95rem;
   padding-top: 0.95rem;
   padding-bottom: 0.95rem;
-  border-radius: 0 0.85rem 0.85rem 0;
-}
-
-.login-input-group .input-group-text:first-child {
-  border-radius: 0.85rem 0 0 0.85rem;
 }
 
 /* Buttons */
 .login-btn {
   padding: 0.95rem 1.75rem;
   font-size: 1.05rem;
-  border-radius: 0.85rem;
+  border-radius: 8px;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(25, 25, 112, 0.2);
 }
@@ -491,13 +491,14 @@ function loginWithGoogle() {
 }
 
 .google-btn {
-  border-color: #e2e8f0;
-  color: #475569;
+  border: 1.5px solid #dadce0;
+  color: #3c4043;
   padding: 0.95rem 1.5rem;
   font-size: 1.05rem;
-  border-radius: 0.85rem;
+  border-radius: 8px;
   transition: all 0.3s ease;
   background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .google-btn:hover {

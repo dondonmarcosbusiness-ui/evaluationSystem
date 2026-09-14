@@ -66,9 +66,11 @@
             </div>
           </div>
 
-          <div class="d-flex align-items-center gap-2 mb-2 mt-2 fade-in-up">
-            <span class="badge rounded-pill bg-primary-subtle text-primary fw-semibold">Faculty Summary</span>
-            <span class="text-muted small">Faculty evaluation performance and rating distribution</span>
+          <div class="section-divider fade-in-up">
+            <div class="section-divider-text">
+              <h6 class="mb-0">Faculty Summary</h6>
+              <small>Faculty evaluation performance and rating distribution</small>
+            </div>
           </div>
 
           <div class="row g-4 mt-1 fade-in-up">
@@ -96,13 +98,15 @@
             </div>
           </div>
 
-          <div class="d-flex align-items-center gap-2 mb-2 mt-3 fade-in-up">
-            <span class="badge rounded-pill bg-info-subtle text-info fw-semibold">Office Summary</span>
-            <span class="text-muted small">Office feedback trends and visitor insights</span>
+          <div class="section-divider fade-in-up">
+            <div class="section-divider-text">
+              <h6 class="mb-0">Office Summary</h6>
+              <small>Office feedback trends and visitor insights</small>
+            </div>
           </div>
 
           <div class="row g-4 mt-1 fade-in-up">
-            <div class="col-lg-5 d-flex">
+            <div class="col-lg-8 d-flex">
               <div class="card h-100 flex-grow-1">
                 <div class="card-header">
                   <i class="fas fa-chart-line"></i>
@@ -114,17 +118,6 @@
               </div>
             </div>
             <div class="col-lg-4 d-flex">
-              <div class="card h-100 flex-grow-1">
-                <div class="card-header">
-                  <i class="fas fa-users"></i>
-                  Visitor Type Breakdown
-                </div>
-                <div class="card-body d-flex align-items-center justify-content-center flex-grow-1" style="min-height: 320px">
-                  <canvas id="officeVisitorChart"></canvas>
-                </div>
-              </div>
-            </div>
-            <div class="col-lg-3 d-flex">
               <div class="card shadow-none h-100 flex-grow-1 d-flex flex-column">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
                   <div class="d-flex align-items-center gap-2">
@@ -180,6 +173,55 @@
                   >
                     View All Feedback <i class="fas fa-arrow-right ms-1"></i>
                   </router-link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-4 mt-1 fade-in-up">
+            <div class="col-12 d-flex">
+              <div class="card h-100 flex-grow-1">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <span><i class="fas fa-users"></i> Visitor Type Breakdown</span>
+                  <span class="small text-muted fw-normal">{{ heatmapTotal }} visits in the last 6 months</span>
+                </div>
+                <div class="card-body">
+                  <div v-if="heatmapHasData" class="visitor-heatmap-scroll">
+                    <div class="visitor-heatmap-grid" :style="{ '--heat-cols': heatmapDaysList.length }">
+                      <div class="heat-corner"></div>
+                      <div v-for="(day, i) in heatmapDaysList" :key="'m-' + day" class="heat-month">
+                        {{ heatMonthLabel(day, i) }}
+                      </div>
+                      <template v-for="type in visitorTypesOrder" :key="type">
+                        <div class="heat-type">
+                          <span class="text-capitalize">{{ type }}</span>
+                          <span class="heat-type-count">{{ visitorTypeTotal(type) }}</span>
+                        </div>
+                        <div
+                          v-for="day in heatmapDaysList"
+                          :key="type + day"
+                          class="heat-cell"
+                          :class="'heat-' + heatLevel(type, day)"
+                          :title="heatTooltip(type, day)"
+                        ></div>
+                      </template>
+                    </div>
+                  </div>
+                  <div v-else class="text-center py-5">
+                    <div class="mb-3 opacity-25">
+                      <i class="fas fa-users fa-3x"></i>
+                    </div>
+                    <p class="text-muted small">No visitor data yet.</p>
+                  </div>
+                  <div v-if="heatmapHasData" class="heatmap-legend">
+                    <span>Less</span>
+                    <span class="heat-cell legend-cell heat-0"></span>
+                    <span class="heat-cell legend-cell heat-1"></span>
+                    <span class="heat-cell legend-cell heat-2"></span>
+                    <span class="heat-cell legend-cell heat-3"></span>
+                    <span class="heat-cell legend-cell heat-4"></span>
+                    <span>More</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -397,6 +439,7 @@ import CustomSelect from "../components/CustomSelect.vue";
 import api from "../services/api.js";
 import { useLanguage } from "../helpers/language.js";
 import { translations } from "../helpers/translations.js";
+import { DEFAULT_SEMESTERS, defaultAcademicYears, asStringArray, fetchAcademicConfig } from "../helpers/academic.js";
 
 const { currentLang } = useLanguage();
 const t = computed(() => translations[currentLang.value]);
@@ -426,6 +469,9 @@ const officeStats = ref({
 });
 const officeTrend = ref([]);
 const officeVisitorTypes = ref({});
+const visitorHeatmap = ref({});
+const visitorHeatmapDays = ref(182);
+const visitorTypesOrder = ["student", "parent", "faculty", "alumni", "visitor", "others"];
 
 const offices = ref([]);
 const officesLoading = ref(false);
@@ -438,12 +484,12 @@ const feedbackFilters = ref({
   academic_year: "all",
 });
 
-const semesterOptions = [
+const semesterList = ref([...DEFAULT_SEMESTERS]);
+
+const semesterOptions = computed(() => [
   { label: "All Semesters", value: "all" },
-  { label: "1st Semester", value: "1st Semester" },
-  { label: "2nd Semester", value: "2nd Semester" },
-  { label: "Summer", value: "Summer" },
-];
+  ...semesterList.value.map((s) => ({ label: s, value: s })),
+]);
 
 const yearOptions = ref([{ label: "All Years", value: "all" }]);
 
@@ -472,7 +518,6 @@ const userInitials = computed(() => {
 let facultyChart = null;
 let ratingsChart = null;
 let officeTrendChart = null;
-let officeVisitorChart = null;
 let facultyDelayed = false;
 let ratingsDelayed = false;
 
@@ -518,6 +563,81 @@ const sparkStudentsFill = computed(() => sparklineFill(sparkStudents.value));
 const sparkEvalsFill = computed(() => sparklineFill(sparkEvals.value));
 const sparkRatingFill = computed(() => sparklineFill(sparkRating.value));
 
+// ── GitHub-style visitor heatmap (types as rows, days as columns) ──
+function toDayKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+const heatmapDaysList = computed(() => {
+  const n = visitorHeatmapDays.value || 182;
+  const end = new Date();
+  end.setHours(12, 0, 0, 0);
+  const days = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(end);
+    d.setDate(end.getDate() - i);
+    days.push(toDayKey(d));
+  }
+  return days;
+});
+
+const heatmapMax = computed(() => {
+  let mx = 0;
+  for (const day of Object.values(visitorHeatmap.value || {})) {
+    for (const c of Object.values(day || {})) {
+      const n = Number(c) || 0;
+      if (n > mx) mx = n;
+    }
+  }
+  return mx;
+});
+
+const heatmapTotal = computed(() =>
+  visitorTypesOrder.reduce((sum, t) => sum + visitorTypeTotal(t), 0),
+);
+
+const heatmapHasData = computed(() => heatmapTotal.value > 0);
+
+function visitorTypeTotal(type) {
+  return Number(officeVisitorTypes.value?.[type]) || 0;
+}
+
+function heatCount(type, day) {
+  return Number(visitorHeatmap.value?.[day]?.[type]) || 0;
+}
+
+function heatLevel(type, day) {
+  const c = heatCount(type, day);
+  if (!c) return 0;
+  const mx = heatmapMax.value || c;
+  const r = c / mx;
+  if (r <= 0.25) return 1;
+  if (r <= 0.5) return 2;
+  if (r <= 0.75) return 3;
+  return 4;
+}
+
+function heatTooltip(type, day) {
+  const c = heatCount(type, day);
+  const d = new Date(day + "T12:00:00").toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  return c ? `${c} ${c === 1 ? "visit" : "visits"} · ${type} · ${d}` : `No visits · ${type} · ${d}`;
+}
+
+function heatMonthLabel(day, i) {
+  const d = new Date(day + "T12:00:00");
+  if (i === 0) return d.toLocaleDateString(undefined, { month: "short" });
+  const prev = new Date(heatmapDaysList.value[i - 1] + "T12:00:00");
+  if (prev.getMonth() !== d.getMonth()) return d.toLocaleDateString(undefined, { month: "short" });
+  return "";
+}
+
 const fetchDashboardStats = async (type = "faculty") => {
   try {
     const res = await api.get(`/reports/dashboard?evaluatee_type=${type}`);
@@ -548,6 +668,8 @@ const fetchOfficeStats = async () => {
       satisfaction_rate: Number(item.satisfaction_rate || 0).toFixed(2),
     }));
     officeVisitorTypes.value = res.data.visitor_type_distribution || {};
+    visitorHeatmap.value = res.data.visitor_heatmap || {};
+    visitorHeatmapDays.value = Number(res.data.visitor_heatmap_days) || 182;
 
     await nextTick();
     initCharts();
@@ -574,13 +696,16 @@ const fetchMyFeedback = async () => {
 };
 
 const setupFeedbackFilterOptions = (settings) => {
-  const currentYear = new Date().getFullYear();
-  const startYear = 2023;
-  const yearList = [{ label: "All Years", value: "all" }];
-  for (let y = currentYear + 1; y >= startYear; y--) {
-    yearList.push({ label: `${y}-${y + 1}`, value: `${y}-${y + 1}` });
+  // Year options come from System Settings so the filter only offers
+  // configured academic years (plus the active year as a safety net).
+  const configuredYears = asStringArray(settings.academic_year_options, defaultAcademicYears());
+  if (settings.active_academic_year && !configuredYears.includes(settings.active_academic_year)) {
+    configuredYears.push(settings.active_academic_year);
   }
-  yearOptions.value = yearList;
+  yearOptions.value = [
+    { label: "All Years", value: "all" },
+    ...configuredYears.map((y) => ({ label: y, value: y })),
+  ];
 
   if (settings.active_semester) {
     feedbackFilters.value.semester = settings.active_semester;
@@ -591,6 +716,9 @@ const setupFeedbackFilterOptions = (settings) => {
 };
 
 onMounted(async () => {
+  fetchAcademicConfig().then((c) => {
+    semesterList.value = c.semesters;
+  });
   if (can("view_dashboard")) {
     fetchDashboardStats(activeTab.value);
     fetchOfficeStats();
@@ -647,7 +775,7 @@ function getRatingLabel(rating) {
 }
 
 function destroyCharts() {
-  [facultyChart, ratingsChart, officeTrendChart, officeVisitorChart].forEach((chart) => {
+  [facultyChart, ratingsChart, officeTrendChart].forEach((chart) => {
     if (chart) {
       chart.destroy();
     }
@@ -656,7 +784,6 @@ function destroyCharts() {
   facultyChart = null;
   ratingsChart = null;
   officeTrendChart = null;
-  officeVisitorChart = null;
 }
 
 onUnmounted(() => {
@@ -833,48 +960,6 @@ function initCharts() {
               pointBorderWidth: 2,
               tension: 0.35,
               fill: false,
-            },
-          ],
-        },
-        options: {
-          plugins: {
-            legend: { display: false },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { color: "#374151" },
-              grid: { color: "rgba(0,0,0,0.05)" },
-            },
-            x: {
-              ticks: { color: "#374151" },
-              grid: { display: false },
-            },
-          },
-          responsive: true,
-          maintainAspectRatio: false,
-        },
-      });
-    }
-
-    const visitorCtx = document.getElementById("officeVisitorChart");
-    if (visitorCtx && Object.keys(officeVisitorTypes.value).length) {
-      officeVisitorChart = new Chart(visitorCtx, {
-        type: "bar",
-        data: {
-          labels: Object.keys(officeVisitorTypes.value),
-          datasets: [
-            {
-              label: "Visitors",
-              data: Object.values(officeVisitorTypes.value).map((v) => Number(v) || 0),
-              backgroundColor: [
-                "#0e9f6e",
-                "#191970",
-                "#f59e0b",
-                "#e11d48",
-                "#232380",
-              ],
-              borderRadius: 8,
             },
           ],
         },
@@ -1430,5 +1515,131 @@ function initCharts() {
     min-width: 36px;
     font-size: 0.9rem;
   }
+}
+
+/* ── Dashboard section dividers ── */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.section-divider::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(to right, var(--border-color), transparent);
+}
+
+.section-divider-text h6 {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.section-divider-text small {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ── GitHub-style visitor heatmap ── */
+.visitor-heatmap-scroll {
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.visitor-heatmap-grid {
+  display: grid;
+  grid-template-columns: 110px repeat(var(--heat-cols), 14px);
+  gap: 3px;
+  min-width: max-content;
+  align-items: center;
+}
+
+.heat-corner {
+  min-height: 16px;
+}
+
+.heat-month {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: visible;
+  min-height: 16px;
+  line-height: 16px;
+}
+
+.heat-type {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-main);
+  padding-right: 0.5rem;
+  min-height: 14px;
+}
+
+.heat-type-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-light);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 0 0.45rem;
+  line-height: 1.4;
+}
+
+.heat-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: #ebedf0;
+  border: 1px solid rgba(27, 31, 35, 0.06);
+}
+
+.heat-cell.heat-0 {
+  background: #ebedf0;
+}
+
+.heat-cell.heat-1 {
+  background: #9be9a8;
+}
+
+.heat-cell.heat-2 {
+  background: #40c463;
+}
+
+.heat-cell.heat-3 {
+  background: #30a14e;
+}
+
+.heat-cell.heat-4 {
+  background: #216e39;
+}
+
+.heat-cell:not(.legend-cell):hover {
+  outline: 1px solid rgba(27, 31, 35, 0.35);
+  outline-offset: -1px;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 0.75rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.heatmap-legend .legend-cell {
+  width: 12px;
+  height: 12px;
 }
 </style>
