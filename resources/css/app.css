@@ -480,6 +480,11 @@
   padding: 0;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   font-family: "Calibri Light", Calibri, "Segoe UI", sans-serif;
   color: var(--text-main);
@@ -1236,6 +1241,7 @@ h6 {
   min-height: 100vh;
   transition: margin-left var(--transition);
   background: var(--bg-body);
+  overflow-x: hidden;
 }
 
 .main-wrapper.collapsed {
@@ -1339,6 +1345,7 @@ h6 {
 
 .content-area {
   padding: 24px;
+  overflow-x: hidden;
 }
 
 /* ── Stat cards (GitHub compact) ─────── */
