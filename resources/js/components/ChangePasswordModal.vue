@@ -1,5 +1,6 @@
 <template>
-  <div ref="modalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+  <Teleport to="body">
+    <div ref="modalEl" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
@@ -77,7 +78,8 @@
         </form>
       </div>
     </div>
-  </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -249,3 +251,19 @@ watch(
   },
 );
 </script>
+
+<style scoped>
+/* Keep the dialog inside the viewport on small screens */
+.modal-dialog {
+  max-width: min(500px, calc(100vw - 2rem));
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 380px) {
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+</style>
