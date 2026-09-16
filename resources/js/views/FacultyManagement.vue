@@ -1213,9 +1213,49 @@ async function uploadCsv() {
   transform: translateX(-50%) translateY(20px);
 }
 
+/* Full-screen table layout — fill viewport height/width */
+.main-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: calc(100vh - 65px);
+  width: 100%;
+  max-width: 100%;
+}
+.content-area .card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+}
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 /* Sticky Table Header with Glassmorphism */
-.table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
-table { border-collapse: separate; border-spacing: 0; table-layout: auto; }
+.table-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  overflow: auto;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 100%;
+}
+table { border-collapse: separate; border-spacing: 0; table-layout: auto; width: 100%; }
 thead th {
   position: sticky;
   top: 0;
