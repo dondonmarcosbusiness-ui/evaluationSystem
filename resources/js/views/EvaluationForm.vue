@@ -68,15 +68,15 @@
         <!-- Step 2: Answer Questions -->
         <div v-if="step === 2">
           <div class="sticky-evaluation-header" :style="{ top: headerTopOffset }">
-            <div class="progress" style="height: 6px; border-radius: 0">
+            <div class="d-flex justify-content-between align-items-center py-2 px-3">
+              <h5 class="mb-0 fw-bold">{{ t.evaluation_form }}</h5>
+              <div class="text-muted small fw-bold">{{ answeredCount }} / {{ totalQuestions }}</div>
+            </div>
+            <div class="progress evaluation-progress">
               <div
                 class="progress-bar bg-primary progress-bar-striped progress-bar-animated"
                 :style="{ width: progressPercent + '%' }"
               ></div>
-            </div>
-            <div class="d-flex justify-content-between align-items-center py-2 px-3">
-              <h5 class="mb-0 fw-bold">{{ t.evaluation_form }}</h5>
-              <div class="text-muted small fw-bold">{{ answeredCount }} / {{ totalQuestions }}</div>
             </div>
           </div>
 
@@ -202,10 +202,44 @@ const headerTopOffset = ref('60px');
 
 const user = ref(JSON.parse(localStorage.getItem("user") || "{}") || {});
 
+// Small screens get non-blocking toasts instead of centered modals.
+const isSmallScreen = () =>
+  typeof window !== "undefined" &&
+  (window.matchMedia?.("(max-width: 576px)").matches ?? window.innerWidth <= 576);
+
+function showAlert({ icon, title, text, html, timer, timerProgressBar, confirmButtonText = "OK", confirmButtonColor = "#3085d6", didOpen }) {
+  if (isSmallScreen()) {
+    return Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon,
+      title,
+      text,
+      showConfirmButton: false,
+      timer: timer ?? 3500,
+      timerProgressBar: timerProgressBar ?? true,
+    });
+  }
+  return Swal.fire({
+    icon,
+    title,
+    text,
+    html,
+    timer,
+    timerProgressBar,
+    showConfirmButton: true,
+    confirmButtonText,
+    confirmButtonColor,
+    didOpen,
+  });
+}
+
 const updateTopOffset = () => {
   const topbar = document.querySelector('.topbar');
   if (topbar) {
-    headerTopOffset.value = topbar.offsetHeight + 'px';
+    // Dock 1px under the sticky topbar so the header never slides beneath it
+    // (which clipped the progress bar) and no content peeks through the seam.
+    headerTopOffset.value = Math.max(topbar.offsetHeight - 1, 0) + 'px';
   }
 };
 
@@ -318,6 +352,15 @@ async function checkComment() {
 
   // Frontend cooldown check
   if (user.value.role === "student" && cooldownRemaining.value > 0) {
+    if (isSmallScreen()) {
+      showAlert({
+        icon: "warning",
+        title: "Cooldown Active",
+        text: `Please wait ${cooldownRemaining.value}s before generating another feedback.`,
+        timer: cooldownRemaining.value * 1000,
+      });
+      return;
+    }
     Swal.fire({
       icon: "warning",
       title: "Cooldown Active",
@@ -360,19 +403,17 @@ async function checkComment() {
       localStorage.setItem(getCooldownKey(), endTime.toString());
       startCooldownTimer(remaining);
 
-      Swal.fire({
+      showAlert({
         icon: "warning",
         title: "Cooldown Active",
         text: e.response.data.message || "Please wait before generating another feedback.",
-        confirmButtonColor: "#3085d6",
       });
     } else {
       console.error("AI analysis failed", e);
-      Swal.fire({
+      showAlert({
         icon: "info",
         title: "AI analysis unavailable",
         text: "Your comment can still be submitted. Please try the suggestion again later.",
-        confirmButtonColor: "#3085d6",
       });
     }
   } finally {
@@ -397,7 +438,9 @@ const progressPercent = computed(() => (totalQuestions.value ? (answeredCount.va
 
 onMounted(async () => {
   updateTopOffset();
+  requestAnimationFrame(updateTopOffset);
   window.addEventListener('resize', updateTopOffset);
+  window.addEventListener('load', updateTopOffset);
 
   try {
     const setRes = await api.get("/settings");
@@ -423,6 +466,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateTopOffset);
+  window.removeEventListener('load', updateTopOffset);
 });
 
 async function loadQuestions() {
@@ -462,12 +506,10 @@ async function submitEvaluation() {
   };
   try {
     await api.post("/evaluations", payload);
-    Swal.fire({
+    showAlert({
       icon: "success",
       title: "Submitted!",
       text: "Thank you! Your evaluation has been submitted anonymously.",
-      confirmButtonText: "OK",
-      confirmButtonColor: "#3085d6",
     });
     step.value = 1;
     selectedFacultyData.value = null;
@@ -475,7 +517,7 @@ async function submitEvaluation() {
     // Refresh evaluatees list to show the evaluated professor as disabled
     await fetchEvaluatees();
   } catch (e) {
-    Swal.fire({
+    showAlert({
       icon: "error",
       title: "Submission Failed",
       text: e.response?.data?.message || "Submission failed.",
@@ -493,8 +535,19 @@ async function submitEvaluation() {
   top: 60px;
   z-index: 1000;
   background: var(--bg-card);
-  border-bottom: 1px solid var(--border-light);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  overflow: hidden;
   backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  margin-bottom: 1.5rem;
+}
+
+.evaluation-progress {
+  height: 6px;
+  border-radius: 0;
+  background: var(--bg-light);
+  margin: 0;
 }
 
 .question-card {

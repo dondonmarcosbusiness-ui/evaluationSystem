@@ -1864,15 +1864,24 @@ select,
 }
 
 /* ── Evaluation form ─────────────────── */
-/* Sticky Progress Bar Container */
+/* Sticky Progress Bar Container (progress sits at the bottom so it can't slide under the topbar) */
 .sticky-evaluation-header {
   position: sticky;
-  top: 52px;
-  background: #f8fafc;
+  top: 60px;
+  background: var(--bg-card, #f8fafc);
   z-index: 800;
   padding: 0;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-light, rgba(0, 0, 0, 0.05));
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.sticky-evaluation-header .evaluation-progress {
+  height: 6px;
+  border-radius: 0;
+  margin: 0;
 }
 
 .likert-scale {
@@ -1994,6 +2003,14 @@ select,
 @media (max-width: 576px) {
   .sticky-evaluation-header {
     top: 60px;
+  }
+
+  /* SweetAlert2 toasts used on small screens: keep them compact and inside the viewport */
+  .swal2-popup.swal2-toast {
+    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem;
+    max-width: calc(100vw - 1rem);
   }
 
   .question-card-body {
