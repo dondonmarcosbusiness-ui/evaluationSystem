@@ -1871,6 +1871,7 @@ select,
   background: var(--bg-card, #f8fafc);
   z-index: 800;
   padding: 0;
+  padding-bottom: 6px;
   margin-bottom: 1.5rem;
   border: 1px solid var(--border-light, rgba(0, 0, 0, 0.05));
   border-radius: 12px;
@@ -1879,6 +1880,10 @@ select,
 }
 
 .sticky-evaluation-header .evaluation-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: 6px;
   border-radius: 0;
   margin: 0;

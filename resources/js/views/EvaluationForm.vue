@@ -541,11 +541,18 @@ async function submitEvaluation() {
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   margin-bottom: 1.5rem;
+  /* Reserve the bar's height so the pinned bar never covers the title */
+  padding-bottom: 6px;
 }
 
 .evaluation-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: 6px;
-  border-radius: 0;
+  margin: 0 !important;
+  border-radius: 0 !important;
   background: var(--bg-light);
   margin: 0;
 }
