@@ -21,7 +21,7 @@
           <div class="px-3 pb-3">
             <div class="mb-3">
               <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.faculty_member }}</label>
-              <CustomSelect v-model="selectedFacultyData" :options="facultyOptions" placeholder="-- Select --" />
+              <CustomSelect v-model="selectedFacultyId" :options="facultyOptions" placeholder="-- Select --" />
             </div>
             <div class="row g-3">
               <div class="col-sm-6">
@@ -55,7 +55,7 @@
             </div>
             <button
               class="btn btn-primary w-100 mt-2"
-              :disabled="!selectedFacultyData || !semester || !academicYear || (!subjectCode || !yearSection)"
+              :disabled="!selectedFacultyId || !semester || !academicYear || (!subjectCode || !yearSection)"
               @click="loadQuestions"
             >
               <i class="fas fa-arrow-right me-2"></i>
@@ -66,43 +66,37 @@
         </div>
 
         <!-- Step 2: Answer Questions -->
-        <div v-if="step === 2">
-          <!-- Vertical progress indicator -->
-          <div class="vertical-progress" :style="{ left: progressBarLeft }">
-            <div class="vertical-progress__track">
-              <div class="vertical-progress__fill" :style="{ height: progressPercent + '%' }"></div>
-            </div>
-          </div>
-
+        <div v-if="step === 2" class="eval-wrap">
           <div v-if="loadingQ" class="py-4">
             <SkeletonLoader variant="form" :rows="3" />
           </div>
 
           <template v-else>
-            <div v-for="cat in categories" :key="cat.id" class="mb-4">
-              <div v-for="(q, qIndex) in cat.questions" :key="q.id" class="question-card fade-in">
-                <div v-if="qIndex === 0" class="question-card-header">
+            <div v-for="cat in categories" :key="cat.id" class="eval-category fade-in">
+              <div class="eval-category-head">
+                <span class="eval-category-name">
                   {{ currentLang === 'tl' && cat.category_name_tl ? cat.category_name_tl : cat.category_name }}
-                </div>
-                <div class="question-card-body">
-                  <div class="question-text">
-                    {{ currentLang === 'tl' && q.question_text_tl ? q.question_text_tl : q.question_text }}
-                  </div>
+                </span>
+                <span class="eval-category-count">{{ cat.questions?.length || 0 }} questions</span>
+              </div>
+              <div v-for="q in cat.questions" :key="q.id" class="eval-question">
+                <p class="question-text">
+                  {{ currentLang === 'tl' && q.question_text_tl ? q.question_text_tl : q.question_text }}
+                </p>
 
-                  <div class="likert-scale">
-                    <div v-for="n in 5" :key="n" class="likert-option">
-                      <input
-                        type="radio"
-                        :id="'q' + q.id + '_' + n"
-                        :name="'question_' + q.id"
-                        :value="n"
-                        v-model="answers[q.id]"
-                      />
-                      <label :for="'q' + q.id + '_' + n" class="likert-label">
-                        <span class="likert-val">{{ n }}</span>
-                        <span class="likert-text">{{ likertLabels[n] }}</span>
-                      </label>
-                    </div>
+                <div class="likert-scale" role="radiogroup">
+                  <div v-for="n in 5" :key="n" class="likert-option">
+                    <input
+                      type="radio"
+                      :id="'q' + q.id + '_' + n"
+                      :name="'question_' + q.id"
+                      :value="n"
+                      v-model="answers[q.id]"
+                    />
+                    <label :for="'q' + q.id + '_' + n" class="likert-label">
+                      <span class="likert-val">{{ n }}</span>
+                      <span class="likert-text">{{ likertLabels[n] }}</span>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -160,7 +154,7 @@
               </div>
             </div>
 
-            <div class="d-flex gap-2 mt-3">
+            <div class="d-flex gap-2 mt-3 eval-actions">
               <button class="btn btn-outline-secondary" @click="step = 1">← {{ t.back_btn }}</button>
               <button
                 class="btn btn-success flex-fill"
@@ -172,6 +166,35 @@
               </button>
             </div>
           </template>
+
+          <!-- Floating circular progress, bottom-right -->
+          <div
+            v-if="!loadingQ && totalQuestions > 0"
+            class="eval-fab"
+            :class="{ 'is-complete': answeredCount >= totalQuestions }"
+            role="progressbar"
+            aria-label="Evaluation progress"
+            :aria-valuenow="answeredCount"
+            aria-valuemin="0"
+            :aria-valuemax="totalQuestions"
+            :title="answeredCount + '/' + totalQuestions + ' answered'"
+          >
+            <svg class="eval-fab__ring" viewBox="0 0 64 64" aria-hidden="true">
+              <circle class="eval-fab__track" cx="32" cy="32" :r="ringRadius" />
+              <circle
+                class="eval-fab__fill"
+                cx="32"
+                cy="32"
+                :r="ringRadius"
+                :stroke-dasharray="ringCircumference"
+                :stroke-dashoffset="ringDashOffset"
+              />
+            </svg>
+            <div class="eval-fab__label">
+              <strong>{{ Math.round(progressPercent) }}%</strong>
+              <small>{{ answeredCount }}/{{ totalQuestions }}</small>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -188,21 +211,12 @@ import api from "../services/api.js";
 import Swal from "sweetalert2";
 import { useLanguage } from "../helpers/language.js";
 import { translations } from "../helpers/translations.js";
+import { notifyInfo } from "../composables/useSnackbar.js";
 
 const { currentLang } = useLanguage();
 const t = computed(() => translations[currentLang.value]);
 
 const user = ref(JSON.parse(localStorage.getItem("user") || "{}") || {});
-
-// Vertical progress bar: track sidebar width so it always sits at the content edge
-const progressBarLeft = ref('0px');
-function updateProgressBarLeft() {
-  const main = document.querySelector('.main-wrapper');
-  if (main) {
-    const ml = window.getComputedStyle(main).marginLeft;
-    progressBarLeft.value = ml || '0px';
-  }
-}
 
 // Small screens get non-blocking toasts instead of centered modals.
 const isSmallScreen = () =>
@@ -241,12 +255,12 @@ const evaluateeType = ref('faculty');
 const facultyList = ref([]);
 const facultyOptions = computed(() => {
   return [
-    { label: "-- Select --", value: null },
+    { label: "-- Select --", value: "" },
     ...facultyList.value.map((f) => {
       const labelSuffix = ` (${f.subject_code})`;
       return {
         label: `${f.user?.name}${labelSuffix}${f.is_evaluated ? " ✓ " + t.value.evaluated_badge : ""}`,
-        value: f,
+        value: f.id,
         disabled: f.is_evaluated,
       };
     }),
@@ -266,11 +280,12 @@ async function fetchEvaluatees() {
 
 function setEvaluateeType(type) {
   evaluateeType.value = type;
-  selectedFacultyData.value = null;
+  selectedFacultyId.value = "";
   fetchEvaluatees();
 }
-const selectedFacultyData = ref(null);
-const selectedFaculty = computed(() => selectedFacultyData.value?.id || "");
+const selectedFacultyId = ref("");
+const selectedFacultyData = computed(() => facultyList.value.find((f) => f.id === selectedFacultyId.value) || null);
+const selectedFaculty = computed(() => selectedFacultyId.value || "");
 const semester = ref("");
 const academicYear = ref("");
 const categories = ref([]);
@@ -403,10 +418,8 @@ async function checkComment() {
       });
     } else {
       console.error("AI analysis failed", e);
-      showAlert({
-        icon: "info",
+      notifyInfo("Your comment can still be submitted. Please try the suggestion again later.", {
         title: "AI analysis unavailable",
-        text: "Your comment can still be submitted. Please try the suggestion again later.",
       });
     }
   } finally {
@@ -429,9 +442,12 @@ const totalQuestions = computed(() => categories.value.reduce((s, c) => s + (c.q
 const answeredCount = computed(() => Object.keys(answers.value).length);
 const progressPercent = computed(() => (totalQuestions.value ? (answeredCount.value / totalQuestions.value) * 100 : 0));
 
+// Floating circular progress ring (SVG)
+const ringRadius = 26;
+const ringCircumference = 2 * Math.PI * ringRadius;
+const ringDashOffset = computed(() => ringCircumference * (1 - progressPercent.value / 100));
+
 onMounted(async () => {
-  updateProgressBarLeft();
-  window.addEventListener('resize', updateProgressBarLeft);
   try {
     const setRes = await api.get("/settings");
     semester.value = setRes.data.active_semester || "";
@@ -455,7 +471,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', updateProgressBarLeft);
+  if (cooldownInterval) clearInterval(cooldownInterval);
 });
 
 async function loadQuestions() {
@@ -501,7 +517,7 @@ async function submitEvaluation() {
       text: "Thank you! Your evaluation has been submitted anonymously.",
     });
     step.value = 1;
-    selectedFacultyData.value = null;
+    selectedFacultyId.value = "";
 
     // Refresh evaluatees list to show the evaluated professor as disabled
     await fetchEvaluatees();
@@ -519,115 +535,212 @@ async function submitEvaluation() {
 </script>
 
 <style scoped>
-.vertical-progress {
+/* ── Centered reading column: side margins on all screens ── */
+.eval-wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0.5rem 2rem 7rem;
+}
+
+/* ── Floating circular progress, bottom-right ── */
+.eval-fab {
   position: fixed;
-  top: 0;
-  height: 100vh;
-  z-index: 1040;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  width: 76px;
+  height: 76px;
+  z-index: 1030;
   display: flex;
-  align-items: flex-end;
-}
-
-.vertical-progress__track {
-  width: 6px;
-  height: 100%;
-  background: #e2e8f0;
-  border-radius: 0 3px 3px 0;
-  overflow: hidden;
-}
-
-.vertical-progress__fill {
-  width: 100%;
-  background: linear-gradient(to bottom, #191970, #2d2d9e);
-  border-radius: 0 3px 3px 0;
-  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  min-height: 4px;
-}
-
-.question-card {
-  background: var(--bg-card);
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card, #fff);
   border: 1px solid var(--border-light);
-  overflow: hidden;
-  margin-bottom: 1.5rem;
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  pointer-events: none;
 }
 
-.question-card-header {
-  background: #191970;
-  color: white;
-  padding: 0.75rem 1.25rem;
+.eval-fab__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.eval-fab__track {
+  fill: none;
+  stroke: var(--border-light);
+  stroke-width: 6;
+}
+
+.eval-fab__fill {
+  fill: none;
+  stroke: var(--primary, #191970);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.35s ease;
+}
+
+.eval-fab.is-complete .eval-fab__fill {
+  stroke: #16a34a;
+}
+
+.eval-fab__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.eval-fab__label strong {
+  font-size: 0.95rem;
   font-weight: 800;
-  font-size: 0.85rem;
+  color: var(--text-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+.eval-fab__label small {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.eval-fab.is-complete .eval-fab__label strong {
+  color: #16a34a;
+}
+
+/* ── Minimal category + divider layout (no cards) ── */
+.eval-category {
+  margin-bottom: 2rem;
+}
+
+.eval-category-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid var(--text-dark);
+  margin-bottom: 0.25rem;
+}
+
+.eval-category-name {
+  font-weight: 800;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 1px;
+  color: var(--text-dark);
 }
 
-.question-card-body {
-  padding: 1.5rem;
+.eval-category-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.eval-question {
+  padding: 1.15rem 0 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.eval-question:last-child {
+  border-bottom: none;
 }
 
 .question-text {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 500;
   color: var(--text-dark);
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
 }
 
+/* ── Minimal likert options with dividers ── */
 .likert-scale {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  flex-direction: row;
+  align-items: stretch;
 }
 
 .likert-option {
   position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.likert-option + .likert-option {
+  border-left: 1px solid var(--border-light);
 }
 
 .likert-option input {
   position: absolute;
   opacity: 0;
-  cursor: pointer;
+  pointer-events: none;
 }
 
 .likert-label {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 1.25rem;
-  padding: 0.85rem 1.5rem;
-  background: var(--bg-light);
-  border: 1px solid var(--border-light);
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.7rem 0.5rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  width: 100%;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+  height: 100%;
+  text-align: center;
+}
+
+.likert-label:hover {
+  background: rgba(25, 25, 112, 0.04);
+}
+
+.likert-option input:focus-visible + .likert-label {
+  outline: 2px solid var(--primary, #191970);
+  outline-offset: 2px;
 }
 
 .likert-option input:checked + .likert-label {
-  background: #191970;
-  border-color: #191970;
-  color: white;
+  background: rgba(25, 25, 112, 0.06);
 }
 
 .likert-val {
-  width: 32px;
-  height: 32px;
-  background: white;
-  color: #191970;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
 }
 
 .likert-option input:checked + .likert-label .likert-val {
-  background: white;
-  color: #191970;
+  background: var(--primary, #191970);
+  border-color: var(--primary, #191970);
+  color: #fff;
 }
 
 .likert-text {
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  font-size: 0.9rem;
+  font-size: 0.68rem;
   letter-spacing: 0.5px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.likert-option input:checked + .likert-label .likert-text {
+  color: var(--primary, #191970);
+  font-weight: 700;
 }
 
 .fade-in {
@@ -639,34 +752,53 @@ async function submitEvaluation() {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media (min-width: 768px) {
+@media (max-width: 767.98px) {
+  .eval-wrap {
+    padding: 0.25rem 1.25rem 7rem;
+  }
+
+  .eval-fab {
+    right: 1rem;
+    bottom: 1rem;
+    width: 68px;
+    height: 68px;
+  }
+
+  .eval-actions {
+    padding-bottom: 1rem;
+  }
+
   .likert-scale {
-    flex-direction: row;
-    justify-content: space-between;
-  }
-  
-  .likert-option {
-    flex: 1;
-  }
-  
-  .likert-label {
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 1.25rem 1rem;
-    text-align: center;
-    height: 100%;
+    align-items: stretch;
   }
-  
+
+  .likert-option + .likert-option {
+    border-left: none;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .likert-label {
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+    gap: 0.85rem;
+    padding: 0.6rem 0.25rem;
+  }
+
   .likert-val {
-    margin: 0 auto;
+    width: 30px;
+    height: 30px;
+    font-size: 0.82rem;
+    flex-shrink: 0;
   }
-  
+
   .likert-text {
-    font-size: 0.75rem;
-    width: 100%;
-    text-align: center;
+    font-size: 0.72rem;
+  }
+
+  .eval-question {
+    padding: 1rem 0 1.1rem;
   }
 }
 
