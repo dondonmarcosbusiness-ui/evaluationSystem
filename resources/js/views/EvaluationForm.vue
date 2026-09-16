@@ -538,7 +538,9 @@ async function submitEvaluation() {
   border: 1px solid var(--border-light);
   border-radius: 12px;
   overflow: hidden;
-  backdrop-filter: blur(10px);
+  /* NOTE: no backdrop-filter here — it promotes the header to its own GPU
+     layer in Chromium, which breaks overflow:hidden rounded-corner clipping
+     and lets the progress bar bleed out past the card with square corners. */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   margin-bottom: 1.5rem;
   padding-bottom: 0;
