@@ -327,7 +327,20 @@ class EvaluationController extends Controller
         $user->load('student.section_relationship.course');
         $studentType = $user->student ? $user->student->student_type : 'regular';
         $studentSectionId = $user->student ? $user->student->section_id : null;
-        $studentCourseName = ($user->student && $user->student->section_relationship) ? ($user->student->section_relationship->course->name ?? null) : null;
+        $studentSection = $user->student ? $user->student->section_relationship : null;
+        $studentCourseName = $studentSection ? ($studentSection->course->name ?? null) : null;
+
+        // Same legacy fallback as getFacultyToEvaluateNew(): imported records
+        // may have the section name but no section_id.
+        if (!$studentSectionId && $user->student?->section && $user->student?->course) {
+            $studentSectionId = \App\Models\Section::where('name', $user->student->section)
+                ->whereHas('course', fn ($query) => $query->where('name', $user->student->course))
+                ->value('id');
+            if ($studentSectionId && !$studentSection) {
+                $studentSection = \App\Models\Section::with('course')->find($studentSectionId);
+                $studentCourseName = $studentSection?->course?->name;
+            }
+        }
 
         if ($studentType === 'irregular') {
             return \App\Models\Enrollment::where([
@@ -338,28 +351,37 @@ class EvaluationController extends Controller
             ])->exists();
         }
 
-        $assignment = FacultyAssignment::where([
-            'faculty_id' => $facultyId,
-            'section_id' => $studentSectionId,
-            'semester' => $semester,
-            'academic_year' => $academicYear
-        ])->first();
+        // A faculty may hold several assignments on the same section (different
+        // subjects / year levels). The evaluatee list shows the faculty when ANY
+        // assignment matches the student's year, so validation must do the same.
+        // Checking only ->first() rejects valid submissions when the first row
+        // happens to carry a non-matching year.
+        if ($studentSectionId) {
+            $assignments = FacultyAssignment::with(['subject', 'section'])
+                ->where('faculty_id', $facultyId)
+                ->where('section_id', $studentSectionId)
+                ->where('semester', $semester)
+                ->where('academic_year', $academicYear)
+                ->get();
 
-        if ($assignment) {
-            $studentYear = $user->student ? $user->student->year_level : null;
-            $assignmentYear = $assignment->year_level;
-            if ($assignmentYear === null) {
-                $assignmentYear = $assignment->subject->year_level ?? $assignment->section->year_level;
-            }
-            if (YearLevel::matches($assignmentYear, $studentYear)) {
-                return true;
+            if ($assignments->isNotEmpty()) {
+                $studentYear = $user->student ? $user->student->year_level : null;
+                foreach ($assignments as $assignment) {
+                    $assignmentYear = $assignment->year_level
+                        ?? $assignment->subject?->year_level
+                        ?? $assignment->section?->year_level;
+                    if (YearLevel::matches($assignmentYear, $studentYear)) {
+                        return true;
+                    }
+                }
             }
         }
 
         // Check if General Education faculty
         $genEdFaculty = Faculty::find($facultyId);
         if ($genEdFaculty && $genEdFaculty->department === 'General Education') {
-            if (str_contains($genEdFaculty->course, 'All Course') || ($studentCourseName && str_contains($genEdFaculty->course, $studentCourseName))) {
+            $facultyCourse = $genEdFaculty->course ?? '';
+            if (str_contains($facultyCourse, 'All Course') || ($studentCourseName && str_contains($facultyCourse, $studentCourseName))) {
                 return true;
             }
         }
