@@ -36,7 +36,7 @@
           <div class="card-body p-0">
             <Transition name="fade" mode="out-in">
               <div v-if="loading" key="loading">
-                <SkeletonLoader variant="table" :rows="8" :cols="8" />
+                <SkeletonLoader variant="table" :rows="8" :cols="9" />
               </div>
               <div v-else key="table" class="table-scroll" @scroll="onTableScroll">
                 <table class="table table-hover mb-0">
@@ -184,7 +184,12 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-              <div v-if="qrLoading" class="py-4"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i></div>
+              <div v-if="qrLoading" class="py-4 d-flex justify-content-center">
+                <div class="d-flex flex-column align-items-center gap-3">
+                  <div class="sk-bone" style="width: 220px; height: 220px; border-radius: 12px"></div>
+                  <div class="sk-bone" style="width: 180px; height: 13px"></div>
+                </div>
+              </div>
               <div v-else-if="qrDataUrl" class="qr-display">
                 <img :src="qrDataUrl" alt="QR Code" class="img-fluid mb-3" style="max-width: 220px; border: 1px solid var(--border-color); border-radius: 12px; padding: 8px" />
                 <p class="text-muted small mb-3">Scan to provide feedback for this office</p>

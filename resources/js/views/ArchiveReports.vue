@@ -57,7 +57,7 @@
         </div>
 
         <div v-if="loading" class="py-4">
-          <SkeletonLoader variant="table" :rows="6" :cols="4" />
+          <SkeletonLoader variant="table" :rows="6" :cols="9" />
         </div>
 
         <div v-else-if="!results" class="card mx-3 mx-md-0">

@@ -360,7 +360,7 @@
             >
               <span v-if="saving" class="spinner-border spinner-border-sm me-2" role="status"></span>
               <i v-else class="fas fa-save me-2"></i>
-              {{ saving ? "UPDATING SYSTEM..." : "SAVE SETTINGS" }}
+              {{ saving ? "UPDATING SYSTEM..." : "SAVE CHANGES" }}
             </button>
           </div>
         </div>

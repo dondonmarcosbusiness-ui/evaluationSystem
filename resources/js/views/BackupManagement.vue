@@ -79,7 +79,7 @@
 
           <div class="card-body p-0">
             <div v-if="loading">
-              <SkeletonLoader variant="table" :rows="6" :cols="4" />
+              <SkeletonLoader variant="table" :rows="6" :cols="5" />
             </div>
 
             <div v-else-if="backups.length === 0" class="text-center py-5">

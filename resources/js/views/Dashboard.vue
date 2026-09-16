@@ -186,41 +186,35 @@
                   <span class="small text-muted fw-normal">{{ heatmapTotal }} visits in the last 6 months</span>
                 </div>
                 <div class="card-body">
-                  <div v-if="heatmapHasData" class="visitor-heatmap-scroll">
-                    <div class="visitor-heatmap-grid" :style="{ '--heat-cols': heatmapDaysList.length }">
-                      <div class="heat-corner"></div>
-                      <div v-for="(day, i) in heatmapDaysList" :key="'m-' + day" class="heat-month">
-                        {{ heatMonthLabel(day, i) }}
-                      </div>
-                      <template v-for="type in visitorTypesOrder" :key="type">
-                        <div class="heat-type">
-                          <span class="text-capitalize">{{ type }}</span>
-                          <span class="heat-type-count">{{ visitorTypeTotal(type) }}</span>
-                        </div>
-                        <div
-                          v-for="day in heatmapDaysList"
-                          :key="type + day"
-                          class="heat-cell"
-                          :class="'heat-' + heatLevel(type, day)"
-                          :title="heatTooltip(type, day)"
-                        ></div>
-                      </template>
-                    </div>
+                  <div v-if="heatmapHasData" class="visitor-heatmap-table-wrap">
+                    <table class="visitor-heatmap-table">
+                      <thead>
+                        <tr>
+                          <th class="heat-year-header">Year</th>
+                          <th v-for="m in heatmapMonthLabels" :key="m">{{ m }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="row in heatmapTableRows" :key="row.year">
+                          <td class="heat-year-cell">{{ row.year }}</td>
+                          <td
+                            v-for="(cell, mi) in row.months"
+                            :key="mi"
+                            class="heat-month-cell"
+                            :class="cell.level"
+                            :title="cell.tooltip"
+                          >
+                            <span class="heat-month-value">{{ cell.count }}</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                   <div v-else class="text-center py-5">
                     <div class="mb-3 opacity-25">
                       <i class="fas fa-users fa-3x"></i>
                     </div>
                     <p class="text-muted small">No visitor data yet.</p>
-                  </div>
-                  <div v-if="heatmapHasData" class="heatmap-legend">
-                    <span>Less</span>
-                    <span class="heat-cell legend-cell heat-0"></span>
-                    <span class="heat-cell legend-cell heat-1"></span>
-                    <span class="heat-cell legend-cell heat-2"></span>
-                    <span class="heat-cell legend-cell heat-3"></span>
-                    <span class="heat-cell legend-cell heat-4"></span>
-                    <span>More</span>
                   </div>
                 </div>
               </div>
@@ -265,12 +259,8 @@
             <h5 class="fw-800 mb-1"><i class="fas fa-building me-2 text-primary"></i>Office Feedback</h5>
             <p class="text-muted small mb-0">Evaluate campus offices to help improve their services.</p>
           </div>
-          <div v-if="officesLoading" class="py-3">
-            <div class="row g-3 mx-3 mx-md-0">
-              <div v-for="i in 3" :key="i" class="col-12 col-sm-6 col-lg-4">
-                <div class="sk-list-item" style="height: 120px"></div>
-              </div>
-            </div>
+          <div v-if="officesLoading" class="py-3 mx-3 mx-md-0">
+            <SkeletonLoader variant="cards" :rows="3" />
           </div>
           <div v-else class="row g-3 mx-3 mx-md-0">
             <div v-for="office in offices" :key="office.id" class="col-12 col-sm-6 col-lg-4 d-flex">
@@ -378,10 +368,7 @@
               </div>
 
               <div v-if="myFeedbackLoading" class="d-flex flex-column gap-3">
-                <div v-for="i in 3" :key="i" class="sk-list-item">
-                  <div class="sk-shimmer mb-2" style="width: 40%; height: 14px"></div>
-                  <div class="sk-shimmer" style="width: 90%; height: 14px"></div>
-                </div>
+                <SkeletonLoader variant="list" :rows="3" />
               </div>
 
               <div v-else-if="myFeedbacks.length > 0" class="faculty-feedback-list">
@@ -436,6 +423,7 @@ import { ref, onMounted, onUnmounted, nextTick, inject, computed } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
+import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import { useLanguage } from "../helpers/language.js";
 import { translations } from "../helpers/translations.js";
@@ -563,36 +551,57 @@ const sparkStudentsFill = computed(() => sparklineFill(sparkStudents.value));
 const sparkEvalsFill = computed(() => sparklineFill(sparkEvals.value));
 const sparkRatingFill = computed(() => sparklineFill(sparkRating.value));
 
-// ── GitHub-style visitor heatmap (types as rows, days as columns) ──
-function toDayKey(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
+// ── Year × Month visitor heatmap table ──
+const heatmapMonthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const heatmapDaysList = computed(() => {
-  const n = visitorHeatmapDays.value || 182;
-  const end = new Date();
-  end.setHours(12, 0, 0, 0);
-  const days = [];
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(end);
-    d.setDate(end.getDate() - i);
-    days.push(toDayKey(d));
-  }
-  return days;
-});
+const heatmapTableRows = computed(() => {
+  const hm = visitorHeatmap.value || {};
+  const monthly = {};
 
-const heatmapMax = computed(() => {
-  let mx = 0;
-  for (const day of Object.values(visitorHeatmap.value || {})) {
-    for (const c of Object.values(day || {})) {
-      const n = Number(c) || 0;
-      if (n > mx) mx = n;
+  for (const [dayKey, types] of Object.entries(hm)) {
+    const parts = dayKey.split("-");
+    if (parts.length < 3) continue;
+    const year = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    if (!monthly[year]) monthly[year] = {};
+    if (!monthly[year][month]) monthly[year][month] = 0;
+    for (const v of Object.values(types || {})) {
+      monthly[year][month] += Number(v) || 0;
     }
   }
-  return mx;
+
+  const years = Object.keys(monthly)
+    .map(Number)
+    .sort((a, b) => b - a);
+
+  let globalMax = 0;
+  for (const year of years) {
+    for (let m = 0; m < 12; m++) {
+      const c = monthly[year]?.[m] || 0;
+      if (c > globalMax) globalMax = c;
+    }
+  }
+
+  return years.map((year) => ({
+    year,
+    months: Array.from({ length: 12 }, (_, m) => {
+      const count = monthly[year]?.[m] || 0;
+      const monthName = heatmapMonthLabels[m];
+      let level = "heat-empty";
+      if (count > 0 && globalMax > 0) {
+        const r = count / globalMax;
+        if (r <= 0.25) level = "heat-low";
+        else if (r <= 0.5) level = "heat-mid";
+        else if (r <= 0.75) level = "heat-high";
+        else level = "heat-max";
+      }
+      return {
+        count,
+        level,
+        tooltip: count ? `${count} ${count === 1 ? "visit" : "visits"} · ${monthName} ${year}` : `No visits · ${monthName} ${year}`,
+      };
+    }),
+  }));
 });
 
 const heatmapTotal = computed(() =>
@@ -603,39 +612,6 @@ const heatmapHasData = computed(() => heatmapTotal.value > 0);
 
 function visitorTypeTotal(type) {
   return Number(officeVisitorTypes.value?.[type]) || 0;
-}
-
-function heatCount(type, day) {
-  return Number(visitorHeatmap.value?.[day]?.[type]) || 0;
-}
-
-function heatLevel(type, day) {
-  const c = heatCount(type, day);
-  if (!c) return 0;
-  const mx = heatmapMax.value || c;
-  const r = c / mx;
-  if (r <= 0.25) return 1;
-  if (r <= 0.5) return 2;
-  if (r <= 0.75) return 3;
-  return 4;
-}
-
-function heatTooltip(type, day) {
-  const c = heatCount(type, day);
-  const d = new Date(day + "T12:00:00").toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-  return c ? `${c} ${c === 1 ? "visit" : "visits"} · ${type} · ${d}` : `No visits · ${type} · ${d}`;
-}
-
-function heatMonthLabel(day, i) {
-  const d = new Date(day + "T12:00:00");
-  if (i === 0) return d.toLocaleDateString(undefined, { month: "short" });
-  const prev = new Date(heatmapDaysList.value[i - 1] + "T12:00:00");
-  if (prev.getMonth() !== d.getMonth()) return d.toLocaleDateString(undefined, { month: "short" });
-  return "";
 }
 
 const fetchDashboardStats = async (type = "faculty") => {
@@ -1544,102 +1520,99 @@ function initCharts() {
   color: var(--text-muted);
 }
 
-/* ── GitHub-style visitor heatmap ── */
-.visitor-heatmap-scroll {
+/* ── Year × Month visitor heatmap table ── */
+.visitor-heatmap-table-wrap {
   overflow-x: auto;
-  padding-bottom: 0.5rem;
+  -webkit-overflow-scrolling: touch;
 }
 
-.visitor-heatmap-grid {
-  display: grid;
-  grid-template-columns: 110px repeat(var(--heat-cols), 14px);
-  gap: 3px;
-  min-width: max-content;
-  align-items: center;
+.visitor-heatmap-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 3px;
+  table-layout: fixed;
 }
 
-.heat-corner {
-  min-height: 16px;
-}
-
-.heat-month {
-  font-size: 0.65rem;
+.visitor-heatmap-table th {
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--text-muted);
+  text-align: center;
+  padding: 4px 2px;
   white-space: nowrap;
-  overflow: visible;
-  min-height: 16px;
-  line-height: 16px;
 }
 
-.heat-type {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+.visitor-heatmap-table .heat-year-header {
+  text-align: left;
+  width: 60px;
+}
+
+.visitor-heatmap-table td {
+  text-align: center;
+  padding: 0;
+}
+
+.visitor-heatmap-table .heat-year-cell {
   font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-main);
-  padding-right: 0.5rem;
-  min-height: 14px;
-}
-
-.heat-type-count {
-  font-size: 0.7rem;
   font-weight: 700;
-  color: var(--text-muted);
-  background: var(--bg-light);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  padding: 0 0.45rem;
-  line-height: 1.4;
+  color: var(--text-main);
+  text-align: left;
+  padding: 6px 8px 6px 2px;
+  white-space: nowrap;
 }
 
-.heat-cell {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  background: #ebedf0;
-  border: 1px solid rgba(27, 31, 35, 0.06);
+.visitor-heatmap-table .heat-month-cell {
+  border-radius: 4px;
+  padding: 6px 4px;
+  min-width: 0;
+  transition: transform 0.15s ease;
+  cursor: default;
 }
 
-.heat-cell.heat-0 {
-  background: #ebedf0;
+.visitor-heatmap-table .heat-month-cell:hover {
+  transform: scale(1.15);
+  z-index: 1;
 }
 
-.heat-cell.heat-1 {
-  background: #9be9a8;
+.visitor-heatmap-table .heat-month-value {
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  display: block;
 }
 
-.heat-cell.heat-2 {
-  background: #40c463;
+.heat-month-cell.heat-empty {
+  background: var(--bg-light, #f0f0f0);
+}
+.heat-month-cell.heat-empty .heat-month-value {
+  color: var(--text-muted, #999);
 }
 
-.heat-cell.heat-3 {
-  background: #30a14e;
+.heat-month-cell.heat-low {
+  background: #2d6a4f;
+}
+.heat-month-cell.heat-low .heat-month-value {
+  color: #fff;
 }
 
-.heat-cell.heat-4 {
-  background: #216e39;
+.heat-month-cell.heat-mid {
+  background: #40916c;
+}
+.heat-month-cell.heat-mid .heat-month-value {
+  color: #fff;
 }
 
-.heat-cell:not(.legend-cell):hover {
-  outline: 1px solid rgba(27, 31, 35, 0.35);
-  outline-offset: -1px;
+.heat-month-cell.heat-high {
+  background: #52b788;
+}
+.heat-month-cell.heat-high .heat-month-value {
+  color: #fff;
 }
 
-.heatmap-legend {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  margin-top: 0.75rem;
-  font-size: 0.7rem;
-  color: var(--text-muted);
+.heat-month-cell.heat-max {
+  background: #95d5b2;
 }
-
-.heatmap-legend .legend-cell {
-  width: 12px;
-  height: 12px;
+.heat-month-cell.heat-max .heat-month-value {
+  color: #1b4332;
 }
 </style>

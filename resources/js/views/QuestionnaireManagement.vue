@@ -70,7 +70,7 @@
         </div>
 
         <div v-if="loading" class="py-4">
-          <SkeletonLoader variant="cards" :rows="6" />
+          <SkeletonLoader :variant="viewMode === 'table' ? 'table' : 'cards'" :rows="6" :cols="6" />
         </div>
 
         <!-- Grid of Sectors (Cards view) -->

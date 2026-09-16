@@ -6,7 +6,7 @@
 
       <div class="content-area">
         <!-- Premium Filters & Action Bar + Year Tabs (attached, sticky) -->
-        <div class="assignment-toolbar-sticky mb-4 fade-in-up">
+        <div class="assignment-toolbar-sticky fade-in-up">
           <div class="stats-bar-premium">
             <div
               class="d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-3 rounded-top-4 shadow-sm bg-card border border-light border-bottom-0"
@@ -64,47 +64,63 @@
         </div>
 
         <div v-if="loading" class="py-4">
-          <SkeletonLoader variant="cards" :rows="8" />
+          <SkeletonLoader variant="table" :rows="8" :cols="5" />
         </div>
 
-        <!-- Faculty Assignment Grid -->
-        <div v-else class="row g-4 fade-in-up">
-          <TransitionGroup name="grid-stagger">
-            <div v-for="group in paginatedFacultyGroups" :key="group.facultyId" class="col-md-6 col-lg-4 col-xl-3">
-              <div class="faculty-card-premium" @click="handleFacultyClick(group)">
-                <div class="card-glow"></div>
-                <div class="faculty-card-inner p-4 h-100 d-flex flex-column">
-                  <div class="d-flex justify-content-between align-items-start mb-4">
-                    <div class="faculty-avatar-box">
+        <!-- Faculty Assignment Table -->
+        <div v-else class="assignment-table-wrap fade-in-up">
+          <table class="assignment-table">
+            <thead>
+              <tr>
+                <th>Faculty Name</th>
+                <th>Department</th>
+                <th>Loads</th>
+                <th>Subjects</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="group in paginatedFacultyGroups"
+                :key="group.facultyId"
+                class="assignment-row"
+                @click="handleFacultyClick(group)"
+              >
+                <td>
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="faculty-avatar-sm">
                       <i class="fas fa-user-tie"></i>
                     </div>
-                    <div class="load-badge">{{ group.assignments.length }} LOADS</div>
+                    <span class="fw-700">{{ group.facultyName }}</span>
                   </div>
-
-                  <h5 class="faculty-name-v3 mb-1 fw-800">{{ group.facultyName }}</h5>
-                  <span class="faculty-dept-v3 mb-4">{{ group.department }}</span>
-
-                  <div class="mt-auto pt-3 border-top border-light">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <div class="d-flex -space-x-2">
-                        <div v-for="i in Math.min(group.assignments.length, 3)" :key="i" class="mini-load-dot"></div>
-                        <div v-if="group.assignments.length > 3" class="mini-load-more">
-                          +{{ group.assignments.length - 3 }}
-                        </div>
-                      </div>
-                      <span class="view-details-link small fw-800 text-uppercase ls-1">
-                        Manage Load
-                        <i class="fas fa-chevron-right ms-1"></i>
-                      </span>
-                    </div>
+                </td>
+                <td class="text-muted">{{ group.department }}</td>
+                <td>
+                  <span class="load-count-badge">{{ group.assignments.length }}</span>
+                </td>
+                <td>
+                  <div class="subjects-cell">
+                    <span v-for="(a, i) in group.assignments.slice(0, 3)" :key="i" class="subject-chip">
+                      {{ a.subject?.code }}
+                    </span>
+                    <span v-if="group.assignments.length > 3" class="subject-more">
+                      +{{ group.assignments.length - 3 }}
+                    </span>
+                    <span v-if="!group.assignments.length" class="text-muted fst-italic">No assignments</span>
                   </div>
-                </div>
-              </div>
-            </div>
-          </TransitionGroup>
+                </td>
+                <td class="text-end">
+                  <button class="btn-manage-load" @click.stop="handleFacultyClick(group)">
+                    Manage
+                    <i class="fas fa-chevron-right ms-1"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
           <!-- Pagination -->
-          <div class="col-12 mt-4 d-flex justify-content-between align-items-center gap-3 flex-wrap">
+          <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mt-4">
             <label class="per-page-wrap">
               <span class="per-page-label">Rows:</span>
               <select class="per-page-select" :value="facultyPerPage" @change="changePerPage($event.target.value)">
@@ -126,7 +142,7 @@
           </div>
 
           <!-- Empty State -->
-          <div v-if="!paginatedFacultyGroups.length && !loading" class="col-12 text-center py-5">
+          <div v-if="!paginatedFacultyGroups.length && !loading" class="text-center py-5">
             <i class="fas fa-user-slash fa-4x opacity-10 mb-3"></i>
             <h5 class="fw-800">No Assignments Found</h5>
             <p class="text-muted small">Try different filters or create a new assignment.</p>
@@ -214,6 +230,24 @@
 
                 <div class="row g-3">
                   <div class="col-12">
+                    <label class="form-label-premium">Filter by Course</label>
+                    <div class="course-radio-pills">
+                      <label class="course-radio-pill" :class="{ active: !courseFilter }">
+                        <input type="radio" :value="''" v-model="courseFilter" @change="onCourseFilterChange" />
+                        <span>All</span>
+                      </label>
+                      <label
+                        v-for="opt in courseRadioOptions"
+                        :key="opt.value"
+                        class="course-radio-pill"
+                        :class="{ active: courseFilter === opt.value }"
+                      >
+                        <input type="radio" :value="opt.value" v-model="courseFilter" @change="onCourseFilterChange" />
+                        <span>{{ opt.label }}</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12">
                     <label class="form-label-premium">Professor</label>
                     <CustomSelect
                       v-model="form.faculty_id"
@@ -232,7 +266,7 @@
                     />
                   </div>
                   <div class="col-md-6 d-flex align-items-end">
-                    <p class="small text-muted mb-2">Subjects & sections narrow to the chosen year.</p>
+                    <p class="small text-muted mb-2">Subjects & sections narrow to the chosen course and year.</p>
                   </div>
                   <div class="col-12">
                     <label class="form-label-premium">Target Subject</label>
@@ -240,7 +274,7 @@
                       v-model="form.subject_id"
                       :options="subjectOptions"
                       placeholder="Select Subject"
-                      :disabled="!form.faculty_id"
+                      :disabled="!form.faculty_id && !courseFilter"
                       @change="onSubjectChange"
                     />
                   </div>
@@ -250,7 +284,7 @@
                       v-model="form.section_id"
                       :options="sectionOptions"
                       placeholder="Select Section"
-                      :disabled="!form.faculty_id"
+                      :disabled="!form.faculty_id && !courseFilter"
                     />
                   </div>
                   <div class="col-md-6">
@@ -349,6 +383,50 @@ function onFacultyChange() {
   form.value.section_id = "";
 }
 
+// Course radio filter (kept outside `form` so it is never POSTed).
+// "" = All courses (today's behavior). Otherwise a course id from meta.courses.
+const courseFilter = ref("");
+
+const selectedCourse = computed(() => meta.value.courses.find((c) => c.id === courseFilter.value) || null);
+
+// Department-aware match (pick 1b): faculty of the course itself,
+// faculty in the same department, plus General Education faculty.
+function facultyPassesCourseFilter(fac) {
+  if (!selectedCourse.value) return true;
+  if (!fac) return false;
+  return (
+    fac.course === selectedCourse.value.name ||
+    fac.department === selectedCourse.value.department ||
+    fac.department === "General Education"
+  );
+}
+
+// Course ids in scope of the radio filter (course itself + same department).
+const courseScopeIds = computed(() => {
+  if (!selectedCourse.value) return [];
+  return meta.value.courses
+    .filter((c) => c.id === selectedCourse.value.id || c.department === selectedCourse.value.department)
+    .map((c) => c.id);
+});
+
+function onCourseFilterChange() {
+  // Clear the professor if they no longer match the course filter (cascades to subject/section).
+  const fac = meta.value.faculty.find((f) => f.id === form.value.faculty_id);
+  if (form.value.faculty_id && !facultyPassesCourseFilter(fac)) {
+    form.value.faculty_id = "";
+    onFacultyChange();
+  }
+  // No professor picked: still validate subject/section against the newly narrowed lists.
+  if (!form.value.faculty_id) {
+    if (form.value.subject_id && !filteredSubjects.value.some((s) => s.id === form.value.subject_id)) {
+      form.value.subject_id = "";
+    }
+    if (form.value.section_id && !filteredSections.value.some((s) => s.id === form.value.section_id)) {
+      form.value.section_id = "";
+    }
+  }
+}
+
 // Untagged (null) or Irregular years are visible under every year filter.
 function matchesYear(itemYear, wanted) {
   if (!wanted) return true;
@@ -364,7 +442,13 @@ function onSubjectChange() {
 }
 
 const filteredSubjects = computed(() => {
-  if (!form.value.faculty_id) return [];
+  // No professor yet: narrow by the course radio filter if one is marked.
+  if (!form.value.faculty_id) {
+    if (!selectedCourse.value) return [];
+    return meta.value.subjects.filter(
+      (s) => courseScopeIds.value.includes(s.course_id) && matchesYear(s.year_level, form.value.year_level),
+    );
+  }
   const fac = meta.value.faculty.find((f) => f.id === form.value.faculty_id);
   if (!fac) return [];
   const matchingCourses = meta.value.courses.filter(
@@ -378,7 +462,13 @@ const filteredSubjects = computed(() => {
 });
 
 const filteredSections = computed(() => {
-  if (!form.value.faculty_id) return [];
+  // No professor yet: narrow by the course radio filter if one is marked.
+  if (!form.value.faculty_id) {
+    if (!selectedCourse.value) return [];
+    return meta.value.sections.filter(
+      (s) => courseScopeIds.value.includes(s.course_id) && matchesYear(s.year_level, form.value.year_level),
+    );
+  }
   const fac = meta.value.faculty.find((f) => f.id === form.value.faculty_id);
   if (!fac) return [];
   const matchingCourses = meta.value.courses.filter(
@@ -442,9 +532,13 @@ const semesterOptions = computed(() => [
   ...semesterList.value.map((s) => ({ label: s, value: s })),
 ]);
 
+const filteredFaculty = computed(() => meta.value.faculty.filter(facultyPassesCourseFilter));
+
+const courseRadioOptions = computed(() => meta.value.courses.map((c) => ({ label: c.name, value: c.id })));
+
 const facultyOptions = computed(() => [
   { label: "Select a Faculty Member", value: "" },
-  ...meta.value.faculty.map((f) => ({ label: f.user?.name || "Unknown", value: f.id })),
+  ...filteredFaculty.value.map((f) => ({ label: f.user?.name || "Unknown", value: f.id })),
 ]);
 
 const yearList = computed(() => meta.value.year_levels?.length ? meta.value.year_levels : fallbackYearLevels);
@@ -478,15 +572,33 @@ const yearModalOptions = computed(() => yearList.value.map((y) => ({ label: `${y
 const subjectOptions = computed(() => [
   { label: "Select a Subject", value: "" },
   ...filteredSubjects.value.map((s) => ({
-    label: `${s.code} - ${s.name} (${s.year_level ?? "All years"})`,
+    label: subjectOptionLabel(s),
     value: s.id,
   })),
 ]);
 
 const sectionOptions = computed(() => [
   { label: "Select a Section", value: "" },
-  ...filteredSections.value.map((s) => ({ label: `${s.name} (${s.year_level ?? "All years"})`, value: s.id })),
+  ...filteredSections.value.map((s) => ({
+    label: sectionOptionLabel(s),
+    value: s.id,
+  })),
 ]);
+
+// All Years mode: show year tags so every option's scope is visible
+// (e.g. "5A (3rd)", "1A (1st, 2nd, 3rd, 4th)").
+// Specific year mode: list is already strictly filtered, so show plain names.
+function sectionOptionLabel(s) {
+  if (form.value.year_level) return s.name;
+  if (s.year_level) return `${s.name} (${s.year_level})`;
+  return `${s.name} (1st, 2nd, 3rd, 4th)`;
+}
+
+function subjectOptionLabel(s) {
+  if (form.value.year_level) return `${s.code} - ${s.name}`;
+  if (s.year_level) return `${s.code} - ${s.name} (${s.year_level})`;
+  return `${s.code} - ${s.name} (1st, 2nd, 3rd, 4th)`;
+}
 
 function clearFilters() {
   filters.value = { query: "", department: "", academic_year: "", semester: "", year_level: "" };
@@ -544,13 +656,14 @@ function handleFacultyClick(group) {
 
 function openAddModal() {
   formError.value = "";
+  courseFilter.value = "";
   form.value = {
     faculty_id: "",
     subject_id: "",
     section_id: "",
     academic_year: globalSettings.value.academic_year,
     semester: globalSettings.value.semester,
-    year_level: "",
+    year_level: filters.value.year_level || "",
   };
   showModal.value = true;
 }
@@ -590,7 +703,7 @@ async function deleteAssignment(id) {
 /* Sticky toolbar: filters + tabs attached with no gap */
 .assignment-toolbar-sticky {
   position: sticky;
-  top: 65px;
+  top: 0;
   z-index: 1020;
 }
 .assignment-toolbar-sticky .stats-bar-premium {
@@ -903,6 +1016,48 @@ async function deleteAssignment(id) {
   text-transform: uppercase;
   margin-bottom: 0.5rem;
 }
+
+/* Course radio pills — filter for the Professor dropdown */
+.course-radio-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 96px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.course-radio-pill {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  cursor: pointer;
+}
+.course-radio-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.course-radio-pill span {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.course-radio-pill:hover span {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.course-radio-pill.active span {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
 .form-control-premium {
   width: 100%;
   padding: 0.85rem 1.25rem;
@@ -928,29 +1083,29 @@ async function deleteAssignment(id) {
 }
 
 .btn-primary-premium {
-  padding: 1rem;
-  border-radius: 1.25rem;
+  padding: 0.6rem 1.5rem;
+  border-radius: 0.5rem;
   background: var(--primary);
   border: none;
   color: #fff;
-  font-weight: 800;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .btn.btn-primary-premium:hover:not(:disabled),
 .btn.btn-primary-premium:focus-visible:not(:disabled) {
-  background: #0041cc;
+  background: var(--primary) !important;
   border: none;
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(25, 25, 112, 0.3);
+  color: #fff !important;
+  transform: scale(1.03);
+  box-shadow: none;
 }
 
 .btn.btn-primary-premium:active:not(:disabled) {
-  background: #0039b3;
-  color: #fff;
-  transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(25, 25, 112, 0.25);
+  background: var(--primary) !important;
+  color: #fff !important;
+  transform: scale(0.98);
 }
 
 .btn.btn-primary-premium:disabled {
@@ -959,30 +1114,32 @@ async function deleteAssignment(id) {
   opacity: 0.65;
   cursor: not-allowed;
   box-shadow: none;
-  transform: none;
 }
 
 .btn-light-premium {
-  padding: 1rem;
-  border-radius: 1.25rem;
+  padding: 0.6rem 1.5rem;
+  border-radius: 0.5rem;
   background: var(--bg-light);
   border: 1px solid var(--border-light);
   color: var(--text-muted);
+  font-size: 0.875rem;
   font-weight: 700;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .btn.btn-light-premium:hover:not(:disabled),
 .btn.btn-light-premium:focus-visible:not(:disabled) {
-  background: #fff;
-  border-color: var(--primary);
-  color: var(--primary);
+  background: #fff !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  transform: scale(1.03);
 }
 
 .btn.btn-light-premium:active:not(:disabled) {
-  background: var(--bg-light);
-  border-color: #0041cc;
-  color: #0041cc;
+  background: var(--bg-light) !important;
+  border-color: #0041cc !important;
+  color: #0041cc !important;
+  transform: scale(0.98);
 }
 
 /* Transitions */
@@ -1006,5 +1163,113 @@ async function deleteAssignment(id) {
 .grid-stagger-enter-from {
   opacity: 0;
   transform: translateY(30px);
+}
+
+/* ── Table Styles ─────── */
+.assignment-table-wrap {
+  margin-top: 24px;
+}
+.assignment-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 0.9rem;
+}
+.assignment-table thead th {
+  padding: 14px 16px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+.assignment-table tbody td {
+  padding: 14px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+.assignment-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.assignment-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.assignment-row:hover {
+  background: var(--bg-light);
+}
+.faculty-avatar-sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(25, 25, 112, 0.08);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.load-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: rgba(25, 25, 112, 0.08);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.subjects-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.subject-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--bg-light);
+  border: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+.subject-more {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.btn-manage-load {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-manage-load:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
 }
 </style>

@@ -21,9 +21,9 @@
                 </span>
               </div>
 
-              <div class="d-flex align-items-center gap-3 flex-wrap">
+              <div class="d-flex align-items-center gap-2 flex-wrap">
                 <!-- Filters -->
-                <div class="premium-filter-group" style="width: 200px">
+                <div class="premium-filter-group" style="width: 220px">
                   <span class="input-group-text">
                     <i class="fas fa-search"></i>
                   </span>
@@ -36,7 +36,7 @@
                   />
                 </div>
 
-                <div class="premium-filter-group" style="width: 180px">
+                <div class="premium-filter-group" style="width: 190px">
                   <CustomSelect
                     v-model="filters.department"
                     :options="filterDeptOptions"
@@ -51,14 +51,12 @@
 
                 <div class="vr mx-1 d-none d-md-block" style="height: 24px; opacity: 0.1"></div>
 
-
-
                 <!-- Action Buttons -->
-                <button class="btn btn-outline-success btn-sm d-flex align-items-center gap-2" @click="openUploadModal">
+                <button class="btn btn-outline-success btn-sm d-flex align-items-center gap-2 px-3" @click="openUploadModal">
                   <i class="fas fa-file-csv"></i>
                   <span class="d-none d-xl-inline">Upload CSV</span>
                 </button>
-                <button class="btn btn-primary btn-sm d-flex align-items-center gap-2" @click="openAddModal">
+                <button class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-3" @click="openAddModal">
                   <i class="fas fa-plus"></i>
                   <span class="d-none d-xl-inline">Add Faculty</span>
                 </button>
@@ -68,7 +66,7 @@
           <div class="card-body p-0">
             <Transition name="fade" mode="out-in">
               <div v-if="loading" key="loading">
-                <SkeletonLoader variant="table" :rows="8" :cols="10" />
+                <SkeletonLoader variant="table" :rows="8" :cols="11" />
               </div>
               <div v-else key="table" class="table-scroll" @scroll="onTableScroll">
                 <table class="table table-hover mb-0">
@@ -1217,7 +1215,7 @@ async function uploadCsv() {
 
 /* Sticky Table Header with Glassmorphism */
 .table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
-table { border-collapse: separate; border-spacing: 0; }
+table { border-collapse: separate; border-spacing: 0; table-layout: auto; }
 thead th {
   position: sticky;
   top: 0;
@@ -1226,8 +1224,30 @@ thead th {
   transition: all 0.2s ease;
   box-shadow: none;
   border-right: 1px solid var(--border-light);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 14px 16px;
+  white-space: nowrap;
 }
 thead th:last-child { border-right: none; }
+tbody td {
+  padding: 14px 16px;
+  font-size: 0.85rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-light);
+}
+tbody tr {
+  transition: background 0.15s ease;
+}
+tbody tr:hover {
+  background: var(--bg-light);
+}
+tbody tr:last-child td {
+  border-bottom: none;
+}
 .glass-header th {
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(12px) saturate(180%);

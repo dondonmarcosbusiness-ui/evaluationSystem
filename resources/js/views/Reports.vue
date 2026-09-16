@@ -61,7 +61,7 @@
 
         <!-- Results Section -->
         <div v-if="loading" class="py-4">
-          <SkeletonLoader variant="table" :rows="6" :cols="4" />
+          <SkeletonLoader variant="cards" :rows="3" />
         </div>
 
         <div v-else-if="results" class="reports-results">
@@ -262,10 +262,10 @@
                 </div>
 
                 <div class="modal-body ai-modal-body">
-                    <div v-if="loadingAi" class="text-center py-5">
-                      <div class="spinner-border text-primary mb-3" style="width: 3.5rem; height: 3.5rem"></div>
-                      <h4 class="fw-bold">Generating Analytics...</h4>
-                      <p class="text-muted">Analyzing metrics and qualitative feedback for your smart dashboard.</p>
+                    <div v-if="loadingAi" class="py-4">
+                      <h4 class="fw-bold text-center">Generating Analytics...</h4>
+                      <p class="text-muted text-center">Analyzing metrics and qualitative feedback for your smart dashboard.</p>
+                      <SkeletonLoader variant="list" :rows="4" />
                     </div>
 
                     <div v-else-if="aiError" class="text-center py-5">

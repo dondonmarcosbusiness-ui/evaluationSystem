@@ -7,7 +7,7 @@
       <div class="content-area">
         <!-- Loading State -->
         <div v-if="loadingDashboard" class="py-4">
-          <SkeletonLoader variant="table" :rows="6" :cols="5" />
+          <SkeletonLoader variant="cards" :rows="4" />
         </div>
 
         <!-- Summary View -->
@@ -99,7 +99,7 @@
             <div class="card-body p-0">
               <Transition name="fade" mode="out-in">
                 <div v-if="loadingSummary" key="loading">
-                  <SkeletonLoader variant="table" :rows="6" :cols="8" />
+                      <SkeletonLoader variant="table" :rows="6" :cols="7" />
                 </div>
                 <div v-else-if="summaryList.length" key="table" class="table-scroll" @scroll="onTableScroll">
                   <table class="table table-hover mb-0">
@@ -237,7 +237,7 @@
 
             <!-- Loading Detail -->
             <div v-if="loadingDetail" class="py-4">
-            <SkeletonLoader variant="table" :rows="6" :cols="4" />
+            <SkeletonLoader variant="cards" :rows="4" />
           </div>
 
             <!-- Detailed Content -->
@@ -386,7 +386,7 @@
                 <div class="card-body p-0">
                   <Transition name="fade" mode="out-in">
                     <div v-if="loadingFeedbacks" key="loading">
-                      <SkeletonLoader variant="table" :rows="6" :cols="8" />
+                  <SkeletonLoader variant="table" :rows="6" :cols="6" />
                     </div>
                     <div v-else-if="feedbackList.length" key="table">
                       <div class="table-responsive">

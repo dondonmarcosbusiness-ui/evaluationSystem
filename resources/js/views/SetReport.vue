@@ -140,7 +140,7 @@
 
         <!-- Results -->
         <div v-if="loading" class="py-4">
-          <SkeletonLoader variant="table" :rows="6" :cols="4" />
+          <SkeletonLoader variant="table" :rows="6" :cols="7" />
         </div>
 
         <div v-else-if="detailedResults">

@@ -35,7 +35,7 @@
         </div>
 
         <div v-if="loading" class="py-4">
-          <SkeletonLoader variant="cards" :rows="8" />
+          <SkeletonLoader variant="table" :rows="8" :cols="6" />
         </div>
 
         <!-- Courses Table -->

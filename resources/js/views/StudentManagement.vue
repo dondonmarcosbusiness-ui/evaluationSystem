@@ -92,7 +92,7 @@
           <div class="card-body p-0">
             <Transition name="fade" mode="out-in">
               <div v-if="loading" key="loading">
-                <SkeletonLoader variant="table" :rows="8" :cols="10" />
+                <SkeletonLoader variant="table" :rows="8" :cols="12" />
               </div>
               <div v-else key="table" class="table-scroll" @scroll="onTableScroll">
                 <table class="table table-hover mb-0">
