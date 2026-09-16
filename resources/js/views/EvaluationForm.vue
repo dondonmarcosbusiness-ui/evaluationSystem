@@ -541,20 +541,22 @@ async function submitEvaluation() {
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   margin-bottom: 1.5rem;
-  /* Reserve the bar's height so the pinned bar never covers the title */
-  padding-bottom: 6px;
+  padding-bottom: 0;
 }
 
 .evaluation-progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  display: block;
   height: 6px;
   margin: 0 !important;
-  border-radius: 0 !important;
+  border: 0 !important;
+  border-radius: 0 0 11px 11px !important;
   background: var(--bg-light);
-  margin: 0;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.evaluation-progress .progress-bar {
+  border-radius: inherit;
 }
 
 .question-card {
