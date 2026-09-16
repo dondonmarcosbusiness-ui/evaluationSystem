@@ -81,14 +81,13 @@
           <div class="separator position-relative text-center my-4">
             <hr class="text-muted opacity-25" />
             <span
-              class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small fw-semibold"
-              style="letter-spacing: 0.05em"
+              class="position-absolute top-50 start-50 translate-middle bg-white px-2 px-sm-3 text-muted small fw-semibold divider-label"
             >
               OR SIGN IN WITH ID
             </span>
           </div>
 
-          <form @submit.prevent="login" class="mb-4">
+          <form @submit.prevent="login">
             <div class="mb-4">
               <label class="form-label fw-semibold text-dark small mb-2">ID Number or Email</label>
               <div class="input-group input-group-lg login-input-group">
@@ -105,7 +104,7 @@
               </div>
             </div>
 
-            <div class="mb-5">
+            <div class="mb-4">
               <label class="form-label fw-semibold text-dark small mb-2">Password</label>
               <div class="input-group input-group-lg login-input-group">
                 <span class="input-group-text bg-transparent border-end-0 pe-2">
@@ -553,6 +552,11 @@ function loginWithGoogle() {
   }
   .separator span.bg-white {
     background-color: #ffffff !important;
+  }
+  .divider-label {
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+    font-size: clamp(0.65rem, 3.4vw, 0.8rem);
   }
 }
 
