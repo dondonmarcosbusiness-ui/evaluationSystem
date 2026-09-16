@@ -1864,33 +1864,6 @@ select,
 }
 
 /* ── Evaluation form ─────────────────── */
-/* Sticky Progress Bar Container (progress sits at the bottom so it can't slide under the topbar) */
-.sticky-evaluation-header {
-  position: sticky;
-  top: 60px;
-  background: var(--bg-card, #f8fafc);
-  z-index: 800;
-  padding: 0;
-  margin-bottom: 1.5rem;
-  border: 1px solid var(--border-light, rgba(0, 0, 0, 0.05));
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-.sticky-evaluation-header .evaluation-progress {
-  display: block;
-  height: 6px;
-  border: 0;
-  border-radius: 0 0 11px 11px;
-  margin: 0;
-  overflow: hidden;
-  line-height: 0;
-}
-
-.sticky-evaluation-header .evaluation-progress .progress-bar {
-  border-radius: inherit;
-}
 
 .likert-scale {
   display: flex;
@@ -1918,7 +1891,6 @@ select,
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  border-radius: var(--radius-md);
   background: #f8fafc;
   border: 1px solid var(--border-color);
   transition: all 0.2s ease;
@@ -1935,7 +1907,6 @@ select,
   justify-content: center;
   background: #ffffff;
   border: 1px solid var(--border-color);
-  border-radius: 50%;
   margin-right: 1rem;
   font-size: 0.9rem;
   font-weight: 800;
@@ -1976,11 +1947,8 @@ select,
 /* Question Card Styling */
 .question-card {
   background: #ffffff;
-  border-radius: var(--card-radius);
   margin-bottom: 2.5rem;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
-  transition: transform 0.3s ease;
   position: relative;
 }
 
@@ -1993,7 +1961,6 @@ select,
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  border-radius: var(--card-radius) var(--card-radius) 0 0;
 }
 
 .question-card-body {
@@ -2009,10 +1976,6 @@ select,
 }
 
 @media (max-width: 576px) {
-  .sticky-evaluation-header {
-    top: 60px;
-  }
-
   /* SweetAlert2 toasts used on small screens: keep them compact and inside the viewport */
   .swal2-popup.swal2-toast {
     font-size: 0.85rem;

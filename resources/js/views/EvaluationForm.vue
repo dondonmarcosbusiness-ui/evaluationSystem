@@ -8,7 +8,7 @@
         <!-- Step 1: Select Faculty + Semester -->
         <div
           v-if="step === 1"
-          class="card border-0 rounded-4 overflow-visible evaluation-step-card fade-in"
+          class="card border-0 overflow-visible evaluation-step-card fade-in"
         >
           <div class="evaluatee-tab-panel">
           <div class="text-center mb-4 mt-3">
@@ -67,16 +67,10 @@
 
         <!-- Step 2: Answer Questions -->
         <div v-if="step === 2">
-          <div class="sticky-evaluation-header" :style="{ top: headerTopOffset }">
-            <div class="d-flex justify-content-between align-items-center py-2 px-3">
-              <h5 class="mb-0 fw-bold">{{ t.evaluation_form }}</h5>
-              <div class="text-muted small fw-bold">{{ answeredCount }} / {{ totalQuestions }}</div>
-            </div>
-            <div class="progress evaluation-progress">
-              <div
-                class="progress-bar bg-primary progress-bar-striped progress-bar-animated"
-                :style="{ width: progressPercent + '%' }"
-              ></div>
+          <!-- Vertical progress indicator -->
+          <div class="vertical-progress" :style="{ left: progressBarLeft }">
+            <div class="vertical-progress__track">
+              <div class="vertical-progress__fill" :style="{ height: progressPercent + '%' }"></div>
             </div>
           </div>
 
@@ -143,7 +137,7 @@
               ></textarea>
 
               <!-- AI Feedback Area -->
-              <div v-if="aiAnalysis" class="mt-2 p-3 rounded-3 border-0 shadow-sm fade-in" :class="aiBgClass">
+              <div v-if="aiAnalysis" class="mt-2 p-3 border-0 fade-in" :class="aiBgClass">
                 <div class="d-flex justify-content-between align-items-start">
                   <div class="small">
                     <div class="fw-bold mb-1 d-flex align-items-center gap-2">
@@ -198,9 +192,17 @@ import { translations } from "../helpers/translations.js";
 const { currentLang } = useLanguage();
 const t = computed(() => translations[currentLang.value]);
 
-const headerTopOffset = ref('60px');
-
 const user = ref(JSON.parse(localStorage.getItem("user") || "{}") || {});
+
+// Vertical progress bar: track sidebar width so it always sits at the content edge
+const progressBarLeft = ref('0px');
+function updateProgressBarLeft() {
+  const main = document.querySelector('.main-wrapper');
+  if (main) {
+    const ml = window.getComputedStyle(main).marginLeft;
+    progressBarLeft.value = ml || '0px';
+  }
+}
 
 // Small screens get non-blocking toasts instead of centered modals.
 const isSmallScreen = () =>
@@ -233,15 +235,6 @@ function showAlert({ icon, title, text, html, timer, timerProgressBar, confirmBu
     didOpen,
   });
 }
-
-const updateTopOffset = () => {
-  const topbar = document.querySelector('.topbar');
-  if (topbar) {
-    // Dock 1px under the sticky topbar so the header never slides beneath it
-    // (which clipped the progress bar) and no content peeks through the seam.
-    headerTopOffset.value = Math.max(topbar.offsetHeight - 1, 0) + 'px';
-  }
-};
 
 const step = ref(1);
 const evaluateeType = ref('faculty');
@@ -437,11 +430,8 @@ const answeredCount = computed(() => Object.keys(answers.value).length);
 const progressPercent = computed(() => (totalQuestions.value ? (answeredCount.value / totalQuestions.value) * 100 : 0));
 
 onMounted(async () => {
-  updateTopOffset();
-  requestAnimationFrame(updateTopOffset);
-  window.addEventListener('resize', updateTopOffset);
-  window.addEventListener('load', updateTopOffset);
-
+  updateProgressBarLeft();
+  window.addEventListener('resize', updateProgressBarLeft);
   try {
     const setRes = await api.get("/settings");
     semester.value = setRes.data.active_semester || "";
@@ -465,8 +455,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', updateTopOffset);
-  window.removeEventListener('load', updateTopOffset);
+  window.removeEventListener('resize', updateProgressBarLeft);
 });
 
 async function loadQuestions() {
@@ -530,49 +519,36 @@ async function submitEvaluation() {
 </script>
 
 <style scoped>
-.sticky-evaluation-header {
-  position: sticky;
-  top: 60px;
-  z-index: 1000;
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  overflow: hidden;
-  /* NOTE: no backdrop-filter here — it promotes the header to its own GPU
-     layer in Chromium, which breaks overflow:hidden rounded-corner clipping
-     and lets the progress bar bleed out past the card with square corners. */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  margin-bottom: 1.5rem;
-  padding-bottom: 0;
+.vertical-progress {
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  z-index: 1040;
+  display: flex;
+  align-items: flex-end;
 }
 
-.evaluation-progress {
-  display: block;
-  height: 6px;
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 0 0 11px 11px !important;
-  background: var(--bg-light);
+.vertical-progress__track {
+  width: 6px;
+  height: 100%;
+  background: #e2e8f0;
+  border-radius: 0 3px 3px 0;
   overflow: hidden;
-  line-height: 0;
 }
 
-.evaluation-progress .progress-bar {
-  border-radius: inherit;
+.vertical-progress__fill {
+  width: 100%;
+  background: linear-gradient(to bottom, #191970, #2d2d9e);
+  border-radius: 0 3px 3px 0;
+  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 4px;
 }
 
 .question-card {
   background: var(--bg-card);
-  border-radius: 1rem;
   border: 1px solid var(--border-light);
   overflow: hidden;
   margin-bottom: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
-}
-
-.question-card:hover {
-  transform: translateY(-2px);
 }
 
 .question-card-header {
@@ -620,7 +596,6 @@ async function submitEvaluation() {
   padding: 0.85rem 1.5rem;
   background: var(--bg-light);
   border: 1px solid var(--border-light);
-  border-radius: 50px;
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
@@ -637,12 +612,10 @@ async function submitEvaluation() {
   height: 32px;
   background: white;
   color: #191970;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .likert-option input:checked + .likert-label .likert-val {
@@ -682,7 +655,6 @@ async function submitEvaluation() {
     align-items: center;
     gap: 0.75rem;
     padding: 1.25rem 1rem;
-    border-radius: 1rem;
     text-align: center;
     height: 100%;
   }
@@ -710,7 +682,6 @@ async function submitEvaluation() {
   border-bottom: 1px solid var(--border-light) !important;
   padding: 0 0.5rem;
   background: var(--bg-card, #fff);
-  border-radius: 1rem 1rem 0 0;
 }
 
 .evaluatee-tabs .nav-link.evaluatee-tab {
