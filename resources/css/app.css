@@ -17,7 +17,7 @@
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 80px;
   --sidebar-mobile-width: 280px;
-  --sidebar-bg: #191970;
+  --sidebar-bg: #0e0e55;
   --sidebar-accent: #ffffff;
   --card-radius: 8px;
   --transition: 0.15s ease;
@@ -31,7 +31,7 @@
 
   /* Modal standard — matches curriculum detail reference:
      2rem container radius, 1.5rem content gutters. */
-  --modal-radius: 2rem;
+  --modal-radius: 1rem;
   --modal-padding: 1.5rem;
 
   /* Standard web type scale: body 16px / line-height 1.6,
@@ -949,7 +949,7 @@ h6 {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.07em;
-  text-transform: uppercase;
+  text-transform: capitalize;
   color: rgba(255, 255, 255, 0.5);
   opacity: 0.85;
 }

@@ -140,14 +140,14 @@
 
       <!-- System Section Label -->
       <li v-if="$can('manage_courses')" class="sidebar-nav-section">
-        <span class="sidebar-section-label">System</span>
+        <span class="sidebar-section-label">manage courses</span>
       </li>
 
       <!-- Course List -->
       <li v-if="$can('manage_courses')">
         <router-link to="/courses" class="nav-link">
           <i class="fas fa-book"></i>
-          <span>Course List</span>
+          <span>Course Settings</span>
           <span class="nav-tooltip">Course List</span>
         </router-link>
       </li>
