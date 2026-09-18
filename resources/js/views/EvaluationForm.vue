@@ -111,7 +111,8 @@
             </div>
 
             <div class="mb-4">
-              <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-2 gap-2">
+              <!-- AI Feedback Area -->
+              <!-- <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-2 gap-2">
                 <label class="form-label fw-bold mb-0">{{ t.comments_label }}</label>
                 <button
                   v-if="comments.length >= 5"
@@ -122,7 +123,7 @@
                   <i class="fas" :class="analyzing ? 'fa-spinner fa-spin' : (user.role === 'student' && cooldownRemaining > 0 ? 'fa-clock' : 'fa-magic')"></i>
                   <span>{{ analyzing ? t.analyzing : (user.role === "student" && cooldownRemaining > 0 ? t.wait_cooldown.replace('{n}', cooldownRemaining) : t.suggest_improvement) }}</span>
                 </button>
-              </div>
+              </div> -->
               <textarea
                 v-model="comments"
                 class="form-control"
