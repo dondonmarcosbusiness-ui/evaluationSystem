@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\Log;
 class AiService
 {
   protected $apiKey;
-  protected $model = 'gemini-2.5-flash';
+  protected $model = 'gemini-3.6-flash';
 
   public function __construct()
   {
     $this->apiKey = config('services.gemini.key');
-    $this->model = config('services.gemini.model', 'gemini-2.5-flash');
+    $this->model = config('services.gemini.model', 'gemini-3.6-flash');
   }
 
   /**

@@ -3,7 +3,7 @@
 ## Stack
 - **Backend:** Laravel 12, PHP 8.2+, Spatie Permission, Sanctum, SQLite (dev)
 - **Frontend:** Vue 3 SPA + Vue Router, Vite, Tailwind 4, Sass
-- **AI:** Gemini API via `App\Services\AiService` (`gemini-2.5-flash`, key in `GEMINI_API_KEY`)
+- **AI:** Gemini API via `App\Services\AiService` (`gemini-3.6-flash`, key in `GEMINI_API_KEY`, model override via `GEMINI_MODEL`)
 - **Auth:** email/password + Google OAuth (Laravel Socialite)
 
 ## Commands
