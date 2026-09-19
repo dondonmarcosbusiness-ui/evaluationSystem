@@ -7,6 +7,7 @@ use App\Models\Faculty;
 use App\Models\User;
 use App\Models\Evaluation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -561,7 +562,7 @@ class ReportController extends Controller
         if ($activeSemester)    { $commentQuery->where('evaluations.semester', $activeSemester); }
         if ($activeAcademicYear){ $commentQuery->where('evaluations.academic_year', $activeAcademicYear); }
 
-        $comments = $commentQuery->pluck('evaluations.comments')->toArray();
+        $comments = $commentQuery->limit(200)->pluck('evaluations.comments')->toArray();
 
         if (empty($comments)) {
             return response()->json([
@@ -574,6 +575,22 @@ class ReportController extends Controller
             ]);
         }
 
+        // Cache successes: "all" aggregates are expensive and every modal open /
+        // Try-Again click otherwise fires a fresh Gemini call into quota limits.
+        $cacheKey = 'ai_insights:' . md5(json_encode([
+            $evaluateeType, $evaluateeId, $departmentFilter,
+            $activeSemester, $activeAcademicYear,
+        ]));
+
+        if ($request->boolean('refresh')) {
+            Cache::forget($cacheKey);
+        }
+
+        $cached = Cache::get($cacheKey);
+        if ($cached) {
+            return response()->json($cached);
+        }
+
         if (count($comments) > 50) {
             $comments = array_slice($comments, 0, 50);
         }
@@ -582,20 +599,46 @@ class ReportController extends Controller
         $insights  = $aiService->generateSummary($comments, $averageRating, $responseCount, null);
 
         if (!$insights) {
+            $err = $aiService->lastError() ?? [];
+            $code = $err['code'] ?? null;
+            $status = $err['status'] ?? null;
+
+            // Genuine quota exhaustion keeps the 429 contract the frontend expects.
+            if ($code === 'quota_exceeded' || $status === 429) {
+                return response()->json([
+                    'message'         => 'AI Service is currently at its limit (Quota Exceeded). Please wait a few minutes and try again.',
+                    'overview'        => 'The AI service is temporarily unavailable due to high usage.',
+                    'strengths'       => [],
+                    'issues'          => [],
+                    'recommendations' => [],
+                    'sentiment'       => ['positive' => 0, 'neutral' => 0, 'negative' => 0],
+                    'key_insights'    => 'Quota reached.',
+                    'metric_insights' => [],
+                    'metrics'         => ['average_rating' => $averageRating, 'response_count' => $responseCount, 'previous_rating' => null]
+                ], 429);
+            }
+
+            // Timeouts, truncated JSON, model/config errors: 503, not 429.
+            Log::warning('AI insights unavailable (non-quota).', [
+                'code' => $code, 'status' => $status,
+                'evaluatee_type' => $evaluateeType, 'evaluatee_id' => $evaluateeId,
+            ]);
+
             return response()->json([
-                'message'         => 'AI Service is currently at its limit (Quota Exceeded). Please wait a few minutes and try again.',
-                'overview'        => 'The AI service is temporarily unavailable due to high usage.',
+                'message'         => 'AI Analysis is temporarily unavailable. Please try again in a few minutes.',
+                'overview'        => 'The AI service is temporarily unavailable.',
                 'strengths'       => [],
                 'issues'          => [],
                 'recommendations' => [],
                 'sentiment'       => ['positive' => 0, 'neutral' => 0, 'negative' => 0],
-                'key_insights'    => 'Quota reached.',
+                'key_insights'    => 'Service unavailable.',
                 'metric_insights' => [],
                 'metrics'         => ['average_rating' => $averageRating, 'response_count' => $responseCount, 'previous_rating' => null]
-            ], 429);
+            ], 503);
         }
 
         $insights['metrics'] = ['average_rating' => $averageRating, 'response_count' => $responseCount, 'previous_rating' => null];
+        Cache::put($cacheKey, $insights, now()->addMinutes(10));
         return response()->json($insights);
     }
 

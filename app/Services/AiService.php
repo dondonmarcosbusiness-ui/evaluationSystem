@@ -10,10 +10,18 @@ class AiService
   protected $apiKey;
   protected $model = 'gemini-3.6-flash';
 
+  /** Last failed callGemini() result (code/status), so controllers can map real HTTP statuses. */
+  protected $lastError = null;
+
   public function __construct()
   {
     $this->apiKey = config('services.gemini.key');
     $this->model = config('services.gemini.model', 'gemini-3.6-flash');
+  }
+
+  public function lastError(): ?array
+  {
+    return $this->lastError;
   }
 
   /**
@@ -41,9 +49,11 @@ class AiService
     $result = $this->callGemini($prompt);
 
     if ($result['success']) {
+      $this->lastError = null;
       return $result['data'];
     }
 
+    $this->lastError = $result;
     return null;
   }
 
@@ -52,8 +62,26 @@ class AiService
    */
   public function generateSummary(array $comments, float $averageRating = 0, int $responseCount = 0, float $previousRating = null)
   {
+    // Sanitize: drop empties, cap each comment so one long essay can't blow up the prompt.
+    $comments = array_values(array_filter(array_map(
+      fn($c) => mb_substr(trim((string) $c), 0, 300),
+      $comments
+    )));
+
     if (empty($comments)) {
+      $this->lastError = null;
       return null;
+    }
+
+    // Cap payload: system-wide ("all") requests otherwise hit quota/timeouts first.
+    // Evenly sample so one evaluatee doesn't dominate the summary.
+    if (count($comments) > 25) {
+      $total = count($comments);
+      $sampled = [];
+      for ($i = 0; $i < 25; $i++) {
+        $sampled[] = $comments[(int) floor($i * $total / 25)];
+      }
+      $comments = $sampled;
     }
 
     $commentsText = implode("\n- ", $comments);
@@ -91,9 +119,11 @@ class AiService
     $result = $this->callGemini($prompt);
 
     if ($result['success']) {
+      $this->lastError = null;
       return $result['data'];
     }
 
+    $this->lastError = $result;
     return null;
   }
 
@@ -140,7 +170,8 @@ class AiService
           return [
             'success' => false,
             'error' => 'Gemini API returned invalid JSON.',
-            'code' => 'invalid_response'
+            'code' => 'invalid_response',
+            'status' => $response->status(),
           ];
         }
 
@@ -151,23 +182,26 @@ class AiService
       }
 
       $errorMessage = $response->body();
+      $status = $response->status();
       Log::error('Gemini API error.', [
         'model' => $this->model,
-        'status' => $response->status(),
+        'status' => $status,
         'body' => $errorMessage,
       ]);
 
       return [
         'success' => false,
         'error' => 'Gemini API returned an error.',
-        'code' => 'provider_error'
+        'code' => $status === 429 ? 'quota_exceeded' : 'provider_error',
+        'status' => $status,
       ];
     } catch (\Exception $e) {
       Log::error('Gemini API exception: ' . $e->getMessage());
       return [
         'success' => false,
         'error' => 'An unexpected error occurred while connecting to the AI service.',
-        'code' => 'exception'
+        'code' => 'exception',
+        'status' => null,
       ];
     }
   }

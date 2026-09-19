@@ -244,7 +244,7 @@
                     <button
                       v-if="aiInsights && !loadingAi"
                       class="btn btn-sm btn-light py-1 px-3 rounded-pill fw-bold text-primary"
-                      @click="loadAiInsights"
+                      @click="loadAiInsights(true)"
                     >
                       <i class="fas fa-sync-alt me-1"></i>
                       Refresh
@@ -745,13 +745,14 @@ async function loadResults() {
   }
 }
 
-async function loadAiInsights() {
+async function loadAiInsights(force = false) {
   if (!selectedFacultyId.value || !canUseAiInsights.value) return;
   loadingAi.value = true;
   aiInsights.value = null;
   aiError.value = null;
   try {
     const params = { evaluatee_type: evaluateeType.value };
+    if (force) params.refresh = 1;
     if (evaluateeType.value === "faculty" && selectedDepartment.value && selectedDepartment.value !== "all") {
       params.department = selectedDepartment.value;
     }
