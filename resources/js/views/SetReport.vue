@@ -6,47 +6,46 @@
 
       <div class="content-area">
         <!-- Print Only Header -->
-        <div class="print-only report-header mb-4 mt-2 mx-3 mx-md-0">
-          <div class="header-grid d-flex align-items-center justify-content-center gap-2" style="width: 100%;">
-            <div class="d-flex gap-1 justify-content-start">
-              <img :src="`${basePath}/assets/img/bagong_pilipinas_logo.png`" alt="Bagong Pilipinas" style="width: 75px; height: 75px; object-fit: contain;" @error="(e) => e.target.style.display='none'" />
-              <img :src="`${basePath}/assets/img/neust_logo.webp`" alt="NEUST Logo" style="width: 70px; height: 70px; object-fit: contain;" />
+        <div class="print-only report-header mb-4 mt-2">
+          <div class="report-masthead">
+            <div class="masthead-logos">
+              <img :src="`${basePath}/assets/img/bagong_pilipinas_logo.png`" alt="Bagong Pilipinas" @error="(e) => e.target.style.display='none'" />
+              <img :src="`${basePath}/assets/img/neust_logo.webp`" alt="NEUST Logo" />
             </div>
-            <div class="d-flex gap-1 align-items-center">
-              <div style="border-left: 3px solid #facd04; height: 75px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
-              <div style="border-left: 3px solid #facd04; height: 75px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
-              <div style="border-left: 8px solid #191970; height: 75px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
+            <div class="masthead-text">
+              <p class="mb-0 masthead-republic">Republic of the Philippines</p>
+              <p class="mb-0 masthead-university">NUEVA ECIJA UNIVERSITY OF SCIENCE AND TECHNOLOGY</p>
+              <p class="mb-0 masthead-campus">Carranglan Off-Campus</p>
             </div>
-            <div class="text-start lh-1">
-              <p class="mb-0 text-dark" style="font-family: 'Times New Roman', Times, serif; font-size: 14px;">Republic of the Philippines</p>
-              <p class="mb-0 fw-bold" style="font-family: 'Times New Roman', Times, serif; font-size: 16px; color: #5c7081;">NUEVA ECIJA UNIVERSITY OF SCIENCE AND TECHNOLOGY</p>
-              <p class="mb-0 text-dark" style="font-family: 'Times New Roman', Times, serif; font-size: 14px; color: #5c7081;">Carranglan off-Campus</p>
-            </div>
-            <div></div> <!-- Spacer to maintain center -->
+            <div class="masthead-spacer" aria-hidden="true"></div>
           </div>
 
-          <div class="mt-1" style="background-color: #191970; height: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; width: 100%;"></div>
+          <div class="masthead-rule" aria-hidden="true"><span class="rule-gold"></span><span class="rule-navy"></span></div>
 
           <h5 class="print-report-title text-center fw-bold mt-4">NEUST EVALUATION REPORT</h5>
 
-          <div class="print-meta-section text-start mx-2 mt-2 mb-3">
-            <p class="print-meta-heading mb-3">{{ printInfoSectionTitle }}</p>
-            <div class="print-meta-row">
-              <span class="print-meta-label">{{ printEvaluateeFieldLabel }}</span>
-              <span class="print-meta-value">{{ printEvaluateeValue }}</span>
-            </div>
-            <div v-if="evaluateeType === 'faculty'" class="print-meta-row">
-              <span class="print-meta-label">Department</span>
-              <span class="print-meta-value">{{ printDepartmentValue }}</span>
-            </div>
-            <div class="print-meta-row">
-              <span class="print-meta-label">Semester/Academic Year</span>
-              <span class="print-meta-value">{{ systemSettings?.active_semester }} / {{ systemSettings?.active_academic_year }}</span>
-            </div>
-            <div class="print-meta-row">
-              <span class="print-meta-label">Date generated</span>
-              <span class="print-meta-value">{{ new Date().toLocaleDateString() }}</span>
-            </div>
+          <div class="print-meta-section mt-2 mb-3">
+            <p class="print-meta-heading mb-2">{{ printInfoSectionTitle }}</p>
+            <table class="print-meta-table">
+              <tbody>
+                <tr>
+                  <th>{{ printEvaluateeFieldLabel }}</th>
+                  <td>{{ printEvaluateeValue }}</td>
+                </tr>
+                <tr v-if="evaluateeType === 'faculty'">
+                  <th>Department</th>
+                  <td>{{ printDepartmentValue }}</td>
+                </tr>
+                <tr>
+                  <th>Semester / Academic Year</th>
+                  <td>{{ systemSettings?.active_semester }} / {{ systemSettings?.active_academic_year }}</td>
+                </tr>
+                <tr>
+                  <th>Date Generated</th>
+                  <td>{{ new Date().toLocaleDateString() }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -351,6 +350,27 @@
           </template>
         </div>
 
+        <!-- Print-only legend, signatories and document note -->
+        <div class="print-only report-print-footer" v-if="detailedResults && filteredCourseSummaries.length > 0">
+          <div class="legend-block">
+            <span class="legend-title">Rating Scale:</span>
+            <span>4.50&ndash;5.00 Excellent &middot; 3.50&ndash;4.49 Very Good &middot; 2.50&ndash;3.49 Good &middot; 1.50&ndash;2.49 Fair &middot; 1.00&ndash;1.49 Poor</span>
+          </div>
+          <div class="signatory-row">
+            <div class="signatory">
+              <span class="sig-label">Prepared by:</span>
+              <span class="sig-line" aria-hidden="true"></span>
+              <span class="sig-name">{{ user.name }}</span>
+            </div>
+            <div class="signatory">
+              <span class="sig-label">Noted by:</span>
+              <span class="sig-line" aria-hidden="true"></span>
+              <span class="sig-name">&nbsp;</span>
+            </div>
+          </div>
+          <p class="system-note">System-generated report &middot; NEUST Carranglan Off-Campus &middot; {{ new Date().toLocaleString() }}</p>
+        </div>
+
         <div
           v-else-if="!loading && selectedFacultyId === '' && $can('view_reports') && user.role !== 'faculty'"
           class="card shadow-none mx-3 mx-md-0"
@@ -466,7 +486,7 @@ const filteredFacultyList = computed(() => {
 
 const evaluateeType = ref('faculty');
 
-const printInfoSectionTitle = computed(() => "A. Faculty information");
+const printInfoSectionTitle = computed(() => "A. Faculty Information");
 
 const printEvaluateeFieldLabel = computed(() => "Faculty");
 
@@ -654,10 +674,15 @@ function getRatingBadge(rating) {
   }
 
   @page {
-    margin: 0;
+    size: A4 portrait;
+    margin: 12mm 10mm 14mm;
   }
   .content-area {
     --set-report-print-blue: #191970;
+    --set-report-print-gold: #facd04;
+    --set-report-print-line: #c7cde0;
+    --set-report-print-zebra: #f2f4fa;
+    --set-report-print-tint: #e9edf7;
     padding: 0 !important;
     margin-top: 0 !important;
   }
@@ -679,6 +704,71 @@ function getRatingBadge(rating) {
     margin-right: 0 !important;
   }
 
+  /* Official masthead: balanced grid keeps the institution name optically centered */
+  .report-masthead {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+  .masthead-logos {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-self: start;
+  }
+  .masthead-logos img {
+    object-fit: contain;
+  }
+  .masthead-logos img:first-child {
+    width: 68px;
+    height: 68px;
+  }
+  .masthead-logos img:last-child {
+    width: 62px;
+    height: 62px;
+  }
+  .masthead-text {
+    text-align: center;
+    line-height: 1.25;
+    justify-self: center;
+  }
+  .masthead-republic,
+  .masthead-campus {
+    font-family: 'Times New Roman', Times, serif !important;
+    font-size: 11pt !important;
+    color: #000 !important;
+  }
+  .masthead-university {
+    font-family: 'Times New Roman', Times, serif !important;
+    font-size: 13pt !important;
+    font-weight: 700 !important;
+    color: #191970 !important;
+    letter-spacing: 0.02em;
+  }
+  .masthead-spacer {
+    justify-self: end;
+    width: 142px;
+  }
+  .masthead-rule {
+    margin-top: 10px;
+  }
+  .masthead-rule .rule-gold {
+    display: block;
+    height: 3px;
+    background-color: var(--set-report-print-gold, #facd04) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .masthead-rule .rule-navy {
+    display: block;
+    height: 9px;
+    background-color: var(--set-report-print-blue, #191970) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   .print-report-title {
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 14pt !important;
@@ -697,35 +787,41 @@ function getRatingBadge(rating) {
     font-weight: 700 !important;
     color: #000 !important;
     font-size: 11pt !important;
-    border: none !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--set-report-print-blue, #191970) !important;
     padding: 0 0 0.35rem 0;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.6rem !important;
   }
 
-  .print-meta-row {
-    display: flex !important;
-    align-items: baseline;
-    margin-bottom: 0.4rem !important;
-    gap: 0.5rem;
+  .print-meta-table {
+    width: 100%;
+    border-collapse: collapse !important;
+    font-size: 10pt !important;
   }
-
-  .print-meta-label {
-    flex: 0 0 200px;
-    color: #000 !important;
-    font-weight: 400 !important;
+  .print-meta-table th,
+  .print-meta-table td {
+    border: 1px solid var(--set-report-print-line, #c7cde0) !important;
+    padding: 6px 10px !important;
+    text-align: left;
+    vertical-align: middle;
   }
-
-  .print-meta-label::after {
-    content: ":";
-  }
-
-  .print-meta-value {
+  .print-meta-table th {
+    width: 38%;
     font-weight: 600 !important;
     color: #000 !important;
+    background-color: var(--set-report-print-zebra, #f2f4fa) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-meta-table td {
+    font-weight: 700 !important;
+    color: #000 !important;
+    background-color: #fff !important;
   }
 
   .print-table-block {
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
   }
 
   .print-table-title {
@@ -734,13 +830,14 @@ function getRatingBadge(rating) {
     font-weight: 700 !important;
     text-align: center !important;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     color: #fff !important;
     background-color: var(--set-report-print-blue, #191970) !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     padding: 10px 14px !important;
     border: 1px solid var(--set-report-print-blue, #191970) !important;
+    border-bottom: none !important;
     margin: 0 !important;
   }
 
@@ -756,7 +853,9 @@ function getRatingBadge(rating) {
     font-weight: 600 !important;
     text-align: center !important;
     color: #000 !important;
-    background-color: #fff !important;
+    background-color: var(--set-report-print-tint, #e9edf7) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
     border: 1px solid var(--set-report-print-blue, #191970);
     border-top: none;
     padding: 11px 14px !important;
@@ -774,22 +873,32 @@ function getRatingBadge(rating) {
     width: 100% !important;
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 10pt !important;
+    font-variant-numeric: tabular-nums;
     border: none !important;
     margin: 0 !important;
   }
 
+  .print-table thead {
+    display: table-header-group;
+  }
+  .print-table tfoot {
+    display: table-footer-group;
+  }
+  .print-table tr {
+    page-break-inside: avoid;
+  }
+
   .print-table thead th {
     border: 1px solid var(--set-report-print-blue, #191970) !important;
-    border-bottom: 2px solid var(--set-report-print-blue, #191970) !important;
-    background-color: #fff !important;
-    color: #000 !important;
+    background-color: var(--set-report-print-blue, #191970) !important;
+    color: #fff !important;
     padding: 9px 8px !important;
     vertical-align: middle !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     font-size: 8.5pt !important;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    line-height: 1.3;
+    letter-spacing: 0.04em;
+    line-height: 1.35;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -802,17 +911,25 @@ function getRatingBadge(rating) {
   }
 
   .print-table tbody td {
-    border: 1px solid var(--set-report-print-blue, #191970) !important;
-    padding: 9px 8px !important;
+    border: 1px solid var(--set-report-print-line, #c7cde0) !important;
+    padding: 8px !important;
     vertical-align: middle !important;
     color: #000 !important;
     font-weight: 400 !important;
     background-color: #fff !important;
   }
 
+  .print-table tbody tr:nth-child(even) td {
+    background-color: var(--set-report-print-zebra, #f2f4fa) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   .print-table tfoot td {
     border: 1px solid var(--set-report-print-blue, #191970) !important;
-    background-color: #fff !important;
+    background-color: var(--set-report-print-tint, #e9edf7) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
     color: #000 !important;
     padding: 10px 8px !important;
     vertical-align: middle !important;
@@ -821,8 +938,7 @@ function getRatingBadge(rating) {
   }
 
   .print-text-black,
-  .print-text-gray,
-  .print-header-row th {
+  .print-text-gray {
     color: #000 !important;
   }
 
@@ -845,6 +961,59 @@ function getRatingBadge(rating) {
   .report-table-card .card-body.print-table-block {
     padding-left: 0 !important;
     padding-right: 0 !important;
+  }
+
+  /* Rating legend, signatories and document note */
+  .report-print-footer {
+    margin-top: 1.1rem;
+    font-family: Arial, Helvetica, sans-serif !important;
+    color: #000 !important;
+    page-break-inside: avoid;
+  }
+  .legend-block {
+    font-size: 9pt !important;
+    border: 1px solid var(--set-report-print-line, #c7cde0) !important;
+    background-color: var(--set-report-print-zebra, #f2f4fa) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 8px 12px !important;
+    margin-bottom: 1.4rem !important;
+  }
+  .legend-title {
+    font-weight: 700 !important;
+    margin-right: 6px;
+  }
+  .signatory-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    margin: 0 8px 0.6rem 8px;
+  }
+  .signatory {
+    display: flex;
+    flex-direction: column;
+  }
+  .sig-label {
+    font-size: 10pt !important;
+    margin-bottom: 2.2rem;
+  }
+  .sig-line {
+    display: block;
+    border-bottom: 1px solid #000 !important;
+    margin-bottom: 4px;
+  }
+  .sig-name {
+    font-size: 10pt !important;
+    font-weight: 700 !important;
+    text-align: center;
+  }
+  .system-note {
+    margin-top: 1rem !important;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--set-report-print-line, #c7cde0) !important;
+    font-size: 8pt !important;
+    color: #555 !important;
+    text-align: center;
   }
 
   .table-responsive {
@@ -1087,19 +1256,31 @@ thead th:last-child { border-right: none; }
   table.print-table th.print-col-header,
   table.print-table thead th {
     border: 1px solid #191970 !important;
-    border-bottom: 2px solid #191970 !important;
-    color: #000 !important;
-    background-color: #fff !important;
+    color: #fff !important;
+    background-color: #191970 !important;
     font-weight: 700 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  table.print-table tbody td,
+  table.print-table tbody td {
+    border: 1px solid #c7cde0 !important;
+    color: #000 !important;
+    background-color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  table.print-table tbody tr:nth-child(even) td {
+    background-color: #f2f4fa !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   table.print-table tfoot td {
     border: 1px solid #191970 !important;
     color: #000 !important;
-    background-color: #fff !important;
+    background-color: #e9edf7 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
