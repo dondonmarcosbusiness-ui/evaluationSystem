@@ -1184,6 +1184,9 @@ function getRatingBadge(rating) {
     margin: 0 0 0.6rem 0 !important;
   }
   .exec-charts {
+    display: grid !important;
+    grid-template-columns: 5fr 7fr !important;
+    gap: 1.25rem;
     align-items: center;
   }
   .exec-chart-title {
@@ -1345,7 +1348,7 @@ function getRatingBadge(rating) {
   position: relative;
   height: 230px;
 }
-@media (max-width: 767.98px) {
+@media screen and (max-width: 767.98px) {
   .exec-charts {
     grid-template-columns: 1fr;
   }
