@@ -192,6 +192,36 @@
             </div>
           </div>
 
+          <!-- Print-only KPI band (screen uses the stat cards above) -->
+          <div class="print-only exec-kpi-band">
+            <div class="exec-kpi"><span class="kpi-label">Faculty</span><span class="kpi-value">{{ printEvaluateeValue }}</span></div>
+            <div class="exec-kpi"><span class="kpi-label">Respondents</span><span class="kpi-value">{{ detailedResults.total_students }}</span></div>
+            <div class="exec-kpi"><span class="kpi-label">Overall SET</span><span class="kpi-value">{{ detailedResults.overall_set_rating.toFixed(2) }}</span></div>
+            <div class="exec-kpi"><span class="kpi-label">Weighted Score</span><span class="kpi-value">{{ Number(detailedResults.total_weighted_score).toLocaleString() }}</span></div>
+            <div class="exec-kpi"><span class="kpi-label">Rating</span><span class="kpi-value">{{ getRatingStatus(detailedResults.overall_set_rating) }}</span></div>
+          </div>
+
+          <!-- Executive charts: respondents donut + SET bars (screen + print) -->
+          <div class="card shadow-none mb-4 exec-charts-card" v-if="execChartReady">
+            <div class="card-header bg-white py-3 no-print">
+              <h6 class="mb-0 fw-bold">
+                <i class="fas fa-chart-pie me-2 text-primary"></i>
+                Performance Overview
+              </h6>
+            </div>
+            <div class="print-only print-table-title">Performance Overview</div>
+            <div class="card-body exec-charts">
+              <div class="exec-chart-box">
+                <div class="exec-chart-title">{{ execDonutData.title }}</div>
+                <div class="exec-chart-wrap"><canvas id="execDonut"></canvas></div>
+              </div>
+              <div class="exec-chart-box exec-chart-box-wide">
+                <div class="exec-chart-title">Average SET Rating by Course</div>
+                <div class="exec-chart-wrap"><canvas id="execBar"></canvas></div>
+              </div>
+            </div>
+          </div>
+
           <!-- No Data Notice -->
           <div
             class="alert alert-info border-0 shadow-sm text-center py-4 mb-4"
@@ -404,7 +434,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, inject, watch } from "vue";
+import { ref, onMounted, computed, inject, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
@@ -460,6 +490,107 @@ const filteredCourseSummaries = computed(() => {
   }
   return detailedResults.value.course_summaries.filter((s) => s.course_name === selectedCourseFilter.value);
 });
+
+// Executive charts: everything derives from the already-fetched summaries.
+const execChartReady = computed(() => filteredCourseSummaries.value.length > 0);
+
+const execDonutData = computed(() => {
+  const list = filteredCourseSummaries.value;
+  if (list.length > 1) {
+    return {
+      title: "Respondents by Course",
+      labels: list.map((s) => s.course_name),
+      data: list.map((s) => s.course_total_students),
+    };
+  }
+  const rows = list[0]?.rows || [];
+  return {
+    title: "Respondents by Subject",
+    labels: rows.map((r) => `${r.course_code} · ${r.year_section}`),
+    data: rows.map((r) => r.no_of_students),
+  };
+});
+
+const execBarData = computed(() => {
+  const list = filteredCourseSummaries.value;
+  if (list.length > 1) {
+    return {
+      labels: list.map((s) => s.course_name),
+      data: list.map((s) => Number(s.course_average_rating)),
+    };
+  }
+  const rows = list[0]?.rows || [];
+  return {
+    labels: rows.map((r) => `${r.course_code} · ${r.year_section}`),
+    data: rows.map((r) => Number(r.average_set_rating)),
+  };
+});
+
+const execPalette = ["#191970", "#facd04", "#2f6fed", "#38bdf8", "#f59e0b", "#64748b", "#0ea5e9", "#a78bfa"];
+
+function renderExecCharts() {
+  import("chart.js").then(({ Chart, registerables }) => {
+    Chart.register(...registerables);
+
+    const existingDonut = Chart.getChart("execDonut");
+    if (existingDonut) existingDonut.destroy();
+    const existingBar = Chart.getChart("execBar");
+    if (existingBar) existingBar.destroy();
+    if (!execChartReady.value) return;
+
+    const donutCtx = document.getElementById("execDonut");
+    if (donutCtx) {
+      new Chart(donutCtx, {
+        type: "doughnut",
+        data: {
+          labels: execDonutData.value.labels,
+          datasets: [{
+            data: execDonutData.value.data,
+            backgroundColor: execDonutData.value.labels.map((_, i) => execPalette[i % execPalette.length]),
+            borderWidth: 2,
+            borderColor: "#ffffff",
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "58%",
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 12, boxHeight: 12, padding: 12, color: "#111827" } },
+          },
+        },
+      });
+    }
+
+    const barCtx = document.getElementById("execBar");
+    if (barCtx) {
+      new Chart(barCtx, {
+        type: "bar",
+        data: {
+          labels: execBarData.value.labels,
+          datasets: [{
+            label: "Avg SET Rating",
+            data: execBarData.value.data,
+            backgroundColor: "#191970",
+            borderRadius: 6,
+            barThickness: "flex",
+            maxBarThickness: 34,
+          }],
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { min: 0, max: 100, ticks: { color: "#111827" }, grid: { color: "#e5e7eb" } },
+            y: { ticks: { color: "#111827" }, grid: { display: false } },
+          },
+          plugins: { legend: { display: false } },
+        },
+      });
+    }
+  }).catch((e) => console.error("Exec charts failed", e));
+}
 
 const filteredFacultyList = computed(() => {
   if (!facultyList.value) return [];
@@ -621,6 +752,8 @@ async function loadResults() {
     }
     const res = await api.get(`/reports/evaluatee/${selectedFacultyId.value}`, { params });
     detailedResults.value = res.data;
+    await nextTick();
+    renderExecCharts();
   } catch (e) {
     console.error(e);
   } finally {
@@ -1016,6 +1149,54 @@ function getRatingBadge(rating) {
     text-align: center;
   }
 
+  /* Executive summary (KPI band + charts) */
+  .exec-kpi-band {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr);
+    border: 1px solid var(--set-report-print-blue, #191970) !important;
+    margin-bottom: 1rem !important;
+    page-break-inside: avoid;
+  }
+  .exec-kpi {
+    padding: 8px 6px !important;
+    text-align: center;
+    border-right: 1px solid var(--set-report-print-line, #c7cde0) !important;
+  }
+  .exec-kpi:last-child {
+    border-right: none !important;
+  }
+  .kpi-label {
+    display: block;
+    font-size: 7.5pt !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #444 !important;
+    margin-bottom: 2px;
+  }
+  .kpi-value {
+    display: block;
+    font-size: 11.5pt !important;
+    font-weight: 800 !important;
+    color: #000 !important;
+  }
+  .exec-charts-card {
+    border: 1px solid var(--set-report-print-blue, #191970) !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin-bottom: 1.5rem !important;
+    page-break-inside: avoid;
+  }
+  .exec-charts {
+    padding: 12px 14px !important;
+  }
+  .exec-chart-title {
+    color: #000 !important;
+  }
+  .exec-chart-wrap {
+    height: 250px;
+  }
+
   .table-responsive {
     overflow: visible !important;
   }
@@ -1129,6 +1310,31 @@ function getRatingBadge(rating) {
 
 /* Sticky Table Header with Glassmorphism */
 .set-report-table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
+
+/* Executive summary charts (screen + print) */
+.exec-charts {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 1.25rem;
+}
+.exec-chart-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+.exec-chart-wrap {
+  position: relative;
+  height: 270px;
+}
+@media (max-width: 767.98px) {
+  .exec-charts {
+    grid-template-columns: 1fr;
+  }
+}
 table { border-collapse: separate; border-spacing: 0; }
 thead th {
   position: sticky;
