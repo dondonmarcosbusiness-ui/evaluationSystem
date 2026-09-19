@@ -6,7 +6,7 @@
 
       <div class="content-area">
         <!-- Print Only Header -->
-        <div class="print-only report-header mb-4 mt-2">
+        <div class="print-only report-header mb-3">
           <div class="report-masthead">
             <div class="masthead-logos">
               <img :src="`${basePath}/assets/img/bagong_pilipinas_logo.png`" alt="Bagong Pilipinas" @error="(e) => e.target.style.display='none'" />
@@ -24,7 +24,7 @@
 
           <div class="masthead-rule" aria-hidden="true"><span class="rule-gold"></span><span class="rule-navy"></span></div>
 
-          <h5 class="print-report-title text-center fw-bold mt-4">NEUST EVALUATION REPORT</h5>
+          <h5 class="print-report-title text-center fw-bold mt-3">NEUST EVALUATION REPORT</h5>
 
           <div class="print-meta-section mt-2 mb-3">
             <p class="print-meta-heading mb-2">{{ printInfoSectionTitle }}</p>
@@ -835,6 +835,7 @@ function getRatingBadge(rating) {
   }
 
   .report-header {
+    margin-top: 0 !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
   }
@@ -891,7 +892,7 @@ function getRatingBadge(rating) {
     object-fit: contain;
   }
   .masthead-rule {
-    margin-top: 10px;
+    margin-top: 6px;
   }
   .masthead-rule .rule-gold {
     display: block;
