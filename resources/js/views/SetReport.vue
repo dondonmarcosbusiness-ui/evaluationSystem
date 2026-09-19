@@ -579,16 +579,16 @@ function renderExecCharts() {
             maxBarThickness: 34,
           }],
         },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { min: 0, max: 100, ticks: { color: "#111827" }, grid: { color: "#e5e7eb" } },
-            y: { ticks: { color: "#111827" }, grid: { display: false } },
-          },
-          plugins: { legend: { display: false } },
+      options: {
+        indexAxis: "x",
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { min: 0, max: 100, ticks: { color: "#111827" }, grid: { color: "#e5e7eb" } },
+          x: { ticks: { color: "#111827", maxRotation: 45, minRotation: 0 }, grid: { display: false } },
         },
+        plugins: { legend: { display: false } },
+      },
       });
     }
   }).catch((e) => console.error("Exec charts failed", e));
