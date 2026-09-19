@@ -17,7 +17,9 @@
               <p class="mb-0 masthead-university">NUEVA ECIJA UNIVERSITY OF SCIENCE AND TECHNOLOGY</p>
               <p class="mb-0 masthead-campus">Carranglan Off-Campus</p>
             </div>
-            <div class="masthead-spacer" aria-hidden="true"></div>
+            <div class="masthead-right">
+              <img :src="`${basePath}/assets/img/cict_logo.png`" alt="CICT Logo" @error="(e) => e.target.style.display='none'" />
+            </div>
           </div>
 
           <div class="masthead-rule" aria-hidden="true"><span class="rule-gold"></span><span class="rule-navy"></span></div>
@@ -201,23 +203,23 @@
             <div class="exec-kpi"><span class="kpi-label">Rating</span><span class="kpi-value">{{ getRatingStatus(detailedResults.overall_set_rating) }}</span></div>
           </div>
 
-          <!-- Executive charts: respondents donut + SET bars (screen + print) -->
-          <div class="card shadow-none mb-4 exec-charts-card" v-if="execChartReady">
-            <div class="card-header bg-white py-3 no-print">
+          <!-- Executive charts: respondents donut + SET bars, free-floating side by side (screen + print) -->
+          <div class="exec-charts-section" v-if="execChartReady">
+            <div class="no-print mb-3">
               <h6 class="mb-0 fw-bold">
                 <i class="fas fa-chart-pie me-2 text-primary"></i>
                 Performance Overview
               </h6>
             </div>
-            <div class="print-only print-table-title">Performance Overview</div>
-            <div class="card-body exec-charts">
+            <div class="print-only exec-section-heading">Performance Overview</div>
+            <div class="exec-charts">
               <div class="exec-chart-box">
                 <div class="exec-chart-title">{{ execDonutData.title }}</div>
-                <div class="exec-chart-wrap"><canvas id="execDonut"></canvas></div>
+                <div class="exec-chart-wrap exec-chart-wrap-donut"><canvas id="execDonut"></canvas></div>
               </div>
               <div class="exec-chart-box exec-chart-box-wide">
                 <div class="exec-chart-title">Average SET Rating by Course</div>
-                <div class="exec-chart-wrap"><canvas id="execBar"></canvas></div>
+                <div class="exec-chart-wrap exec-chart-wrap-bar"><canvas id="execBar"></canvas></div>
               </div>
             </div>
           </div>
@@ -880,9 +882,13 @@ function getRatingBadge(rating) {
     color: #191970 !important;
     letter-spacing: 0.02em;
   }
-  .masthead-spacer {
+  .masthead-right {
     justify-self: end;
-    width: 142px;
+  }
+  .masthead-right img {
+    width: 68px;
+    height: 68px;
+    object-fit: contain;
   }
   .masthead-rule {
     margin-top: 10px;
@@ -922,7 +928,7 @@ function getRatingBadge(rating) {
     font-size: 11pt !important;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    border-bottom: 2px solid var(--set-report-print-blue, #191970) !important;
+    border-bottom: 1px solid #000 !important;
     padding: 0 0 0.35rem 0;
     margin-bottom: 0.6rem !important;
   }
@@ -934,7 +940,7 @@ function getRatingBadge(rating) {
   }
   .print-meta-table th,
   .print-meta-table td {
-    border: 1px solid var(--set-report-print-line, #c7cde0) !important;
+    border: 1px solid #a8afc2 !important;
     padding: 6px 10px !important;
     text-align: left;
     vertical-align: middle;
@@ -943,20 +949,19 @@ function getRatingBadge(rating) {
     width: 38%;
     font-weight: 600 !important;
     color: #000 !important;
-    background-color: var(--set-report-print-zebra, #f2f4fa) !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background: none !important;
   }
   .print-meta-table td {
     font-weight: 700 !important;
     color: #000 !important;
-    background-color: #fff !important;
+    background: none !important;
   }
 
   .print-table-block {
     margin-top: 0.75rem;
   }
 
+  /* Clean monochrome section title: no color band */
   .print-table-title {
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 10.5pt !important;
@@ -964,20 +969,16 @@ function getRatingBadge(rating) {
     text-align: center !important;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #fff !important;
-    background-color: var(--set-report-print-blue, #191970) !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    padding: 10px 14px !important;
-    border: 1px solid var(--set-report-print-blue, #191970) !important;
-    border-bottom: none !important;
-    margin: 0 !important;
+    color: #000 !important;
+    background: none !important;
+    padding: 0 0 0.45rem 0 !important;
+    border: none !important;
+    border-bottom: 1px solid #000 !important;
+    margin: 0 0 0.55rem 0 !important;
   }
 
   .print-table-container {
-    border-left: 1px solid var(--set-report-print-blue, #191970) !important;
-    border-right: 1px solid var(--set-report-print-blue, #191970) !important;
-    border-top: none !important;
+    border: none !important;
   }
 
   .print-table-summary {
@@ -986,12 +987,9 @@ function getRatingBadge(rating) {
     font-weight: 600 !important;
     text-align: center !important;
     color: #000 !important;
-    background-color: var(--set-report-print-tint, #e9edf7) !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    border: 1px solid var(--set-report-print-blue, #191970);
-    border-top: none;
-    padding: 11px 14px !important;
+    background: none !important;
+    border: none !important;
+    padding: 0.6rem 0 0 0 !important;
     margin: 0 !important;
   }
 
@@ -1021,50 +1019,43 @@ function getRatingBadge(rating) {
     page-break-inside: avoid;
   }
 
+  /* Pencil-line grid: thin gray rules, crisp black header/tfoot rules */
   .print-table thead th {
-    border: 1px solid var(--set-report-print-blue, #191970) !important;
-    background-color: var(--set-report-print-blue, #191970) !important;
-    color: #fff !important;
-    padding: 9px 8px !important;
+    border: 1px solid #a8afc2 !important;
+    border-bottom: 1.5px solid #000 !important;
+    background: none !important;
+    color: #000 !important;
+    padding: 7px 8px !important;
     vertical-align: middle !important;
     font-weight: 700 !important;
     font-size: 8.5pt !important;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     line-height: 1.35;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
   }
 
   .print-table.table > :not(caption) > thead > tr > th,
   .print-table.table > :not(caption) > thead > tr > td {
     border-width: 1px !important;
     border-style: solid !important;
-    border-color: var(--set-report-print-blue, #191970) !important;
+    border-color: #a8afc2 !important;
   }
 
   .print-table tbody td {
-    border: 1px solid var(--set-report-print-line, #c7cde0) !important;
-    padding: 8px !important;
+    border: 1px solid #a8afc2 !important;
+    padding: 7px 8px !important;
     vertical-align: middle !important;
     color: #000 !important;
     font-weight: 400 !important;
-    background-color: #fff !important;
-  }
-
-  .print-table tbody tr:nth-child(even) td {
-    background-color: var(--set-report-print-zebra, #f2f4fa) !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background: none !important;
   }
 
   .print-table tfoot td {
-    border: 1px solid var(--set-report-print-blue, #191970) !important;
-    background-color: var(--set-report-print-tint, #e9edf7) !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    border: 1px solid #a8afc2 !important;
+    border-top: 1.5px solid #000 !important;
+    background: none !important;
     color: #000 !important;
-    padding: 10px 8px !important;
+    padding: 8px !important;
     vertical-align: middle !important;
     font-weight: 700 !important;
     font-size: 10pt !important;
@@ -1105,10 +1096,8 @@ function getRatingBadge(rating) {
   }
   .legend-block {
     font-size: 9pt !important;
-    border: 1px solid var(--set-report-print-line, #c7cde0) !important;
-    background-color: var(--set-report-print-zebra, #f2f4fa) !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    border: 1px solid #a8afc2 !important;
+    background: none !important;
     padding: 8px 12px !important;
     margin-bottom: 1.4rem !important;
   }
@@ -1153,14 +1142,14 @@ function getRatingBadge(rating) {
   .exec-kpi-band {
     display: grid !important;
     grid-template-columns: repeat(5, 1fr);
-    border: 1px solid var(--set-report-print-blue, #191970) !important;
+    border: 1px solid #a8afc2 !important;
     margin-bottom: 1rem !important;
     page-break-inside: avoid;
   }
   .exec-kpi {
     padding: 8px 6px !important;
     text-align: center;
-    border-right: 1px solid var(--set-report-print-line, #c7cde0) !important;
+    border-right: 1px solid #a8afc2 !important;
   }
   .exec-kpi:last-child {
     border-right: none !important;
@@ -1180,21 +1169,33 @@ function getRatingBadge(rating) {
     font-weight: 800 !important;
     color: #000 !important;
   }
-  .exec-charts-card {
-    border: 1px solid var(--set-report-print-blue, #191970) !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    margin-bottom: 1.5rem !important;
+  .exec-charts-section {
+    margin-bottom: 1.25rem !important;
     page-break-inside: avoid;
   }
+  .exec-section-heading {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 10.5pt !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #000 !important;
+    margin: 0 0 0.6rem 0 !important;
+  }
   .exec-charts {
-    padding: 12px 14px !important;
+    align-items: center;
   }
   .exec-chart-title {
     color: #000 !important;
   }
   .exec-chart-wrap {
-    height: 250px;
+    height: 230px;
+  }
+  .exec-chart-wrap-donut {
+    max-width: 300px;
+    margin: 0 auto;
+    width: 100%;
   }
 
   .table-responsive {
@@ -1311,11 +1312,18 @@ function getRatingBadge(rating) {
 /* Sticky Table Header with Glassmorphism */
 .set-report-table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
 
-/* Executive summary charts (screen + print) */
+/* Executive summary charts: free-floating, horizontally aligned (screen + print) */
+.exec-charts-section {
+  margin-bottom: 1.5rem;
+}
 .exec-charts {
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
+  grid-template-columns: 5fr 7fr;
   gap: 1.25rem;
+  align-items: center;
+}
+.exec-chart-box {
+  min-width: 0;
 }
 .exec-chart-title {
   font-size: 0.72rem;
@@ -1326,9 +1334,16 @@ function getRatingBadge(rating) {
   margin-bottom: 0.5rem;
   text-align: center;
 }
-.exec-chart-wrap {
+.exec-chart-wrap-donut {
   position: relative;
-  height: 270px;
+  height: 230px;
+  max-width: 320px;
+  margin: 0 auto;
+  width: 100%;
+}
+.exec-chart-wrap-bar {
+  position: relative;
+  height: 230px;
 }
 @media (max-width: 767.98px) {
   .exec-charts {
@@ -1455,49 +1470,41 @@ thead th:last-child { border-right: none; }
 
   table.print-table .print-table-title,
   .print-table-title {
-    background-color: #191970 !important;
-    border-color: #191970 !important;
+    background: none !important;
+    border: none !important;
+    border-bottom: 1px solid #000 !important;
+    color: #000 !important;
   }
 
   table.print-table th.print-col-header,
   table.print-table thead th {
-    border: 1px solid #191970 !important;
-    color: #fff !important;
-    background-color: #191970 !important;
+    border: 1px solid #a8afc2 !important;
+    border-bottom: 1.5px solid #000 !important;
+    color: #000 !important;
+    background: none !important;
     font-weight: 700 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
   }
 
   table.print-table tbody td {
-    border: 1px solid #c7cde0 !important;
+    border: 1px solid #a8afc2 !important;
     color: #000 !important;
-    background-color: #fff !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  table.print-table tbody tr:nth-child(even) td {
-    background-color: #f2f4fa !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background: none !important;
   }
 
   table.print-table tfoot td {
-    border: 1px solid #191970 !important;
+    border: 1px solid #a8afc2 !important;
+    border-top: 1.5px solid #000 !important;
     color: #000 !important;
-    background-color: #e9edf7 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background: none !important;
   }
 
   .print-table-container {
-    border-left-color: #191970 !important;
-    border-right-color: #191970 !important;
+    border: none !important;
   }
 
   .print-table-summary {
-    border-color: #191970 !important;
+    border: none !important;
+    background: none !important;
   }
 }
 </style>
