@@ -111,6 +111,51 @@ class YearLevelTest extends TestCase
         ]);
     }
 
+    public function test_google_registration_infers_year_from_section_name()
+    {
+        \App\Models\Role::firstOrCreate(['name' => 'Student', 'guard_name' => 'web']);
+        $course = $this->makeCourse();
+
+        $res = $this->postJson('/api/auth/google/register', [
+            'firstname' => 'Jane',
+            'lastname' => 'Doe',
+            'course' => 'BSIT',
+            'section' => '4A',
+            'google_id' => 'google-4a',
+            'email' => 'car10444@neustcarranglan.ph.education',
+        ]);
+
+        $res->assertStatus(200);
+        $this->assertDatabaseHas('students', [
+            'section' => '4A',
+            'year_level' => '4th',
+            'student_type' => 'regular',
+        ]);
+    }
+
+    public function test_google_registration_prefers_section_tag_over_inferred_name()
+    {
+        \App\Models\Role::firstOrCreate(['name' => 'Student', 'guard_name' => 'web']);
+        $course = $this->makeCourse();
+        $section = $this->makeSection($course, '3rd', '2A');
+
+        $res = $this->postJson('/api/auth/google/register', [
+            'firstname' => 'John',
+            'lastname' => 'Smith',
+            'course' => 'BSIT',
+            'section' => '2A',
+            'section_id' => $section->id,
+            'google_id' => 'google-tag',
+            'email' => 'car10555@neustcarranglan.ph.education',
+        ]);
+
+        $res->assertStatus(200);
+        $this->assertDatabaseHas('students', [
+            'section_id' => $section->id,
+            'year_level' => '3rd',
+        ]);
+    }
+
     public function test_assignment_store_rejects_invalid_year_level()
     {
         $admin = $this->grant($this->makeUser('admin', 'admin@test.com'), ['manage_faculty']);

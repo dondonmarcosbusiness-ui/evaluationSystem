@@ -222,6 +222,9 @@
                     </option>
                   </select>
                 </div>
+                <small v-if="inferredYearLevel" class="text-muted d-block mt-1">
+                  <i class="fas fa-info-circle me-1"></i>Detected year: {{ inferredYearLabel }} (auto-set from section)
+                </small>
               </div>
             </div>
 
@@ -280,6 +283,37 @@ const availableCourses = ref([]);
 const availableSections = computed(() => {
   const selectedCourse = availableCourses.value.find((c) => c.name === form.value.course);
   return selectedCourse ? selectedCourse.academic_sections : [];
+});
+
+const selectedSectionObj = computed(() => {
+  return availableSections.value.find((s) => s.name === form.value.section) || null;
+});
+
+function inferYearFromSectionName(name) {
+  if (!name) return null;
+  const map = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" };
+  const s = String(name);
+  let m = s.match(/([1-4])\s*(st|nd|rd|th)\b/i);
+  if (m) return map[m[1]];
+  m = s.match(/^\s*([1-4])\b/);
+  if (m) return map[m[1]];
+  m = s.match(/\b([1-4])[A-Za-z]\b/);
+  if (m) return map[m[1]];
+  m = s.match(/\byears?\s*([1-4])\b/i);
+  if (m) return map[m[1]];
+  m = s.match(/\b([1-4])\s*[-_]\s*[A-Za-z]\b/);
+  if (m) return map[m[1]];
+  return null;
+}
+
+// Section tag wins; otherwise infer from names like "4A"/"3A" => "4th"/"3rd".
+const inferredYearLevel = computed(() => {
+  return selectedSectionObj.value?.year_level || inferYearFromSectionName(form.value.section);
+});
+
+const inferredYearLabel = computed(() => {
+  const labels = { "1st": "1st Year", "2nd": "2nd Year", "3rd": "3rd Year", "4th": "4th Year" };
+  return labels[inferredYearLevel.value] || inferredYearLevel.value;
 });
 
 onMounted(() => {
@@ -341,6 +375,7 @@ async function finalizeRegistration() {
       course: form.value.course,
       section: form.value.section,
       section_id: sectionObj ? sectionObj.id : null,
+      year_level: inferredYearLevel.value || undefined,
       google_id: googleData.value.id,
       email: googleData.value.email,
     };

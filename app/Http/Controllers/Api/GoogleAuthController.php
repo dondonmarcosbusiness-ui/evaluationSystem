@@ -176,6 +176,7 @@ class GoogleAuthController extends Controller
       'section' => 'nullable|string|max:255',
       'section_id' => 'nullable|string',
       'course' => 'nullable|string|max:255',
+      'year_level' => \App\Support\YearLevel::rule(false),
       'google_id' => 'required|string',
       'email' => 'required|email|unique:users,email',
     ]);
@@ -212,18 +213,38 @@ class GoogleAuthController extends Controller
       $user->assignRole('Student');
 
       $sectionName = $request->section;
-      if (!$sectionName && $request->section_id) {
+      $section = null;
+      if ($request->section_id) {
           $section = \App\Models\Section::find($request->section_id);
-          if ($section) {
+          if ($section && !$sectionName) {
               $sectionName = $section->name;
           }
+      }
+      // Legacy records may send only the name; resolve the link so the
+      // year fallback below can read the section's tag.
+      if (!$section && $sectionName && $request->course) {
+          $section = \App\Models\Section::where('name', $sectionName)
+              ->whereHas('course', fn ($q) => $q->where('name', $request->course))
+              ->first();
+      }
+
+      // Year resolution: explicit input > section tag > inference from
+      // names like "4A"/"3A" (=> 4th/3rd).
+      $yearLevel = $request->input('year_level') ?: null;
+      if (!$yearLevel && $section) {
+          $yearLevel = $section->year_level;
+      }
+      if (!$yearLevel) {
+          $yearLevel = \App\Support\YearLevel::fromSectionName($sectionName);
       }
 
       \App\Models\Student::create([
         'user_id' => $user->id,
         'course' => $request->course,
         'section' => $sectionName,
-        'section_id' => $request->section_id,
+        'section_id' => $section?->id ?? $request->section_id,
+        'student_type' => 'regular',
+        'year_level' => $yearLevel,
       ]);
 
       DB::commit();
