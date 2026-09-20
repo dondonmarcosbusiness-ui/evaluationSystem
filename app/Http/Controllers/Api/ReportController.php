@@ -404,12 +404,22 @@ class ReportController extends Controller
             $query->where('faculty.department', $departmentFilter);
         }
 
-        // Filter by respondent year level; untagged students match every year.
+        // Filter by respondent year level. An explicitly tagged student matches
+        // only their own year; students imported before year tracking (NULL
+        // year_level) fall back to their section's year, and fully untagged
+        // respondents still match every year.
         $yearLevelFilter = $request->query('year_level');
         if ($yearLevelFilter && $yearLevelFilter !== 'all') {
+            $query->leftJoin('sections as respondent_sections', 'respondent_sections.id', '=', 'students.section_id');
             $query->where(function ($q) use ($yearLevelFilter) {
                 $q->where('students.year_level', $yearLevelFilter)
-                    ->orWhereNull('students.year_level');
+                    ->orWhere(function ($q2) use ($yearLevelFilter) {
+                        $q2->whereNull('students.year_level')
+                            ->where(function ($q3) use ($yearLevelFilter) {
+                                $q3->where('respondent_sections.year_level', $yearLevelFilter)
+                                    ->orWhereNull('respondent_sections.year_level');
+                            });
+                    });
             });
         }
 

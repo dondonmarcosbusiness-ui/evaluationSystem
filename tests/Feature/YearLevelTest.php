@@ -326,6 +326,63 @@ class YearLevelTest extends TestCase
         $this->assertEquals(1, $filtered->json('total_students'));
     }
 
+    public function test_detailed_report_year_filter_falls_back_to_section_year()
+    {
+        $this->openEvaluationPeriod();
+        $admin = $this->grant($this->makeUser('admin', 'admin9@test.com'), ['manage_faculty']);
+        $course = $this->makeCourse();
+        $section = $this->makeSection($course, '4th', '4A');
+        $faculty = $this->makeFaculty();
+
+        $category = \App\Models\Category::create([
+            'category_name' => 'Teaching',
+            'weight' => 100,
+            'evaluatee_type' => 'faculty',
+        ]);
+        $question = \App\Models\Question::create([
+            'category_id' => $category->id,
+            'question_text' => 'Teaches well?',
+        ]);
+
+        // Respondent tagged only via section (legacy import without year_level).
+        $studentUser = $this->makeUser('student', 'legacy@test.com');
+        Student::create([
+            'user_id' => $studentUser->id,
+            'course' => 'BSIT',
+            'section' => '4A',
+            'section_id' => $section->id,
+            'student_type' => 'regular',
+            'year_level' => null,
+        ]);
+        $evaluation = \App\Models\Evaluation::create([
+            'student_id' => $studentUser->id,
+            'faculty_id' => $faculty->id,
+            'evaluatee_type' => 'faculty',
+            'evaluatee_id' => $faculty->id,
+            'semester' => '1st Semester',
+            'academic_year' => '2024-2025',
+            'subject_code' => 'IT-SW01',
+            'year_section' => '4A',
+        ]);
+        \App\Models\Answer::create([
+            'evaluation_id' => $evaluation->id,
+            'question_id' => $question->id,
+            'rating' => 5,
+        ]);
+
+        $all = $this->actingAs($admin, 'sanctum')->getJson("/api/reports/evaluatee/{$faculty->id}");
+        $all->assertStatus(200);
+        $this->assertEquals(1, $all->json('total_students'));
+
+        $wrongYear = $this->actingAs($admin, 'sanctum')->getJson("/api/reports/evaluatee/{$faculty->id}?year_level=1st");
+        $wrongYear->assertStatus(200);
+        $this->assertEquals(0, $wrongYear->json('total_students'));
+
+        $rightYear = $this->actingAs($admin, 'sanctum')->getJson("/api/reports/evaluatee/{$faculty->id}?year_level=4th");
+        $rightYear->assertStatus(200);
+        $this->assertEquals(1, $rightYear->json('total_students'));
+    }
+
     public function test_course_detail_can_add_subject_and_section_to_a_year()
     {
         $admin = $this->grant($this->makeUser('admin', 'admin6@test.com'), ['manage_courses']);

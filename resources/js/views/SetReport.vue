@@ -203,24 +203,41 @@
             <div class="exec-kpi"><span class="kpi-label">Rating</span><span class="kpi-value">{{ getRatingStatus(detailedResults.overall_set_rating) }}</span></div>
           </div>
 
-          <!-- Executive charts: respondents donut + SET bars, free-floating side by side (screen + print) -->
+          <!-- Executive charts: respondents donut + SET bars, free-floating side by side -->
           <div class="exec-charts-section" v-if="execChartReady">
+            <!-- Screen: responsive, full data, scrolls when many subjects -->
             <div class="no-print mb-3">
               <h6 class="mb-0 fw-bold">
                 <i class="fas fa-chart-pie me-2 text-primary"></i>
                 Performance Overview
               </h6>
             </div>
-            <div class="print-only exec-section-heading">Performance Overview</div>
-            <div class="exec-charts">
+            <div class="exec-charts no-print">
               <div class="exec-chart-box">
                 <div class="exec-chart-title">{{ execDonutData.title }}</div>
                 <div class="exec-chart-wrap exec-chart-wrap-donut"><canvas id="execDonut"></canvas></div>
               </div>
               <div class="exec-chart-box exec-chart-box-wide">
                 <div class="exec-chart-title">Average SET Rating by Course</div>
-                <div class="exec-chart-wrap exec-chart-wrap-bar"><canvas id="execBar"></canvas></div>
+                <div class="exec-chart-scroll">
+                  <div class="exec-chart-wrap exec-chart-wrap-bar" :style="execBarScrollStyle"><canvas id="execBar"></canvas></div>
+                </div>
               </div>
+            </div>
+            <!-- Print: fixed bitmap, aggregated Top N + Others, deterministic -->
+            <div class="print-only exec-section-heading">Performance Overview</div>
+            <div class="print-only exec-charts-print">
+              <div class="exec-chart-box">
+                <div class="exec-chart-title">{{ execDonutPrintData.title }}</div>
+                <div class="exec-chart-wrap-print"><canvas id="execDonutPrint" width="290" height="230"></canvas></div>
+              </div>
+              <div class="exec-chart-box">
+                <div class="exec-chart-title">Average SET Rating by Course</div>
+                <div class="exec-chart-wrap-print"><canvas id="execBarPrint" width="390" height="230"></canvas></div>
+              </div>
+            </div>
+            <div class="print-only exec-agg-note" v-if="execPrintTruncated">
+              Charts show top subjects — see tables below for the complete list.
             </div>
           </div>
 
@@ -496,6 +513,58 @@ const filteredCourseSummaries = computed(() => {
 // Executive charts: everything derives from the already-fetched summaries.
 const execChartReady = computed(() => filteredCourseSummaries.value.length > 0);
 
+// Print aggregation caps (paper can't scroll): Top N + "Others".
+const PRINT_BAR_TOP_N = 12;
+const PRINT_DONUT_TOP_N = 8;
+
+// Flat subject rows shared by screen + print datasets.
+const execSubjectRows = computed(() => {
+  const list = filteredCourseSummaries.value;
+  if (list.length > 1) {
+    return list.map((s) => ({
+      label: s.course_name,
+      respondents: s.course_total_students,
+      rating: Number(s.course_average_rating),
+    }));
+  }
+  const rows = list[0]?.rows || [];
+  return rows.map((r) => ({
+    label: `${r.course_code} · ${r.year_section}`,
+    respondents: r.no_of_students,
+    rating: Number(r.average_set_rating),
+  }));
+});
+
+const execSubjectCount = computed(() => execSubjectRows.value.length);
+const execPrintTruncated = computed(() => execSubjectCount.value > PRINT_DONUT_TOP_N);
+
+// Short axis labels (full names stay in tooltips / tables).
+function shortChartLabel(label) {
+  const text = String(label ?? "");
+  const max = 22;
+  if (text.length <= max) return text;
+  const parts = text.split(" · ");
+  const code = parts[0].split(",")[0].trim();
+  const tail = parts[1] ? ` · ${parts[1]}` : "";
+  const s = `${code}${tail}`;
+  return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
+}
+
+function topNOthers(rows, n, valueOf) {
+  const sorted = [...rows].sort((a, b) => b.respondents - a.respondents);
+  if (sorted.length <= n) return { rows: sorted, aggregated: false };
+  const top = sorted.slice(0, n);
+  const rest = sorted.slice(n);
+  const restRespondents = rest.reduce((s, r) => s + r.respondents, 0);
+  const restWeighted = rest.reduce((s, r) => s + valueOf(r) * r.respondents, 0);
+  top.push({
+    label: `Others (${rest.length})`,
+    respondents: restRespondents,
+    __aggValue: restRespondents > 0 ? restWeighted / restRespondents : 0,
+  });
+  return { rows: top, aggregated: true };
+}
+
 const execDonutData = computed(() => {
   const list = filteredCourseSummaries.value;
   if (list.length > 1) {
@@ -528,17 +597,57 @@ const execBarData = computed(() => {
   };
 });
 
+// Print datasets: aggregated, pre-shortened labels, full names for tooltips.
+const execDonutPrintData = computed(() => {
+  const { rows } = topNOthers(execSubjectRows.value, PRINT_DONUT_TOP_N, (r) => r.rating);
+  return {
+    title: execDonutData.value.title,
+    labels: rows.map((r) => shortChartLabel(r.label)),
+    full: rows.map((r) => r.label),
+    data: rows.map((r) => r.respondents),
+  };
+});
+
+const execBarPrintData = computed(() => {
+  const { rows } = topNOthers(execSubjectRows.value, PRINT_BAR_TOP_N, (r) => r.rating);
+  return {
+    labels: rows.map((r) => shortChartLabel(r.label)),
+    full: rows.map((r) => r.label),
+    data: rows.map((r) => (r.__aggValue ?? r.rating)),
+  };
+});
+
+// Screen bar wrap grows so bars never squeeze when many subjects evaluate.
+const execBarScrollStyle = computed(() => {
+  const n = execBarData.value.labels.length;
+  return n > 6 ? { minWidth: `${n * 72}px` } : {};
+});
+
 const execPalette = ["#191970", "#facd04", "#2f6fed", "#38bdf8", "#f59e0b", "#64748b", "#0ea5e9", "#a78bfa"];
 
 function renderExecCharts() {
   import("chart.js").then(({ Chart, registerables }) => {
     Chart.register(...registerables);
 
-    const existingDonut = Chart.getChart("execDonut");
-    if (existingDonut) existingDonut.destroy();
-    const existingBar = Chart.getChart("execBar");
-    if (existingBar) existingBar.destroy();
+    ["execDonut", "execBar", "execDonutPrint", "execBarPrint"].forEach((id) => {
+      const existing = Chart.getChart(id);
+      if (existing) existing.destroy();
+    });
     if (!execChartReady.value) return;
+
+    const screenTick = {
+      color: "#111827",
+      maxRotation: 45,
+      minRotation: 0,
+      autoSkip: false,
+      callback: function (value) { return shortChartLabel(this.getLabelForValue(value)); },
+    };
+    const screenBarTooltip = {
+      callbacks: {
+        label: (ctx) => ` ${execBarData.value.labels[ctx.dataIndex]}: ${ctx.parsed.y}`,
+        title: () => "Avg SET Rating",
+      },
+    };
 
     const donutCtx = document.getElementById("execDonut");
     if (donutCtx) {
@@ -575,20 +684,86 @@ function renderExecCharts() {
             data: execBarData.value.data,
             backgroundColor: "#191970",
             borderRadius: 6,
-            barThickness: "flex",
-            maxBarThickness: 34,
+            categoryPercentage: 0.7,
+            barPercentage: 0.85,
           }],
         },
-      options: {
-        indexAxis: "x",
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { min: 0, max: 100, ticks: { color: "#111827" }, grid: { color: "#e5e7eb" } },
-          x: { ticks: { color: "#111827", maxRotation: 45, minRotation: 0 }, grid: { display: false } },
+        options: {
+          indexAxis: "x",
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { min: 0, max: 100, ticks: { color: "#111827" }, grid: { color: "#e5e7eb" } },
+            x: { ticks: screenTick, grid: { display: false } },
+          },
+          plugins: { legend: { display: false }, tooltip: screenBarTooltip },
         },
-        plugins: { legend: { display: false } },
-      },
+      });
+    }
+
+    // Print twins: fixed bitmap, no animation/resize timing hazards, aggregated.
+    const printTick = {
+      color: "#111827",
+      maxRotation: 45,
+      minRotation: 0,
+      autoSkip: false,
+    };
+
+    const donutPrintCtx = document.getElementById("execDonutPrint");
+    if (donutPrintCtx) {
+      const d = execDonutPrintData.value;
+      new Chart(donutPrintCtx, {
+        type: "doughnut",
+        data: {
+          labels: d.labels,
+          datasets: [{
+            data: d.data,
+            backgroundColor: d.labels.map((_, i) => execPalette[i % execPalette.length]),
+            borderWidth: 2,
+            borderColor: "#ffffff",
+          }],
+        },
+        options: {
+          responsive: false,
+          animation: false,
+          cutout: "58%",
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 12, boxHeight: 12, padding: 12, color: "#111827" } },
+            tooltip: { callbacks: { label: (ctx) => ` ${d.full[ctx.dataIndex]}: ${ctx.parsed}` } },
+          },
+        },
+      });
+    }
+
+    const barPrintCtx = document.getElementById("execBarPrint");
+    if (barPrintCtx) {
+      const b = execBarPrintData.value;
+      new Chart(barPrintCtx, {
+        type: "bar",
+        data: {
+          labels: b.labels,
+          datasets: [{
+            label: "Avg SET Rating",
+            data: b.data,
+            backgroundColor: "#191970",
+            borderRadius: 6,
+            categoryPercentage: 0.7,
+            barPercentage: 0.85,
+          }],
+        },
+        options: {
+          indexAxis: "x",
+          responsive: false,
+          animation: false,
+          scales: {
+            y: { min: 0, max: 100, ticks: { color: "#111827" }, grid: { color: "#e5e7eb" } },
+            x: { ticks: printTick, grid: { display: false } },
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => ` ${b.full[ctx.dataIndex]}: ${ctx.parsed.y}` } },
+          },
+        },
       });
     }
   }).catch((e) => console.error("Exec charts failed", e));
@@ -843,7 +1018,7 @@ function getRatingBadge(rating) {
   /* Official masthead: balanced grid keeps the institution name optically centered */
   .report-masthead {
     display: grid !important;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: 12px;
     width: 100%;
@@ -878,10 +1053,11 @@ function getRatingBadge(rating) {
   }
   .masthead-university {
     font-family: 'Times New Roman', Times, serif !important;
-    font-size: 13pt !important;
+    font-size: 12pt !important;
     font-weight: 700 !important;
     color: #191970 !important;
     letter-spacing: 0.02em;
+    white-space: nowrap !important;
   }
   .masthead-right {
     justify-self: end;
@@ -1184,11 +1360,25 @@ function getRatingBadge(rating) {
     color: #000 !important;
     margin: 0 0 0.6rem 0 !important;
   }
-  .exec-charts {
+  .exec-charts-print {
     display: grid !important;
     grid-template-columns: 5fr 7fr !important;
     gap: 1.25rem;
     align-items: center;
+    page-break-inside: avoid;
+  }
+  .exec-chart-wrap-print {
+    line-height: 0;
+  }
+  .exec-chart-wrap-print canvas {
+    max-width: 100%;
+  }
+  .exec-agg-note {
+    font-size: 8.5pt !important;
+    font-style: italic;
+    color: #555 !important;
+    text-align: center;
+    margin-top: 0.4rem !important;
   }
   .exec-chart-title {
     color: #000 !important;
@@ -1348,6 +1538,9 @@ function getRatingBadge(rating) {
 .exec-chart-wrap-bar {
   position: relative;
   height: 230px;
+}
+.exec-chart-scroll {
+  overflow-x: auto;
 }
 @media screen and (max-width: 767.98px) {
   .exec-charts {
