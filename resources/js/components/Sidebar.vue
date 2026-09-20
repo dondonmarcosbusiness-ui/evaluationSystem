@@ -52,7 +52,10 @@
 
     <!-- Sidebar Navigation List -->
     <ul class="sidebar-nav">
-      <!-- Universal Dashboard -->
+      <!-- ── GENERAL ── -->
+      <li class="sidebar-nav-section">
+        <span class="sidebar-section-label">General</span>
+      </li>
       <li>
         <router-link to="/dashboard" class="nav-link">
           <i class="fas fa-home"></i>
@@ -60,24 +63,100 @@
           <span class="nav-tooltip">Dashboard</span>
         </router-link>
       </li>
-
-      <!-- Student Direct Link -->
-      <li v-if="$can('give_evaluations')">
-        <router-link to="/evaluate" class="nav-link">
-          <i class="fas fa-star"></i>
-          <span>Evaluate Faculty</span>
-          <span class="nav-tooltip">Evaluate Faculty</span>
+      <li v-if="$can('manage_courses')">
+        <router-link to="/courses" class="nav-link">
+          <i class="fas fa-book"></i>
+          <span>Course Settings</span>
+          <span class="nav-tooltip">Course Settings</span>
         </router-link>
       </li>
 
-      <!-- Accounts Section Label -->
-      <li v-if="canSeeAccountsSection" class="sidebar-nav-section">
-        <span class="sidebar-section-label">Accounts</span>
+      <!-- ── EVALUATION ── -->
+      <template v-if="$can('give_evaluations')">
+        <li class="sidebar-nav-section">
+          <span class="sidebar-section-label">Evaluation</span>
+        </li>
+        <li>
+          <router-link to="/evaluate" class="nav-link">
+            <i class="fas fa-star"></i>
+            <span>Evaluate Faculty</span>
+            <span class="nav-tooltip">Evaluate Faculty</span>
+          </router-link>
+        </li>
+      </template>
+
+      <!-- ── FACULTY MANAGEMENT ── -->
+      <li v-if="canSeeFacultySection" class="sidebar-nav-section">
+        <span class="sidebar-section-label">Faculty Management</span>
       </li>
 
-      <!-- Faculty Management (Flyout Trigger) -->
+      <!-- Flat links when expanded -->
+      <template v-if="!isCollapsed">
+        <li v-if="$can('manage_faculty')">
+          <router-link to="/faculty" class="nav-link">
+            <i class="fas fa-user-shield"></i>
+            <span>Faculty Accounts</span>
+            <span class="nav-tooltip">Faculty Accounts</span>
+          </router-link>
+        </li>
+        <li v-if="$can('manage_faculty')">
+          <router-link to="/assignments" class="nav-link">
+            <i class="fas fa-link"></i>
+            <span>Faculty Assignments</span>
+            <span class="nav-tooltip">Faculty Assignments</span>
+          </router-link>
+        </li>
+        <li v-if="$can('manage_categories') || $can('manage_questions')">
+          <router-link to="/questionnaire/faculty" class="nav-link">
+            <i class="fas fa-list-alt"></i>
+            <span>Faculty Questionnaires</span>
+            <span class="nav-tooltip">Faculty Questionnaires</span>
+          </router-link>
+        </li>
+        <li v-if="canSeeFacultyReports">
+          <router-link
+            :to="reportLink('/reports', 'faculty')"
+            class="nav-link"
+            active-class=""
+            exact-active-class=""
+            :class="{ 'router-link-active': isReportNavActive('/reports', 'faculty') }"
+          >
+            <i class="fas fa-chart-bar"></i>
+            <span>{{ user.role === "faculty" ? "My Ratings Overview" : "Ratings Overview" }}</span>
+            <span class="nav-tooltip">{{ user.role === "faculty" ? "My Ratings Overview" : "Ratings Overview" }}</span>
+          </router-link>
+        </li>
+        <li v-if="canSeeFacultyReports">
+          <router-link
+            :to="reportLink('/set-report', 'faculty')"
+            class="nav-link"
+            active-class=""
+            exact-active-class=""
+            :class="{ 'router-link-active': isReportNavActive('/set-report', 'faculty') }"
+          >
+            <i class="fas fa-file-invoice"></i>
+            <span>{{ user.role === "faculty" ? "My SET Report" : "Detailed SET Report" }}</span>
+            <span class="nav-tooltip">{{ user.role === "faculty" ? "My SET Report" : "Detailed SET Report" }}</span>
+          </router-link>
+        </li>
+        <li v-if="$can('view_reports')">
+          <router-link
+            :to="reportLink('/feedbacks', 'faculty')"
+            class="nav-link"
+            active-class=""
+            exact-active-class=""
+            :class="{ 'router-link-active': isReportNavActive('/feedbacks', 'faculty') }"
+          >
+            <i class="fas fa-comments"></i>
+            <span>Feedback Management</span>
+            <span class="nav-tooltip">Feedback Management</span>
+          </router-link>
+        </li>
+      </template>
+
+      <!-- Flyout trigger when collapsed -->
       <li
-        v-if="$can('manage_faculty')"
+        v-if="isCollapsed && canSeeFacultySection"
         class="nav-item-flyout"
         :class="{ active: isFacultyActive, 'flyout-open': activeFlyout === 'faculty' }"
       >
@@ -89,23 +168,30 @@
         </div>
       </li>
 
-      <!-- Office Management (Flyout Trigger) -->
-      <li
-        v-if="$can('manage_offices') || $can('manage_faculty')"
-        class="nav-item-flyout"
-        :class="{ active: isOfficeActive, 'flyout-open': activeFlyout === 'office' }"
-      >
-        <div class="nav-link" @click="toggleFlyout('office', $event)">
-          <i class="fas fa-building"></i>
-          <span>Office Management</span>
-          <i class="fas fa-chevron-right ms-auto arrow"></i>
-          <span class="nav-tooltip">Office Management</span>
-        </div>
+      <!-- ── STUDENTS ── -->
+      <li v-if="$can('manage_users')" class="sidebar-nav-section">
+        <span class="sidebar-section-label">Students</span>
       </li>
+      <template v-if="$can('manage_users') && !isCollapsed">
+        <li>
+          <router-link to="/students/regular" class="nav-link">
+            <i class="fas fa-user"></i>
+            <span>Regular Students</span>
+            <span class="nav-tooltip">Regular Students</span>
+          </router-link>
+        </li>
+        <li>
+          <router-link to="/students/irregular" class="nav-link">
+            <i class="fas fa-user-minus"></i>
+            <span>Irregular Students</span>
+            <span class="nav-tooltip">Irregular Students</span>
+          </router-link>
+        </li>
+      </template>
 
-      <!-- Students Management (Flyout Trigger) -->
+      <!-- Students flyout trigger when collapsed -->
       <li
-        v-if="$can('manage_users')"
+        v-if="isCollapsed && $can('manage_users')"
         class="nav-item-flyout"
         :class="{ active: isStudentsActive, 'flyout-open': activeFlyout === 'students' }"
       >
@@ -117,39 +203,46 @@
         </div>
       </li>
 
-      <!-- Reports Section Label -->
-      <template v-if="canSeeReportsSection">
-        <li class="sidebar-nav-section">
-          <span class="sidebar-section-label">Reports</span>
+      <!-- ── OFFICE MANAGEMENT ── -->
+      <li v-if="$can('manage_offices') || $can('manage_faculty')" class="sidebar-nav-section">
+        <span class="sidebar-section-label">Office Management</span>
+      </li>
+      <template v-if="($can('manage_offices') || $can('manage_faculty')) && !isCollapsed">
+        <li>
+          <router-link to="/offices" class="nav-link">
+            <i class="fas fa-building"></i>
+            <span>Office Directory</span>
+            <span class="nav-tooltip">Office Directory</span>
+          </router-link>
         </li>
-
-        <!-- Faculty Reports (Flyout Trigger) -->
-        <li
-          v-if="canSeeFacultyReports"
-          class="nav-item-flyout"
-          :class="{ active: isFacultyReportsActive, 'flyout-open': activeFlyout === 'reports' }"
-        >
-          <div class="nav-link" @click="toggleFlyout('reports', $event)">
-            <i class="fas fa-chart-line"></i>
-            <span>Faculty Reports</span>
-            <i class="fas fa-chevron-right ms-auto arrow"></i>
-            <span class="nav-tooltip">Faculty Reports</span>
-          </div>
+        <li v-if="$can('view_reports') || $can('manage_offices')">
+          <router-link to="/office-reports" class="nav-link">
+            <i class="fas fa-chart-bar"></i>
+            <span>Office Reports</span>
+            <span class="nav-tooltip">Office Reports</span>
+          </router-link>
+        </li>
+        <li>
+          <router-link to="/questionnaire/office" class="nav-link">
+            <i class="fas fa-list-check"></i>
+            <span>Evaluation Questions</span>
+            <span class="nav-tooltip">Evaluation Questions</span>
+          </router-link>
         </li>
       </template>
 
-      <!-- System Section Label -->
-      <li v-if="$can('manage_courses')" class="sidebar-nav-section">
-        <span class="sidebar-section-label">manage courses</span>
-      </li>
-
-      <!-- Course List -->
-      <li v-if="$can('manage_courses')">
-        <router-link to="/courses" class="nav-link">
-          <i class="fas fa-book"></i>
-          <span>Course Settings</span>
-          <span class="nav-tooltip">Course List</span>
-        </router-link>
+      <!-- Office flyout trigger when collapsed -->
+      <li
+        v-if="isCollapsed && ($can('manage_offices') || $can('manage_faculty'))"
+        class="nav-item-flyout"
+        :class="{ active: isOfficeActive, 'flyout-open': activeFlyout === 'office' }"
+      >
+        <div class="nav-link" @click="toggleFlyout('office', $event)">
+          <i class="fas fa-building"></i>
+          <span>Office Management</span>
+          <i class="fas fa-chevron-right ms-auto arrow"></i>
+          <span class="nav-tooltip">Office Management</span>
+        </div>
       </li>
     </ul>
   </aside>
@@ -193,6 +286,37 @@
       </div>
     </Transition>
 
+    <!-- Students Management Flyout -->
+    <Transition name="flyout">
+      <div
+        v-if="activeFlyout === 'students'"
+        class="flyout-menu"
+        :style="flyoutStyle"
+      >
+        <button class="flyout-close-btn" @click="activeFlyout = null" title="Close">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="flyout-header d-flex align-items-center gap-2">
+          <i class="fas fa-user-graduate text-primary"></i>
+          <span>Students Management</span>
+        </div>
+        <ul class="flyout-nav">
+          <li>
+            <router-link to="/students/regular" @click="activeFlyout = null">
+              <i class="fas fa-user"></i>
+              <span>Regular Students</span>
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/students/irregular" @click="activeFlyout = null">
+              <i class="fas fa-user-minus"></i>
+              <span>Irregular Students</span>
+            </router-link>
+          </li>
+        </ul>
+      </div>
+    </Transition>
+
     <!-- Office Management Flyout -->
     <Transition name="flyout">
       <div
@@ -230,91 +354,6 @@
       </div>
     </Transition>
 
-    <!-- Students Management Flyout -->
-    <Transition name="flyout">
-      <div
-        v-if="activeFlyout === 'students'"
-        class="flyout-menu"
-        :style="flyoutStyle"
-      >
-        <button class="flyout-close-btn" @click="activeFlyout = null" title="Close">
-          <i class="fas fa-times"></i>
-        </button>
-        <div class="flyout-header d-flex align-items-center gap-2">
-          <i class="fas fa-user-graduate text-primary"></i>
-          <span>Students Management</span>
-        </div>
-        <ul class="flyout-nav">
-          <li>
-            <router-link to="/students/regular" @click="activeFlyout = null">
-              <i class="fas fa-user"></i>
-              <span>Regular Students</span>
-            </router-link>
-          </li>
-          <li>
-            <router-link to="/students/irregular" @click="activeFlyout = null">
-              <i class="fas fa-user-minus"></i>
-              <span>Irregular Students</span>
-            </router-link>
-          </li>
-        </ul>
-      </div>
-    </Transition>
-
-    <!-- Faculty Reports Flyout -->
-    <Transition name="flyout">
-      <div
-        v-if="activeFlyout === 'reports'"
-        class="flyout-menu"
-        :style="flyoutStyle"
-      >
-        <button class="flyout-close-btn" @click="activeFlyout = null" title="Close">
-          <i class="fas fa-times"></i>
-        </button>
-        <div class="flyout-header d-flex align-items-center gap-2">
-          <i class="fas fa-chart-line text-primary"></i>
-          <span>Faculty Reports</span>
-        </div>
-        <ul class="flyout-nav">
-          <li>
-            <router-link
-              :to="reportLink('/reports', 'faculty')"
-              active-class=""
-              exact-active-class=""
-              :class="{ 'router-link-active': isReportNavActive('/reports', 'faculty') }"
-              @click="activeFlyout = null"
-            >
-              <i class="fas fa-chart-bar"></i>
-              <span>{{ user.role === 'faculty' ? 'My Ratings Overview' : 'Ratings Overview' }}</span>
-            </router-link>
-          </li>
-          <li>
-            <router-link
-              :to="reportLink('/set-report', 'faculty')"
-              active-class=""
-              exact-active-class=""
-              :class="{ 'router-link-active': isReportNavActive('/set-report', 'faculty') }"
-              @click="activeFlyout = null"
-            >
-              <i class="fas fa-file-invoice"></i>
-              <span>{{ user.role === 'faculty' ? 'My SET Report' : 'Detailed SET Report' }}</span>
-            </router-link>
-          </li>
-          <li v-if="$can('view_reports')">
-            <router-link
-              :to="reportLink('/feedbacks', 'faculty')"
-              active-class=""
-              exact-active-class=""
-              :class="{ 'router-link-active': isReportNavActive('/feedbacks', 'faculty') }"
-              @click="activeFlyout = null"
-            >
-              <i class="fas fa-comments"></i>
-              <span>Feedback Management</span>
-            </router-link>
-          </li>
-        </ul>
-      </div>
-    </Transition>
   </Teleport>
 </template>
 
@@ -334,14 +373,9 @@ const flyoutStyle = ref({ top: "0px", left: "0px", visibility: "visible" });
 
 const reportPaths = ["/reports", "/set-report", "/archive", "/feedbacks"];
 
-// Computed Active States for Parent Nav Items
+// Active states for the collapsed flyout triggers
 const isFacultyActive = computed(() => {
-  const paths = ["/faculty", "/assignments", "/questionnaire/faculty"];
-  return paths.some((p) => route.path.startsWith(p));
-});
-
-const isOfficeActive = computed(() => {
-  const paths = ["/offices", "/office-reports", "/questionnaire/office"];
+  const paths = ["/faculty", "/assignments", "/questionnaire/faculty", ...reportPaths];
   return paths.some((p) => route.path.startsWith(p));
 });
 
@@ -350,23 +384,24 @@ const isStudentsActive = computed(() => {
   return paths.some((p) => route.path.startsWith(p));
 });
 
-const isFacultyReportsActive = computed(() => {
-  return reportPaths.includes(route.path);
-});
-
-const canSeeAccountsSection = computed(() => {
-  const can = instance?.appContext.config.globalProperties.$can;
-  return can?.("manage_faculty") || can?.("manage_users");
-});
-
-const canSeeReportsSection = computed(() => {
-  const can = instance?.appContext.config.globalProperties.$can;
-  return can?.("view_reports") || user.value.role === "faculty";
+const isOfficeActive = computed(() => {
+  const paths = ["/offices", "/office-reports", "/questionnaire/office"];
+  return paths.some((p) => route.path.startsWith(p));
 });
 
 const canSeeFacultyReports = computed(() => {
   const can = instance?.appContext.config.globalProperties.$can;
   return can?.("view_reports") || user.value.role === "faculty";
+});
+
+const canSeeFacultySection = computed(() => {
+  const can = instance?.appContext.config.globalProperties.$can;
+  return (
+    can?.("manage_faculty") ||
+    can?.("manage_categories") ||
+    can?.("manage_questions") ||
+    canSeeFacultyReports.value
+  );
 });
 
 function reportLink(path, type) {

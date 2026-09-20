@@ -948,8 +948,8 @@ h6 {
   display: block;
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: capitalize;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: rgba(255, 255, 255, 0.5);
   opacity: 0.85;
 }
@@ -2071,6 +2071,15 @@ select,
   /* Robust override for collapsed state on mobile */
   .sidebar.collapsed {
     width: var(--sidebar-mobile-width) !important;
+  }
+
+  /* Mobile drawer: always left-align nav links, even when the sidebar
+     was left collapsed on desktop (collapsed rules center content) */
+  .sidebar.mobile-show.collapsed .sidebar-nav li a,
+  .sidebar.mobile-show.collapsed .nav-item-flyout .nav-link {
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 8px 12px;
   }
 
   .sidebar.collapsed .sidebar-brand div,
