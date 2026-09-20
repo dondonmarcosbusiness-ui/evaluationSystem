@@ -431,6 +431,17 @@ class ReportController extends Controller
             $query->where('evaluations.academic_year', $activeAcademicYear);
         }
 
+        // Respondents with no year on either their student record or their
+        // section are untaggable by any year filter and match every year.
+        // Counted here (same scope, before the year filter) so the UI can
+        // explain why a year filter did not narrow the results.
+        $untaggedRespondents = (clone $query)
+            ->leftJoin('sections as untagged_sections', 'untagged_sections.id', '=', 'students.section_id')
+            ->whereNull('students.year_level')
+            ->whereNull('untagged_sections.year_level')
+            ->distinct()
+            ->count('evaluations.student_id');
+
         $groupedStats = $query->select(
                 'students.course as student_course',
                 'students.year_level as student_year',
@@ -516,6 +527,7 @@ class ReportController extends Controller
             'total_students' => $totalStudents,
             'total_weighted_score' => $totalWeightedScore,
             'overall_set_rating' => $overallRating,
+            'untagged_respondents' => $untaggedRespondents,
             'comments' => $comments
         ]);
     }

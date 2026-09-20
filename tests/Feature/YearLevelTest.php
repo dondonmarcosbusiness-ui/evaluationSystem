@@ -383,6 +383,60 @@ class YearLevelTest extends TestCase
         $this->assertEquals(1, $rightYear->json('total_students'));
     }
 
+    public function test_detailed_report_flags_fully_untagged_respondents()
+    {
+        $this->openEvaluationPeriod();
+        $admin = $this->grant($this->makeUser('admin', 'admin10@test.com'), ['manage_faculty']);
+        $course = $this->makeCourse();
+        $faculty = $this->makeFaculty();
+
+        $category = \App\Models\Category::create([
+            'category_name' => 'Teaching',
+            'weight' => 100,
+            'evaluatee_type' => 'faculty',
+        ]);
+        $question = \App\Models\Question::create([
+            'category_id' => $category->id,
+            'question_text' => 'Teaches well?',
+        ]);
+
+        // Respondent with no year anywhere: still matches every year filter,
+        // but the response flags them so the UI can explain why.
+        $studentUser = $this->makeUser('student', 'untagged@test.com');
+        Student::create([
+            'user_id' => $studentUser->id,
+            'course' => 'BSIT',
+            'section' => '4A',
+            'section_id' => null,
+            'student_type' => 'regular',
+            'year_level' => null,
+        ]);
+        $evaluation = \App\Models\Evaluation::create([
+            'student_id' => $studentUser->id,
+            'faculty_id' => $faculty->id,
+            'evaluatee_type' => 'faculty',
+            'evaluatee_id' => $faculty->id,
+            'semester' => '1st Semester',
+            'academic_year' => '2024-2025',
+            'subject_code' => 'IT-SW01',
+            'year_section' => '4A',
+        ]);
+        \App\Models\Answer::create([
+            'evaluation_id' => $evaluation->id,
+            'question_id' => $question->id,
+            'rating' => 5,
+        ]);
+
+        $filtered = $this->actingAs($admin, 'sanctum')->getJson("/api/reports/evaluatee/{$faculty->id}?year_level=1st");
+        $filtered->assertStatus(200);
+        $this->assertEquals(1, $filtered->json('total_students'));
+        $this->assertEquals(1, $filtered->json('untagged_respondents'));
+
+        $unfiltered = $this->actingAs($admin, 'sanctum')->getJson("/api/reports/evaluatee/{$faculty->id}");
+        $unfiltered->assertStatus(200);
+        $this->assertEquals(1, $unfiltered->json('untagged_respondents'));
+    }
+
     public function test_course_detail_can_add_subject_and_section_to_a_year()
     {
         $admin = $this->grant($this->makeUser('admin', 'admin6@test.com'), ['manage_courses']);

@@ -241,6 +241,16 @@
             </div>
           </div>
 
+          <!-- Untagged-year notice -->
+          <div
+            class="alert alert-warning border-0 shadow-sm mb-4 no-print"
+            v-if="showUntaggedYearNotice"
+          >
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Year filter could not narrow all results.</strong>
+            {{ detailedResults.untagged_respondents }} respondent(s) have no year level on either their student record or their section, so they are included in every year filter. Tag year levels in Students Management or Course Settings for precise filtering.
+          </div>
+
           <!-- No Data Notice -->
           <div
             class="alert alert-info border-0 shadow-sm text-center py-4 mb-4"
@@ -794,6 +804,15 @@ const filteredFacultyList = computed(() => {
 
 const evaluateeType = ref('faculty');
 
+// Warn when a year filter is active but untagged respondents are present:
+// they match every year, so the filter cannot narrow them out.
+const showUntaggedYearNotice = computed(() => {
+  return (
+    selectedYearFilter.value !== "all" &&
+    (detailedResults.value?.untagged_respondents ?? 0) > 0
+  );
+});
+
 const printInfoSectionTitle = computed(() => "A. Faculty Information");
 
 const printEvaluateeFieldLabel = computed(() => "Faculty");
@@ -1015,10 +1034,9 @@ function getRatingBadge(rating) {
     margin-right: 0 !important;
   }
 
-  /* Official masthead: balanced grid keeps the institution name optically centered */
+  /* Official masthead: fixed logo slots, text takes remaining space */
   .report-masthead {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    display: flex !important;
     align-items: center;
     gap: 12px;
     width: 100%;
@@ -1027,7 +1045,7 @@ function getRatingBadge(rating) {
     display: flex;
     align-items: center;
     gap: 6px;
-    justify-self: start;
+    flex: 0 0 auto;
   }
   .masthead-logos img {
     object-fit: contain;
@@ -1041,9 +1059,10 @@ function getRatingBadge(rating) {
     height: 62px;
   }
   .masthead-text {
+    flex: 1 1 auto;
+    min-width: 0;
     text-align: center;
     line-height: 1.25;
-    justify-self: center;
   }
   .masthead-republic,
   .masthead-campus {
@@ -1053,14 +1072,14 @@ function getRatingBadge(rating) {
   }
   .masthead-university {
     font-family: 'Times New Roman', Times, serif !important;
-    font-size: 12pt !important;
+    font-size: 11.5pt !important;
     font-weight: 700 !important;
     color: #191970 !important;
     letter-spacing: 0.02em;
     white-space: nowrap !important;
   }
   .masthead-right {
-    justify-self: end;
+    flex: 0 0 auto;
   }
   .masthead-right img {
     width: 68px;
