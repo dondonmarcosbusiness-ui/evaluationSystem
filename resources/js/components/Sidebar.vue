@@ -58,14 +58,14 @@
       </li>
       <li>
         <router-link to="/dashboard" class="nav-link">
-          <i class="fas fa-home"></i>
+          <i class="far fa-compass"></i>
           <span>Dashboard</span>
           <span class="nav-tooltip">Dashboard</span>
         </router-link>
       </li>
       <li v-if="$can('manage_courses')">
         <router-link to="/courses" class="nav-link">
-          <i class="fas fa-book"></i>
+          <i class="far fa-bookmark"></i>
           <span>Course Settings</span>
           <span class="nav-tooltip">Course Settings</span>
         </router-link>
@@ -78,7 +78,7 @@
         </li>
         <li>
           <router-link to="/evaluate" class="nav-link">
-            <i class="fas fa-star"></i>
+            <i class="far fa-pen-to-square"></i>
             <span>Evaluate Faculty</span>
             <span class="nav-tooltip">Evaluate Faculty</span>
           </router-link>
@@ -94,21 +94,21 @@
       <template v-if="!isCollapsed">
         <li v-if="$can('manage_faculty')">
           <router-link to="/faculty" class="nav-link">
-            <i class="fas fa-user-shield"></i>
+            <i class="far fa-id-card"></i>
             <span>Faculty Accounts</span>
             <span class="nav-tooltip">Faculty Accounts</span>
           </router-link>
         </li>
         <li v-if="$can('manage_faculty')">
           <router-link to="/assignments" class="nav-link">
-            <i class="fas fa-link"></i>
+            <i class="far fa-folder-open"></i>
             <span>Faculty Assignments</span>
             <span class="nav-tooltip">Faculty Assignments</span>
           </router-link>
         </li>
         <li v-if="$can('manage_categories') || $can('manage_questions')">
           <router-link to="/questionnaire/faculty" class="nav-link">
-            <i class="fas fa-list-alt"></i>
+            <i class="far fa-rectangle-list"></i>
             <span>Faculty Questionnaires</span>
             <span class="nav-tooltip">Faculty Questionnaires</span>
           </router-link>
@@ -121,7 +121,7 @@
             exact-active-class=""
             :class="{ 'router-link-active': isReportNavActive('/reports', 'faculty') }"
           >
-            <i class="fas fa-chart-bar"></i>
+            <i class="far fa-chart-bar"></i>
             <span>{{ user.role === "faculty" ? "My Ratings Overview" : "Ratings Overview" }}</span>
             <span class="nav-tooltip">{{ user.role === "faculty" ? "My Ratings Overview" : "Ratings Overview" }}</span>
           </router-link>
@@ -134,7 +134,7 @@
             exact-active-class=""
             :class="{ 'router-link-active': isReportNavActive('/set-report', 'faculty') }"
           >
-            <i class="fas fa-file-invoice"></i>
+            <i class="far fa-file-lines"></i>
             <span>{{ user.role === "faculty" ? "My SET Report" : "Detailed SET Report" }}</span>
             <span class="nav-tooltip">{{ user.role === "faculty" ? "My SET Report" : "Detailed SET Report" }}</span>
           </router-link>
@@ -147,7 +147,7 @@
             exact-active-class=""
             :class="{ 'router-link-active': isReportNavActive('/feedbacks', 'faculty') }"
           >
-            <i class="fas fa-comments"></i>
+            <i class="far fa-comments"></i>
             <span>Feedback Management</span>
             <span class="nav-tooltip">Feedback Management</span>
           </router-link>
@@ -161,7 +161,7 @@
         :class="{ active: isFacultyActive, 'flyout-open': activeFlyout === 'faculty' }"
       >
         <div class="nav-link" @click="toggleFlyout('faculty', $event)">
-          <i class="fas fa-chalkboard-teacher"></i>
+          <i class="far fa-id-badge"></i>
           <span>Faculty Management</span>
           <i class="fas fa-chevron-right ms-auto arrow"></i>
           <span class="nav-tooltip">Faculty Management</span>
@@ -175,14 +175,14 @@
       <template v-if="$can('manage_users') && !isCollapsed">
         <li>
           <router-link to="/students/regular" class="nav-link">
-            <i class="fas fa-user"></i>
+            <i class="far fa-user"></i>
             <span>Regular Students</span>
             <span class="nav-tooltip">Regular Students</span>
           </router-link>
         </li>
         <li>
           <router-link to="/students/irregular" class="nav-link">
-            <i class="fas fa-user-minus"></i>
+            <i class="far fa-circle-user"></i>
             <span>Irregular Students</span>
             <span class="nav-tooltip">Irregular Students</span>
           </router-link>
@@ -196,7 +196,7 @@
         :class="{ active: isStudentsActive, 'flyout-open': activeFlyout === 'students' }"
       >
         <div class="nav-link" @click="toggleFlyout('students', $event)">
-          <i class="fas fa-user-graduate"></i>
+          <i class="far fa-address-book"></i>
           <span>Students Management</span>
           <i class="fas fa-chevron-right ms-auto arrow"></i>
           <span class="nav-tooltip">Students Management</span>
@@ -210,21 +210,21 @@
       <template v-if="($can('manage_offices') || $can('manage_faculty')) && !isCollapsed">
         <li>
           <router-link to="/offices" class="nav-link">
-            <i class="fas fa-building"></i>
+            <i class="far fa-building"></i>
             <span>Office Directory</span>
             <span class="nav-tooltip">Office Directory</span>
           </router-link>
         </li>
         <li v-if="$can('view_reports') || $can('manage_offices')">
           <router-link to="/office-reports" class="nav-link">
-            <i class="fas fa-chart-bar"></i>
+            <i class="far fa-chart-bar"></i>
             <span>Office Reports</span>
             <span class="nav-tooltip">Office Reports</span>
           </router-link>
         </li>
         <li>
           <router-link to="/questionnaire/office" class="nav-link">
-            <i class="fas fa-list-check"></i>
+            <i class="far fa-circle-question"></i>
             <span>Evaluation Questions</span>
             <span class="nav-tooltip">Evaluation Questions</span>
           </router-link>
@@ -238,7 +238,7 @@
         :class="{ active: isOfficeActive, 'flyout-open': activeFlyout === 'office' }"
       >
         <div class="nav-link" @click="toggleFlyout('office', $event)">
-          <i class="fas fa-building"></i>
+          <i class="far fa-building"></i>
           <span>Office Management</span>
           <i class="fas fa-chevron-right ms-auto arrow"></i>
           <span class="nav-tooltip">Office Management</span>
@@ -260,25 +260,25 @@
           <i class="fas fa-times"></i>
         </button>
         <div class="flyout-header d-flex align-items-center gap-2">
-          <i class="fas fa-chalkboard-teacher text-primary"></i>
+          <i class="far fa-id-badge text-primary"></i>
           <span>Faculty Management</span>
         </div>
         <ul class="flyout-nav">
           <li>
             <router-link to="/faculty" @click="activeFlyout = null">
-              <i class="fas fa-user-shield"></i>
+              <i class="far fa-id-card"></i>
               <span>Faculty Accounts</span>
             </router-link>
           </li>
           <li>
             <router-link to="/assignments" @click="activeFlyout = null">
-              <i class="fas fa-link"></i>
+              <i class="far fa-folder-open"></i>
               <span>Faculty Assignments</span>
             </router-link>
           </li>
           <li v-if="$can('manage_categories') || $can('manage_questions')">
             <router-link to="/questionnaire/faculty" @click="activeFlyout = null">
-              <i class="fas fa-list-alt"></i>
+              <i class="far fa-rectangle-list"></i>
               <span>Faculty Questionnaires</span>
             </router-link>
           </li>
@@ -297,19 +297,19 @@
           <i class="fas fa-times"></i>
         </button>
         <div class="flyout-header d-flex align-items-center gap-2">
-          <i class="fas fa-user-graduate text-primary"></i>
+          <i class="far fa-address-book text-primary"></i>
           <span>Students Management</span>
         </div>
         <ul class="flyout-nav">
           <li>
             <router-link to="/students/regular" @click="activeFlyout = null">
-              <i class="fas fa-user"></i>
+              <i class="far fa-user"></i>
               <span>Regular Students</span>
             </router-link>
           </li>
           <li>
             <router-link to="/students/irregular" @click="activeFlyout = null">
-              <i class="fas fa-user-minus"></i>
+              <i class="far fa-circle-user"></i>
               <span>Irregular Students</span>
             </router-link>
           </li>
@@ -328,25 +328,25 @@
           <i class="fas fa-times"></i>
         </button>
         <div class="flyout-header d-flex align-items-center gap-2">
-          <i class="fas fa-building text-primary"></i>
+          <i class="far fa-building text-primary"></i>
           <span>Office Management</span>
         </div>
         <ul class="flyout-nav">
           <li>
             <router-link to="/offices" @click="activeFlyout = null">
-              <i class="fas fa-building"></i>
+              <i class="far fa-building"></i>
               <span>Office Directory</span>
             </router-link>
           </li>
           <li v-if="$can('view_reports') || $can('manage_offices')">
             <router-link to="/office-reports" @click="activeFlyout = null">
-              <i class="fas fa-chart-bar"></i>
+              <i class="far fa-chart-bar"></i>
               <span>Office Reports</span>
             </router-link>
           </li>
           <li>
             <router-link to="/questionnaire/office" @click="activeFlyout = null">
-              <i class="fas fa-list-check"></i>
+              <i class="far fa-circle-question"></i>
               <span>Evaluation Questions</span>
             </router-link>
           </li>
