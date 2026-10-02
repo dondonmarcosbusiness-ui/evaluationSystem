@@ -1,63 +1,62 @@
 <template>
-  <div class="login-wrapper">
-    <!-- Brand / Hero Section (Left on Desktop) -->
-    <div
-      class="login-hero d-none d-lg-flex"
-      :style="{
-        backgroundImage: `url(${basePath}/assets/img/modern_login_hero.png)`,
-      }"
-    >
-      <div class="hero-overlay"></div>
-      <div class="hero-content">
-        <img :src="`${basePath}/assets/img/neust_logo.webp`" alt="NEUST Logo" class="hero-logo mb-4" />
-        <h1 class="hero-title text-white fw-bold mb-3">Empowering Faculty Excellence</h1>
-        <p class="hero-subtitle text-white-50 fs-5 mb-0">
-          Join the NEUST Carranglan community and participate in shaping the future of education.
+  <div class="login-shell">
+    <!-- ── Brand / Hero panel ──────────────────────────────── -->
+    <div class="login-brand">
+      <div
+        class="login-brand__image"
+        :style="{ backgroundImage: `url(${basePath}/assets/img/modern_login_hero.png)` }"
+        aria-hidden="true"
+      ></div>
+      <div class="login-brand__overlay" aria-hidden="true"></div>
+
+      <div class="login-brand__content">
+        <img
+          :src="`${basePath}/assets/img/neust_logo.webp`"
+          alt="NEUST Carranglan logo"
+          class="login-brand__logo"
+        />
+        <h1 class="login-brand__title">Faculty &amp; Staff<br />Evaluation System</h1>
+        <p class="login-brand__tagline">Your Voice. Better Education.</p>
+        <p class="login-brand__description">
+          Help us improve teaching and learning through meaningful feedback.
         </p>
       </div>
-      <div class="hero-footer text-white-50 small">
-        &copy; {{ new Date().getFullYear() }} NEUST Carranglan Off-Campus. All rights reserved.
-      </div>
+
+      <p class="login-brand__footer">&copy; {{ currentYear }} NEUST Carranglan. All rights reserved.</p>
     </div>
 
-    <!-- Form Section (Right on Desktop, Full Width on Mobile) -->
-    <div class="login-form-section">
-      <div class="login-form-container">
-        <div class="form-header mb-5 text-center text-lg-start">
-          <img
-            :src="`${basePath}/assets/img/neust_logo.webp`"
-            alt="NEUST Logo"
-            class="mobile-logo d-lg-none mb-4"
-            style="width: 72px; height: auto"
-          />
-          <h2 class="fw-bold text-dark mb-2 text-center">
-            {{ isSettingUp ? "Complete Your Profile" : "Welcome Back" }}
+    <!-- ── Login panel ──────────────────────────────────────── -->
+    <div class="login-panel">
+      <div class="login-panel__inner">
+        <header class="login-panel__header">
+          <h2 class="login-panel__heading">
+            {{ isSettingUp ? "Complete Your Profile" : "Welcome!" }}
           </h2>
-          <p class="text-muted text-center">
+          <p class="login-panel__subheading">
             {{
               isSettingUp
                 ? "Please provide your details to finish setting up your account."
-                : "Sign in with Google to continue."
+                : "Sign in using your institutional account to continue."
             }}
           </p>
-        </div>
+        </header>
 
-        <div
-          v-if="error"
-          class="alert alert-danger py-2 small mb-4 d-flex align-items-center gap-2 alert-slide border-0 shadow-sm"
-          style="background-color: #fee2e2; color: #991b1b"
-        >
-          <i class="fas fa-exclamation-circle"></i>
+        <div v-if="error" class="login-alert" role="alert" aria-live="assertive" aria-atomic="true">
+          <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
           <span>{{ error }}</span>
         </div>
 
+        <!-- ── Sign in ───────────────────────────────────────── -->
         <div v-if="!isSettingUp">
-          <button
-            type="button"
-            @click="loginWithGoogle"
-            class="btn btn-light w-100 fw-bold d-flex align-items-center justify-content-center gap-3 google-btn"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <button type="button" class="login-google" @click="loginWithGoogle">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -75,98 +74,111 @@
                 fill="#EA4335"
               />
             </svg>
-            Continue with Google
+            <span
+              >Continue with Google<span class="visually-hidden">
+                using your institutional Google account</span
+              ></span
+            >
           </button>
 
-          <div class="separator position-relative text-center my-4">
-            <hr class="text-muted opacity-25" />
-            <span
-              class="position-absolute top-50 start-50 translate-middle bg-white px-2 px-sm-3 text-muted small fw-semibold divider-label"
-            >
-              OR SIGN IN WITH ID
-            </span>
+          <p class="login-google__hint">
+            Use your <span class="login-google__domain">@neustcarranglan.ph.education</span> account
+          </p>
+
+          <div class="login-divider">
+            <span>OR</span>
           </div>
 
-          <form @submit.prevent="login">
-            <div class="mb-4">
-              <label class="form-label fw-semibold text-dark small mb-2">ID Number or Email</label>
-              <div class="input-group input-group-lg login-input-group">
-                <span class="input-group-text bg-transparent border-end-0 pe-2">
-                  <i class="fas fa-id-card text-muted"></i>
+          <form class="login-form" @submit.prevent="login">
+            <div class="login-field-group">
+              <label class="login-label" for="login-identifier">ID Number or Email</label>
+              <div class="login-field">
+                <span class="login-field__icon" aria-hidden="true">
+                  <i class="fas fa-id-card"></i>
                 </span>
                 <input
+                  id="login-identifier"
                   v-model="form.login"
                   type="text"
-                  class="form-control border-start-0 ps-1"
+                  class="login-input"
+                  name="login"
+                  autocomplete="username"
+                  autocapitalize="none"
+                  spellcheck="false"
                   placeholder="Enter your ID or Email"
                   required
                 />
               </div>
             </div>
 
-            <div class="mb-4">
-              <label class="form-label fw-semibold text-dark small mb-2">Password</label>
-              <div class="input-group input-group-lg login-input-group">
-                <span class="input-group-text bg-transparent border-end-0 pe-2">
-                  <i class="fas fa-lock text-muted"></i>
+            <div class="login-field-group">
+              <label class="login-label" for="login-password">Password</label>
+              <div class="login-field">
+                <span class="login-field__icon" aria-hidden="true">
+                  <i class="fas fa-lock"></i>
                 </span>
                 <input
+                  id="login-password"
                   v-model="form.password"
                   :type="showPass ? 'text' : 'password'"
-                  class="form-control border-start-0 border-end-0 px-1"
-                  placeholder="••••••••"
+                  class="login-input login-input--password"
+                  name="password"
+                  autocomplete="current-password"
+                  placeholder="Enter your password"
                   required
                 />
                 <button
-                  class="input-group-text bg-transparent border-start-0 ps-1 pe-3 text-muted"
                   type="button"
+                  class="login-field__toggle"
+                  :aria-label="showPass ? 'Hide password' : 'Show password'"
+                  :aria-pressed="showPass"
+                  aria-controls="login-password"
                   @click="showPass = !showPass"
                 >
-                  <i :class="showPass ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                  <i :class="showPass ? 'fas fa-eye-slash' : 'fas fa-eye'" aria-hidden="true"></i>
                 </button>
               </div>
             </div>
 
-            <button
-              type="submit"
-              class="btn btn-primary w-100 fw-bold d-flex align-items-center justify-content-center gap-2 login-btn text-white"
-              :disabled="loading"
-            >
-              <i v-if="loading" class="fas fa-spinner fa-spin"></i>
-              <span v-else>Sign In</span>
-              <i v-if="!loading" class="fas fa-arrow-right fs-6 ms-1"></i>
+            <button type="submit" class="login-submit" :disabled="loading">
+              <i v-if="loading" class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+              <span>{{ loading ? "Signing In…" : "Sign In" }}</span>
+              <i v-if="!loading" class="fas fa-arrow-right login-submit__arrow" aria-hidden="true"></i>
             </button>
           </form>
         </div>
 
-        <div v-else class="fade-in">
-          <form @submit.prevent="finalizeRegistration">
-            <div class="row g-3 mb-3">
-              <div class="col-sm-6">
-                <label class="form-label fw-semibold text-dark small mb-2">First Name</label>
-                <div class="input-group login-input-group">
-                  <span class="input-group-text bg-transparent border-end-0">
-                    <i class="fas fa-user text-muted small"></i>
-                  </span>
+        <!-- ── Complete profile ───────────────────────────────── -->
+        <div v-else>
+          <form class="login-form" @submit.prevent="finalizeRegistration">
+            <div class="login-grid-2">
+              <div class="login-field-group">
+                <label class="login-label" for="setup-firstname">First Name</label>
+                <div class="login-field">
+                  <span class="login-field__icon" aria-hidden="true"><i class="fas fa-user"></i></span>
                   <input
+                    id="setup-firstname"
                     v-model="form.firstname"
                     type="text"
-                    class="form-control border-start-0 ps-1"
+                    class="login-input"
+                    name="firstname"
+                    autocomplete="given-name"
                     placeholder="First Name"
                     required
                   />
                 </div>
               </div>
-              <div class="col-sm-6">
-                <label class="form-label fw-semibold text-dark small mb-2">Last Name</label>
-                <div class="input-group login-input-group">
-                  <span class="input-group-text bg-transparent border-end-0">
-                    <i class="fas fa-user text-muted small"></i>
-                  </span>
+              <div class="login-field-group">
+                <label class="login-label" for="setup-lastname">Last Name</label>
+                <div class="login-field">
+                  <span class="login-field__icon" aria-hidden="true"><i class="fas fa-user"></i></span>
                   <input
+                    id="setup-lastname"
                     v-model="form.lastname"
                     type="text"
-                    class="form-control border-start-0 ps-1"
+                    class="login-input"
+                    name="lastname"
+                    autocomplete="family-name"
                     placeholder="Last Name"
                     required
                   />
@@ -174,29 +186,38 @@
               </div>
             </div>
 
-            <div class="mb-3">
-              <label class="form-label fw-semibold text-dark small mb-2">Middle Name (Optional)</label>
-              <div class="input-group login-input-group">
-                <span class="input-group-text bg-transparent border-end-0">
-                  <i class="fas fa-user-tag text-muted small"></i>
-                </span>
+            <div class="login-field-group">
+              <label class="login-label" for="setup-middlename">
+                Middle Name <span class="login-label__optional">(Optional)</span>
+              </label>
+              <div class="login-field">
+                <span class="login-field__icon" aria-hidden="true"><i class="fas fa-user-tag"></i></span>
                 <input
+                  id="setup-middlename"
                   v-model="form.middlename"
                   type="text"
-                  class="form-control border-start-0 ps-1"
+                  class="login-input"
+                  name="middlename"
+                  autocomplete="additional-name"
                   placeholder="Middle Name"
                 />
               </div>
             </div>
 
-            <div class="row g-3 mb-4">
-              <div class="col-sm-6">
-                <label class="form-label fw-semibold text-dark small mb-2">Course</label>
-                <div class="input-group login-input-group">
-                  <span class="input-group-text bg-transparent border-end-0">
-                    <i class="fas fa-graduation-cap text-muted small"></i>
-                  </span>
-                  <select v-model="form.course" class="form-select border-start-0 ps-1" required>
+            <div class="login-grid-2">
+              <div class="login-field-group">
+                <label class="login-label" for="setup-course">Course</label>
+                <div class="login-field">
+                  <span class="login-field__icon" aria-hidden="true"
+                    ><i class="fas fa-graduation-cap"></i
+                  ></span>
+                  <select
+                    id="setup-course"
+                    v-model="form.course"
+                    class="login-input login-select"
+                    name="course"
+                    required
+                  >
                     <option value="" disabled>Select Course</option>
                     <option v-for="c in availableCourses" :key="c.id" :value="c.name">
                       {{ c.name }}
@@ -204,15 +225,15 @@
                   </select>
                 </div>
               </div>
-              <div class="col-sm-6">
-                <label class="form-label fw-semibold text-dark small mb-2">Section</label>
-                <div class="input-group login-input-group">
-                  <span class="input-group-text bg-transparent border-end-0">
-                    <i class="fas fa-layer-group text-muted small"></i>
-                  </span>
+              <div class="login-field-group">
+                <label class="login-label" for="setup-section">Section</label>
+                <div class="login-field">
+                  <span class="login-field__icon" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
                   <select
+                    id="setup-section"
                     v-model="form.section"
-                    class="form-select border-start-0 ps-1"
+                    class="login-input login-select"
+                    name="section"
                     required
                     :disabled="!form.course"
                   >
@@ -222,29 +243,22 @@
                     </option>
                   </select>
                 </div>
-                <small v-if="inferredYearLevel" class="text-muted d-block mt-1">
-                  <i class="fas fa-info-circle me-1"></i>Detected year: {{ inferredYearLabel }} (auto-set from section)
-                </small>
               </div>
             </div>
 
-            <div class="d-flex flex-column gap-3">
-              <button
-                type="submit"
-                class="btn btn-primary w-100 fw-bold d-flex align-items-center justify-content-center gap-2 login-btn text-white"
-                :disabled="loading"
-              >
-                <i v-if="loading" class="fas fa-spinner fa-spin"></i>
-                <span v-else>Complete Profile</span>
-                <i v-if="!loading" class="fas fa-check-circle fs-6 ms-1"></i>
-              </button>
+            <p v-if="inferredYearLevel" class="login-note">
+              <i class="fas fa-info-circle" aria-hidden="true"></i>
+              Detected year: {{ inferredYearLabel }} (auto-set from section)
+            </p>
 
-              <button
-                type="button"
-                @click="isSettingUp = false"
-                class="btn btn-link text-muted text-decoration-none small fw-semibold"
-              >
-                <i class="fas fa-arrow-left me-1"></i>
+            <div class="login-actions">
+              <button type="submit" class="login-submit" :disabled="loading">
+                <i v-if="loading" class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                <span>{{ loading ? "Saving…" : "Complete Profile" }}</span>
+                <i v-if="!loading" class="fas fa-check-circle login-submit__arrow" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="login-back" @click="isSettingUp = false">
+                <i class="fas fa-arrow-left" aria-hidden="true"></i>
                 Back to Login
               </button>
             </div>
@@ -279,6 +293,7 @@ const showPass = ref(false);
 const isSettingUp = ref(false);
 const googleData = ref(null);
 const availableCourses = ref([]);
+const currentYear = new Date().getFullYear();
 
 const availableSections = computed(() => {
   const selectedCourse = availableCourses.value.find((c) => c.name === form.value.course);
@@ -299,7 +314,7 @@ function inferYearFromSectionName(name) {
   if (m) return map[m[1]];
   m = s.match(/\b([1-4])[A-Za-z]\b/);
   if (m) return map[m[1]];
-  m = s.match(/\byears?\s*([1-4])\b/i);
+  m = s.match(/\byears?\s+([1-4])\b/i);
   if (m) return map[m[1]];
   m = s.match(/\b([1-4])\s*[-_]\s*[A-Za-z]\b/);
   if (m) return map[m[1]];
@@ -318,6 +333,7 @@ const inferredYearLabel = computed(() => {
 
 onMounted(() => {
   document.documentElement.removeAttribute("data-theme");
+  document.title = "Faculty & Staff Evaluation System";
 });
 
 // Handle callback if redirected from Google
@@ -397,234 +413,631 @@ function loginWithGoogle() {
 </script>
 
 <style scoped>
-.login-wrapper {
+/* ══════════════════════════════════════════════════════════
+   Design tokens — mobile-first, re-declared per breakpoint.
+   Spacing uses the 4/8/12/16/20/24/28/32/40/48/64 scale.
+   ══════════════════════════════════════════════════════════ */
+.login-shell {
+  --login-navy: #191970;
+  --login-ink: #1f2328;
+  --login-muted: #59636e;
+  --login-muted-soft: #5c6672;
+  --login-border: #d8dee6;
+  --login-border-soft: #e6eaef;
+  --login-surface: #f8fafc;
+
+  /* Type */
+  --fs-title: 20px;
+  --lh-title: 1.2;
+  --fs-tagline: 14px;
+  --fs-desc: 12px;
+  --lh-desc: 1.4;
+  --fs-heading: 24px;
+  --fs-sub: 14px;
+  --fs-label: 14px;
+  --fs-control: 16px;
+  --fs-button: 15px;
+
+  /* Sizing */
+  --logo-size: 64px;
+  --h-control: 50px;
+  --r-control: 8px;
+  --form-max: 480px;
+  --panel-overlap: 20px;
+  --panel-radius: 20px;
+
+  /* Hero spacing */
+  --gap-logo-title: 12px;
+  --gap-title-tagline: 12px;
+  --gap-tagline-desc: 8px;
+  --hero-min: 230px;
+  --hero-pad-y: 16px;
+  --hero-pad-x: 24px;
+
+  /* Form spacing */
+  --gap-heading-desc: 8px;
+  --gap-label: 8px;
+  --gap-google: 24px;
+  --gap-hint: 12px;
+  --gap-divider: 20px;
+  --gap-group: 20px;
+  --gap-submit: 24px;
+  --form-pad-top: 32px;
+  --form-pad-x: 24px;
+  --form-pad-bottom: 40px;
+  --panel-pad-x: 0px;
+
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
   background-color: #ffffff;
 }
 
-/* ── Hero / Brand Section ── */
-.login-hero {
-  flex: 0 0 55%;
+/* ── Brand / hero panel ────────────────────────────────────── */
+.login-brand {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--hero-min);
+  padding: var(--hero-pad-y) var(--hero-pad-x) calc(var(--hero-pad-y) + var(--panel-overlap));
+  overflow: hidden;
+  text-align: center;
+}
+
+.login-brand__image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 4rem;
 }
 
-.hero-overlay {
+.login-brand__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(25, 25, 112, 0.85) 0%, rgba(12, 12, 56, 0.95) 100%);
   z-index: 1;
+  background-color: rgba(12, 17, 76, 0.8);
 }
 
-.hero-content {
+.login-brand__content {
   position: relative;
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 520px;
+}
+
+.login-brand__logo {
+  display: block;
+  width: var(--logo-size);
+  height: var(--logo-size);
+  object-fit: contain;
+  margin: 0 0 var(--gap-logo-title);
+}
+
+.login-brand__title {
+  margin: 0 0 var(--gap-title-tagline);
+  max-width: 520px;
+  /* app.css forces h1 colour / size with !important — override explicitly. */
+  color: #ffffff !important;
+  font-size: var(--fs-title) !important;
+  font-weight: 700 !important;
+  line-height: var(--lh-title);
+  letter-spacing: -0.01em;
+}
+
+.login-brand__tagline {
+  margin: 0 0 var(--gap-tagline-desc);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: var(--fs-tagline);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.login-brand__description {
+  margin: 0;
   max-width: 500px;
-  margin: 0 auto;
-  text-align: center;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: var(--fs-desc);
+  font-weight: 400;
+  line-height: var(--lh-desc);
 }
 
-.hero-logo {
-  width: 90px;
-  height: auto;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+.login-brand__footer {
+  display: none;
 }
 
-.hero-title {
-  font-size: 2.75rem;
+/* ── Login panel ───────────────────────────────────────────── */
+.login-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  margin-top: calc(var(--panel-overlap) * -1);
+  background-color: #ffffff;
+  border-radius: var(--panel-radius) var(--panel-radius) 0 0;
+  box-shadow: 0 -6px 24px rgba(12, 17, 76, 0.18);
+  padding: 0 var(--panel-pad-x);
+  overflow-y: auto;
+}
+
+.login-panel__inner {
+  width: 100%;
+  max-width: var(--form-max);
+  margin: auto;
+  box-sizing: border-box;
+  padding: var(--form-pad-top) var(--form-pad-x) var(--form-pad-bottom);
+}
+
+.login-panel__header {
+  margin: 0;
+}
+
+.login-panel__heading {
+  margin: 0 0 var(--gap-heading-desc);
+  /* app.css forces h2 colour / size with !important — override explicitly. */
+  color: var(--login-ink) !important;
+  font-size: var(--fs-heading) !important;
+  font-weight: 700 !important;
   line-height: 1.2;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: -0.015em;
 }
 
-.hero-subtitle {
-  font-weight: 300;
+.login-panel__subheading {
+  margin: 0;
+  color: var(--login-muted);
+  font-size: var(--fs-sub);
+  line-height: 1.5;
 }
 
-.hero-footer {
-  position: absolute;
-  bottom: 2rem;
-  left: 0;
-  right: 0;
-  text-align: center;
-  z-index: 2;
-  opacity: 0.7;
+/* ── Alert ─────────────────────────────────────────────────── */
+.login-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 24px 0 0;
+  padding: 12px;
+  border: 1px solid #f3c2c2;
+  border-radius: var(--r-control);
+  background-color: #fdf2f2;
+  color: #8a1c1c;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-/* ── Form Section ── */
-.login-form-section {
-  flex: 1;
+.login-alert i {
+  margin-top: 2px;
+}
+
+/* ── Google button ─────────────────────────────────────────── */
+.login-google {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  background: #ffffff;
-}
-
-.login-form-container {
+  gap: 8px;
   width: 100%;
-  max-width: 440px;
-}
-
-/* Flat inputs — one border on the wrapper, borderless segments inside.
-   This guarantees a single clean outline with no doubled/join artifacts. */
-.login-input-group {
-  border: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-  border-radius: 4px;
-  box-shadow: none;
-  overflow: hidden;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.login-input-group:focus-within {
-  border-color: var(--primary);
-  background-color: #ffffff;
-  box-shadow: none;
-}
-
-.login-input-group .form-control,
-.login-input-group .input-group-text {
-  border: 0 !important;
-  border-radius: 0 !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-
-.login-input-group .form-control:focus {
-  border: 0 !important;
-  box-shadow: none !important;
-  outline: none !important;
-  background-color: transparent !important;
-}
-
-.login-input-group .form-control {
-  font-size: 0.95rem;
-  padding-top: 0.95rem;
-  padding-bottom: 0.95rem;
-}
-
-/* Buttons */
-.login-btn {
-  padding: 0.95rem 1.75rem;
-  font-size: 1.05rem;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(25, 25, 112, 0.2);
-}
-
-.login-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(25, 25, 112, 0.3);
-}
-
-.google-btn {
-  border: 1.5px solid #dadce0;
+  min-height: var(--h-control);
+  margin-top: var(--gap-google);
+  padding: 0 16px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: var(--r-control);
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(90deg, #4285f4 0%, #34a853 33%, #fbbc05 66%, #ea4335 100%) border-box;
   color: #3c4043;
-  padding: 0.95rem 1.5rem;
-  font-size: 1.05rem;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  font-family: inherit;
+  font-size: var(--fs-button);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.login-google:hover {
+  background:
+    linear-gradient(#f7f8f9, #f7f8f9) padding-box,
+    linear-gradient(90deg, #4285f4 0%, #34a853 33%, #fbbc05 66%, #ea4335 100%) border-box;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.22);
+}
+
+.login-google:active {
+  transform: translateY(1px);
+}
+
+.login-google svg {
+  flex: 0 0 auto;
+}
+
+.login-google__hint {
+  margin: var(--gap-hint) 0 0;
+  text-align: center;
+  color: var(--login-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.login-google__domain {
+  color: #3f4652;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Divider ───────────────────────────────────────────────── */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: var(--gap-divider) 0;
+  color: var(--login-muted-soft);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background-color: var(--login-border-soft);
+}
+
+/* ── Fields ────────────────────────────────────────────────── */
+.login-form > .login-field-group + .login-field-group,
+.login-form > .login-grid-2 + .login-field-group,
+.login-form > .login-field-group + .login-grid-2 {
+  margin-top: var(--gap-group);
+}
+
+.login-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gap-group);
+}
+
+.login-label {
+  display: block;
+  margin-bottom: var(--gap-label);
+  color: var(--login-ink);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.login-label__optional {
+  color: var(--login-muted);
+  font-weight: 400;
+}
+
+.login-field {
+  display: flex;
+  align-items: stretch;
+  min-height: var(--h-control);
+  box-sizing: border-box;
+  background-color: var(--login-surface);
+  border: 1px solid var(--login-border);
+  border-radius: var(--r-control);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.login-field:focus-within {
   background-color: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: var(--login-navy);
+  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
 }
 
-.google-btn:hover {
-  background-color: #f8fafc;
-  border-color: #cbd5e1;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+.login-field__icon {
+  display: flex;
+  align-items: center;
+  padding-left: 16px;
+  color: var(--login-muted-soft);
+  font-size: 14px;
+  pointer-events: none;
 }
 
-/* Animations */
-.alert-slide {
-  animation: slideDown 0.3s ease-out forwards;
+.login-field:focus-within .login-field__icon {
+  color: var(--login-navy);
 }
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+.login-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  padding: 0 16px 0 8px;
+  border: 0;
+  outline: none;
+  background-color: transparent;
+  color: var(--login-ink);
+  font-family: inherit;
+  font-size: var(--fs-control);
+  line-height: 1.4;
+  appearance: none;
+}
+
+.login-input::placeholder {
+  color: var(--login-muted-soft);
+  opacity: 1;
+}
+
+.login-input:focus {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  background-color: transparent;
+}
+
+.login-input--password {
+  padding-right: 4px;
+}
+
+.login-field__toggle {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  margin-right: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-control);
+  background-color: transparent;
+  color: var(--login-muted-soft);
+  font-size: 16px;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.login-field__toggle:hover {
+  color: var(--login-navy);
+  background-color: rgba(25, 25, 112, 0.05);
+}
+
+.login-select {
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 16px 12px;
+  cursor: pointer;
+}
+
+.login-select:disabled {
+  color: var(--login-muted-soft);
+  cursor: not-allowed;
+}
+
+.login-note {
+  margin: 12px 0 0;
+  color: var(--login-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+.login-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--h-control);
+  margin-top: var(--gap-submit);
+  padding: 0 24px;
+  box-sizing: border-box;
+  border: 1px solid var(--login-navy);
+  border-radius: var(--r-control);
+  background-color: var(--login-navy);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: var(--fs-button);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.login-submit:hover:not(:disabled) {
+  background-color: #12125e;
+  border-color: #12125e;
+}
+
+.login-submit:active:not(:disabled) {
+  background-color: #0e0e52;
+  border-color: #0e0e52;
+}
+
+.login-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.login-submit__arrow {
+  font-size: 14px;
+}
+
+.login-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 0;
+  background-color: transparent;
+  color: var(--login-muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-back:hover {
+  color: var(--login-navy);
+}
+
+/* ── Focus visibility ──────────────────────────────────────── */
+.login-google:focus-visible,
+.login-submit:focus-visible,
+.login-field__toggle:focus-visible,
+.login-back:focus-visible {
+  outline: 2px solid var(--login-navy);
+  outline-offset: 2px;
+}
+
+.login-field:focus-within {
+  outline: none;
+}
+
+@media (forced-colors: active) {
+  .login-field {
+    border: 1px solid CanvasText;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .login-field:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
   }
 }
 
-.fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+/* ══════════════════════════════════════════════════════════
+   Tablet — 768px to 1023px: still stacked (a 50/50 split at
+   this width would compress the 420px form), larger scale.
+   ══════════════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+  .login-shell {
+    --logo-size: 80px;
+    --fs-title: 28px;
+    --fs-tagline: 16px;
+    --fs-desc: 14px;
+    --fs-heading: 28px;
+    --fs-sub: 16px;
+    --h-control: 52px;
+
+    --gap-logo-title: 20px;
+    --gap-title-tagline: 16px;
+    --gap-tagline-desc: 12px;
+    --hero-min: 260px;
+    --hero-pad-y: 24px;
+    --hero-pad-x: 40px;
+
+    --gap-google: 28px;
+    --gap-divider: 24px;
+    --gap-group: 28px;
+    --form-pad-top: 40px;
+    --form-pad-x: 0;
+    --form-pad-bottom: 48px;
+  }
+
+  .login-grid-2 {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap-group) 24px;
+  }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* ══════════════════════════════════════════════════════════
+   Desktop — 1024px and above: exact 50/50 split, both panels
+   100dvh, hero content centred as one block.
+   ══════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .login-shell {
+    flex-direction: row;
+    height: 100dvh;
 
-@media (max-width: 992px) {
-  .login-form-section {
-    background: #f8fafc; /* Subtle background for mobile forms */
-    padding: 3rem 1.5rem;
-    background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23191970" fill-opacity="0.03"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
-  }
-  .login-form-container {
-    background: #ffffff;
-    padding: 2.5rem 2rem;
-    border-radius: var(--card-radius);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08); /* Float effect on mobile */
-  }
-  .separator span.bg-white {
-    background-color: #ffffff !important;
-  }
-  .divider-label {
-    white-space: nowrap;
-    letter-spacing: 0.05em;
-    font-size: clamp(0.65rem, 3.4vw, 0.8rem);
-  }
-}
+    --logo-size: 96px;
+    --fs-title: 32px;
+    --lh-title: 1.15;
+    --fs-tagline: 18px;
+    --fs-desc: 16px;
+    --lh-desc: 1.5;
+    --fs-heading: 28px;
+    --fs-sub: 16px;
+    --h-control: 52px;
 
-@media (max-width: 576px) {
-  .login-form-section {
-    padding: 0;
+    --gap-logo-title: 24px;
+    --gap-title-tagline: 20px;
+    --gap-tagline-desc: 12px;
+    --hero-min: 100dvh;
+    --hero-pad-y: 64px;
+    --hero-pad-x: 64px;
+
+    --gap-google: 28px;
+    --gap-divider: 24px;
+    --gap-group: 28px;
+    --form-pad-top: 0;
+    --form-pad-x: 0;
+    --form-pad-bottom: 0;
+    --panel-pad-x: 40px;
+    --panel-overlap: 0px;
+    --panel-radius: 0px;
   }
-  .login-form-container {
-    padding: 2.5rem 1.5rem;
+
+  .login-brand {
+    flex: 0 0 50%;
+    height: 100dvh;
+  }
+
+  .login-panel {
+    flex: 1 1 50%;
+    height: 100dvh;
+    margin-top: 0;
     border-radius: 0;
     box-shadow: none;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
   }
-  .mobile-logo {
-    width: 60px !important;
-    margin-bottom: 1rem !important;
+
+  .login-brand__footer {
+    display: block;
+    position: absolute;
+    z-index: 2;
+    left: 64px;
+    right: 64px;
+    bottom: 40px;
+    margin: 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 12px;
+    line-height: 1.5;
   }
-  .form-header h2 {
-    font-size: 1.5rem;
+}
+
+/* ── Short viewports (e.g. 360×800) ───────────────────────── */
+@media (max-width: 767px) and (max-height: 820px) {
+  .login-shell {
+    --logo-size: 56px;
+    --hero-min: 200px;
+    --hero-pad-y: 12px;
+    --form-pad-top: 24px;
+    --form-pad-bottom: 32px;
+    --panel-overlap: 16px;
+    --panel-radius: 16px;
   }
-  .form-header p {
-    font-size: 0.85rem;
-  }
-  .login-btn {
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-  }
-  .google-btn {
-    padding: 0.8rem 1.5rem;
-    font-size: 0.95rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-google,
+  .login-submit,
+  .login-field,
+  .login-field__toggle,
+  .login-field__icon {
+    transition: none;
   }
 }
 </style>

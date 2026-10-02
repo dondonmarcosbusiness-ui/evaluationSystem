@@ -1,5 +1,5 @@
 <template>
-  <div class="d-flex">
+  <div class="d-flex" :class="{ 'report-previewing': showPreview }">
     <Sidebar class="no-print" />
     <div class="main-wrapper w-100">
       <Navbar class="no-print"><template #title>Detailed SET Report</template></Navbar>
@@ -111,7 +111,7 @@
 
             <button
               class="btn btn-primary d-flex align-items-center justify-content-center text-white"
-              @click="printReport"
+              @click="openPrintPreview"
               :disabled="!detailedResults || loading"
               title="Print Report"
               style="background-color: #191970; border-color: #191970; border-radius: 8px; width: 42px; height: 42px; flex-shrink: 0"
@@ -130,7 +130,7 @@
             </div>
             <button
               class="btn btn-primary btn-sm fw-bold flex-shrink-0 align-self-stretch align-self-sm-auto"
-              @click="printReport"
+              @click="openPrintPreview"
               :disabled="!detailedResults || loading"
             >
               <i class="fas fa-print me-2"></i>
@@ -459,11 +459,36 @@
         </div>
       </div>
     </div>
+
+    <!-- Print preview chrome (dimmed backdrop + outside-right close + actions) -->
+    <Teleport to="body">
+      <div v-if="showPreview" class="preview-overlay" @click="closePrintPreview"></div>
+
+      <button
+        v-if="showPreview"
+        ref="previewCloseBtn"
+        type="button"
+        class="preview-close"
+        aria-label="Close print preview"
+        @click="closePrintPreview"
+      >
+        <i class="fas fa-times" aria-hidden="true"></i>
+      </button>
+
+      <div v-if="showPreview" class="preview-actions">
+        <button type="button" class="preview-actions__btn" @click="closePrintPreview">
+          <i class="fas fa-times me-2" aria-hidden="true"></i>Close
+        </button>
+        <button type="button" class="preview-actions__btn preview-actions__btn--primary" @click="printFromPreview">
+          <i class="fas fa-print me-2" aria-hidden="true"></i>Print
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, inject, watch, nextTick } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed, inject, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
@@ -965,9 +990,51 @@ async function resetFilters() {
   await loadResults();
 }
 
-function printReport() {
+/* ── Print preview ─────────────────────────────────────────────
+   The report is styled to look like paper on screen first; the
+   browser print dialog is only opened from inside the preview.
+   ────────────────────────────────────────────────────────────── */
+const showPreview = ref(false);
+const previewCloseBtn = ref(null);
+let previewOpener = null;
+
+function openPrintPreview() {
+  if (!detailedResults.value || loading.value) return;
+  previewOpener = document.activeElement;
+  showPreview.value = true;
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.overflow = "hidden";
+  nextTick(() => previewCloseBtn.value?.focus());
+}
+
+function closePrintPreview() {
+  if (!showPreview.value) return;
+  showPreview.value = false;
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
+  nextTick(() => {
+    // Screen charts are hidden while previewing — re-render so they restore cleanly.
+    renderExecCharts();
+    if (previewOpener && typeof previewOpener.focus === "function") previewOpener.focus();
+    previewOpener = null;
+  });
+}
+
+function printFromPreview() {
   window.print();
 }
+
+function onPreviewKeydown(e) {
+  if (e.key === "Escape" && showPreview.value) closePrintPreview();
+}
+
+onMounted(() => window.addEventListener("keydown", onPreviewKeydown));
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onPreviewKeydown);
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
+});
 
 function getRatingStatus(rating) {
   if (rating >= 4.5) return "Excellent";
@@ -993,7 +1060,506 @@ function getRatingBadge(rating) {
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   Print preview (screen only) — the report is rendered as a
+   centred paper sheet over a dimmed backdrop. `window.print()`
+   is only triggered from inside this preview, and these rules
+   never apply in @media print, so the printed page is unchanged.
+   ══════════════════════════════════════════════════════════ */
+@media screen {
+  /* Reveal the paper, hide screen-only chrome */
+  .report-previewing .no-print {
+    display: none !important;
+  }
+  .report-previewing .print-only {
+    display: block !important;
+  }
+  .report-previewing tr.print-only {
+    display: table-row !important;
+  }
+  .report-previewing br.print-only {
+    display: inline !important;
+  }
+  .report-previewing .set-report-mobile-list {
+    display: none !important;
+  }
+  .report-previewing .report-table-card.d-none.d-md-block {
+    display: block !important;
+  }
+  .report-previewing .set-report-table-scroll {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+
+  /* The paper sheet itself */
+  .report-previewing .content-area {
+    position: fixed;
+    top: 24px;
+    bottom: 24px;
+    left: 0;
+    right: 0;
+    width: min(860px, calc(100vw - 48px));
+    margin: 0 auto;
+    padding: 28px 32px 48px !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: #ffffff !important;
+    color: #111111 !important;
+    border-radius: 6px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    z-index: 10010;
+  }
+
+  /* Force the printed look regardless of light/dark theme */
+  .report-previewing .card {
+    background: #ffffff !important;
+    color: #111111 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Official masthead */
+  .report-previewing .report-header {
+    margin: 0 !important;
+  }
+  .report-previewing .report-masthead {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+  .report-previewing .masthead-logos {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+  .report-previewing .masthead-logos img {
+    object-fit: contain;
+  }
+  .report-previewing .masthead-logos img:first-child {
+    width: 68px;
+    height: 68px;
+  }
+  .report-previewing .masthead-logos img:last-child {
+    width: 62px;
+    height: 62px;
+  }
+  .report-previewing .masthead-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: center;
+    line-height: 1.25;
+  }
+  .report-previewing .masthead-republic,
+  .report-previewing .masthead-campus {
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 11pt !important;
+    color: #000 !important;
+  }
+  .report-previewing .masthead-university {
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 11.5pt !important;
+    font-weight: 700 !important;
+    color: #191970 !important;
+    letter-spacing: 0.02em;
+    white-space: nowrap !important;
+  }
+  .report-previewing .masthead-right {
+    flex: 0 0 auto;
+  }
+  .report-previewing .masthead-right img {
+    width: 68px;
+    height: 68px;
+    object-fit: contain;
+  }
+  .report-previewing .masthead-rule {
+    margin-top: 6px;
+  }
+  .report-previewing .masthead-rule .rule-gold {
+    display: block;
+    height: 3px;
+    background-color: #facd04 !important;
+  }
+  .report-previewing .masthead-rule .rule-navy {
+    display: block;
+    height: 9px;
+    background-color: #191970 !important;
+  }
+
+  .report-previewing .print-report-title {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 14pt !important;
+    letter-spacing: 0.08em !important;
+    color: #000 !important;
+    margin-top: 1rem !important;
+  }
+
+  .report-previewing .print-meta-section {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 10pt !important;
+    color: #000 !important;
+    margin-bottom: 1.25rem !important;
+  }
+  .report-previewing .print-meta-heading {
+    font-weight: 700 !important;
+    color: #000 !important;
+    font-size: 11pt !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #000 !important;
+    padding: 0 0 0.35rem 0;
+    margin-bottom: 0.6rem !important;
+  }
+  .report-previewing .print-meta-table {
+    width: 100%;
+    border-collapse: collapse !important;
+    font-size: 10pt !important;
+    color: #000 !important;
+  }
+  .report-previewing .print-meta-table th,
+  .report-previewing .print-meta-table td {
+    border: 1px solid #a8afc2 !important;
+    padding: 6px 10px !important;
+    text-align: left;
+    vertical-align: middle;
+    background: none !important;
+  }
+  .report-previewing .print-meta-table th {
+    width: 38%;
+    font-weight: 600 !important;
+    color: #000 !important;
+  }
+  .report-previewing .print-meta-table td {
+    font-weight: 700 !important;
+    color: #000 !important;
+  }
+
+  /* KPI band */
+  .report-previewing .exec-kpi-band {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr);
+    border: 1px solid #a8afc2 !important;
+    background: #fff !important;
+    margin-bottom: 1rem !important;
+  }
+  .report-previewing .exec-kpi {
+    padding: 8px 6px !important;
+    text-align: center;
+    border-right: 1px solid #a8afc2 !important;
+    background: none !important;
+  }
+  .report-previewing .exec-kpi:last-child {
+    border-right: none !important;
+  }
+  .report-previewing .kpi-label {
+    display: block;
+    font-size: 7.5pt !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #444 !important;
+    margin-bottom: 2px;
+  }
+  .report-previewing .kpi-value {
+    display: block;
+    font-size: 11.5pt !important;
+    font-weight: 800 !important;
+    color: #000 !important;
+  }
+
+  /* Charts (print bitmaps) */
+  .report-previewing .exec-charts-section {
+    margin-bottom: 1.25rem !important;
+  }
+  .report-previewing .exec-section-heading {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 10.5pt !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #000 !important;
+    margin: 0 0 0.6rem 0 !important;
+  }
+  .report-previewing .exec-charts-print {
+    display: grid !important;
+    grid-template-columns: 5fr 7fr !important;
+    gap: 1.25rem;
+    align-items: center;
+  }
+  .report-previewing .exec-chart-wrap-print {
+    line-height: 0;
+  }
+  .report-previewing .exec-chart-wrap-print canvas {
+    max-width: 100%;
+  }
+  .report-previewing .exec-agg-note {
+    font-size: 8.5pt !important;
+    font-style: italic;
+    color: #555 !important;
+    text-align: center;
+    margin-top: 0.4rem !important;
+  }
+  .report-previewing .exec-chart-title {
+    color: #000 !important;
+    font-weight: 600;
+  }
+
+  /* Report tables */
+  .report-previewing .report-table-card {
+    border: none !important;
+    box-shadow: none !important;
+    margin-bottom: 2rem !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+  }
+  .report-previewing .report-table-card .card-body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  .report-previewing .print-table-block {
+    margin-top: 0.75rem;
+  }
+  .report-previewing .print-table-title {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 10.5pt !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #000 !important;
+    background: none !important;
+    padding: 0 0 0.45rem 0 !important;
+    border: none !important;
+    border-bottom: 1px solid #000 !important;
+    margin: 0 0 0.55rem 0 !important;
+  }
+  .report-previewing .print-table-container {
+    border: none !important;
+  }
+  .report-previewing .print-table-summary {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 10pt !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    color: #000 !important;
+    background: none !important;
+    border: none !important;
+    padding: 0.6rem 0 0 0 !important;
+    margin: 0 !important;
+  }
+  .report-previewing .print-table-summary strong {
+    font-weight: 800;
+    font-size: 11pt;
+    color: #000 !important;
+  }
+  .report-previewing .print-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 10pt !important;
+    font-variant-numeric: tabular-nums;
+    border: none !important;
+    margin: 0 !important;
+    color: #111 !important;
+    background: #fff !important;
+  }
+  .report-previewing .print-table thead th {
+    border: 1px solid #a8afc2 !important;
+    border-bottom: 1.5px solid #000 !important;
+    background: none !important;
+    color: #000 !important;
+    padding: 7px 8px !important;
+    vertical-align: middle !important;
+    font-weight: 700 !important;
+    font-size: 8.5pt !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.35;
+    white-space: normal !important;
+  }
+  .report-previewing .print-table tbody td {
+    border: 1px solid #a8afc2 !important;
+    padding: 7px 8px !important;
+    vertical-align: middle !important;
+    color: #000 !important;
+    font-weight: 400 !important;
+    background: none !important;
+  }
+  .report-previewing .print-table tfoot td {
+    border: 1px solid #a8afc2 !important;
+    border-top: 1.5px solid #000 !important;
+    background: none !important;
+    color: #000 !important;
+    padding: 8px !important;
+    vertical-align: middle !important;
+    font-weight: 700 !important;
+    font-size: 10pt !important;
+  }
+  .report-previewing .print-text-black {
+    color: #000 !important;
+  }
+
+  /* Legend, signatories and document note */
+  .report-previewing .report-print-footer {
+    margin-top: 1.1rem;
+    font-family: Arial, Helvetica, sans-serif !important;
+    color: #000 !important;
+  }
+  .report-previewing .legend-block {
+    font-size: 9pt !important;
+    border: 1px solid #a8afc2 !important;
+    background: none !important;
+    color: #000 !important;
+    padding: 8px 12px !important;
+    margin-bottom: 1.4rem !important;
+  }
+  .report-previewing .legend-title {
+    font-weight: 700 !important;
+    margin-right: 6px;
+  }
+  .report-previewing .signatory-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    margin: 0 8px 0.6rem 8px;
+  }
+  .report-previewing .sig-label {
+    font-size: 10pt !important;
+    margin-bottom: 2.2rem;
+  }
+  .report-previewing .sig-line {
+    display: block;
+    border-bottom: 1px solid #000 !important;
+    margin-bottom: 4px;
+  }
+  .report-previewing .sig-name {
+    font-size: 10pt !important;
+    font-weight: 700 !important;
+    text-align: center;
+  }
+  .report-previewing .system-note {
+    margin-top: 1rem !important;
+    padding-top: 0.5rem;
+    border-top: 1px solid #c7cde0 !important;
+    font-size: 8pt !important;
+    color: #555 !important;
+    text-align: center;
+  }
+
+  /* ── Preview chrome (backdrop, outside close, actions) ───── */
+  .preview-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 18, 34, 0.62);
+    z-index: 10000;
+  }
+
+  .preview-close {
+    position: fixed;
+    top: 34px;
+    right: calc((100vw - min(860px, 100vw - 48px)) / 2 + 14px);
+    z-index: 10020;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 50%;
+    background: #ffffff;
+    color: #1f2328;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+    transition: transform 0.2s ease, background-color 0.15s ease;
+  }
+
+  .preview-close:hover {
+    background: #f3f4f6;
+    transform: rotate(90deg);
+  }
+
+  .preview-close:focus-visible {
+    outline: 2px solid #191970;
+    outline-offset: 2px;
+  }
+
+  /* Wide screens: sit fully outside the paper's right edge */
+  @media (min-width: 1000px) {
+    .preview-close {
+      top: 16px;
+      right: calc((100vw - 860px) / 2 - 56px);
+    }
+  }
+
+  .preview-actions {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10020;
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .preview-actions__btn {
+    padding: 9px 18px;
+    border: 1px solid #d8dee6;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1f2328;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .preview-actions__btn:hover {
+    background: #f3f4f6;
+  }
+
+  .preview-actions__btn:focus-visible {
+    outline: 2px solid #191970;
+    outline-offset: 2px;
+  }
+
+  .preview-actions__btn--primary {
+    background: #191970;
+    border-color: #191970;
+    color: #ffffff;
+  }
+
+  .preview-actions__btn--primary:hover {
+    background: #12125e;
+    border-color: #12125e;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .preview-close,
+    .preview-actions__btn {
+      transition: none;
+    }
+  }
+}
+
 @media print {
+  /* Preview chrome must never reach the paper */
+  .preview-overlay,
+  .preview-close,
+  .preview-actions {
+    display: none !important;
+  }
+
   .set-report-mobile-list {
     display: none !important;
   }
@@ -1171,6 +1737,9 @@ function getRatingBadge(rating) {
     border: none !important;
     border-bottom: 1px solid #000 !important;
     margin: 0 0 0.55rem 0 !important;
+    /* Keep the heading attached to its table when pages break */
+    page-break-after: avoid;
+    break-after: avoid;
   }
 
   .print-table-container {
@@ -1275,7 +1844,10 @@ function getRatingBadge(rating) {
     box-shadow: none !important;
     margin-bottom: 2rem !important;
     border-radius: 0 !important;
-    page-break-inside: avoid;
+    /* Let the table flow into the space left on page 1 instead of
+       being pushed whole to page 2 (which left a blank half-page). */
+    page-break-inside: auto;
+    break-inside: auto;
   }
 
   .report-table-card .card-body.print-table-block {
@@ -1679,6 +2251,12 @@ thead th:last-child { border-right: none; }
 <style>
 /* Unscoped — overrides global .table thead th when printing */
 @media print {
+  /* Preview locks scroll while open — never let that clip the paper */
+  html,
+  body {
+    overflow: visible !important;
+  }
+
   table.print-table {
     border-collapse: collapse !important;
     --set-report-print-blue: #191970;
