@@ -3529,6 +3529,22 @@ span.badge.rounded-pill {
   color: var(--primary) !important;
 }
 
+/* Dark: the flat white rule above would leave a white pill with
+   near-white text/icon (invisible) — restore themed contrast. */
+[data-theme="dark"] .btn-light-premium,
+[data-theme="dark"] .btn-light-custom {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: #30363d !important;
+  color: #e6edf3 !important;
+}
+
+[data-theme="dark"] .btn-light-premium:hover,
+[data-theme="dark"] .btn-light-custom:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: #8b949e !important;
+  color: #ffffff !important;
+}
+
 .form-control:focus,
 .form-select:focus,
 .form-control-premium:focus,

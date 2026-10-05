@@ -199,7 +199,7 @@
       </div>
 
       <!-- Feedback Details Modal -->
-      <div ref="detailModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+      <div ref="detailModalEl" class="modal fade eval-detail-modal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" :class="isFullscreen ? 'modal-fullscreen' : 'modal-xl'">
           <div class="modal-content">
             <div class="modal-header">
@@ -207,7 +207,7 @@
                 <h5 class="modal-title">Evaluation Detail</h5>
                 <p class="text-muted small mb-0">Full feedback and quantitative breakdown</p>
               </div>
-              <div class="d-flex gap-2 ms-auto">
+              <div class="d-flex gap-2 ms-auto align-items-center">
                 <button type="button" class="btn btn-sm btn-outline-secondary" @click="isFullscreen = !isFullscreen" :title="isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'">
                   <i :class="isFullscreen ? 'fas fa-compress' : 'fas fa-expand'"></i>
                 </button>
@@ -226,36 +226,36 @@
                     <!-- Faculty Information Fieldset -->
                     <fieldset class="legend-border">
                       <legend class="legend-title">Faculty Information</legend>
-                      <div class="mb-2">
-                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Name:</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">{{ currentDetail.faculty?.user?.name }}</div>
+                      <div class="mb-3">
+                        <div class="eval-field-label">Name:</div>
+                        <div class="eval-field-value">{{ currentDetail.faculty?.user?.name }}</div>
                       </div>
-                      <div v-if="evaluateeType === 'faculty'" class="mb-2">
-                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Department:</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">{{ currentDetail.faculty?.department }}</div>
+                      <div v-if="evaluateeType === 'faculty'" class="mb-3">
+                        <div class="eval-field-label">Department:</div>
+                        <div class="eval-field-value">{{ currentDetail.faculty?.department }}</div>
                       </div>
                       <div class="mb-0">
-                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Position:</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">{{ currentDetail.faculty?.position }}</div>
+                        <div class="eval-field-label">Position:</div>
+                        <div class="eval-field-value">{{ currentDetail.faculty?.position }}</div>
                       </div>
                     </fieldset>
 
                     <!-- Evaluation Information Fieldset -->
                     <fieldset class="legend-border">
                       <legend class="legend-title">Evaluation Information</legend>
-                      <div v-if="evaluateeType === 'faculty'" class="mb-2">
-                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Subjects Included:</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">{{ uniqueSubjects }}</div>
+                      <div v-if="evaluateeType === 'faculty'" class="mb-3">
+                        <div class="eval-field-label">Subjects Included:</div>
+                        <div class="eval-field-value">{{ uniqueSubjects }}</div>
                       </div>
-                      <div class="mb-2">
-                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Period Filters:</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">
+                      <div class="mb-3">
+                        <div class="eval-field-label">Period Filters:</div>
+                        <div class="eval-field-value">
                           {{ filters.semester !== 'all' ? filters.semester : 'All Semesters' }}, {{ filters.academic_year !== 'all' ? filters.academic_year : 'All Years' }}
                         </div>
                       </div>
                       <div class="mb-0">
-                        <div class="fw-bold text-dark mb-1" style="font-size: 0.72rem;">Total Feedbacks:</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">{{ currentDetail.evaluations?.length || 0 }} comments</div>
+                        <div class="eval-field-label">Total Feedbacks:</div>
+                        <div class="eval-field-value">{{ currentDetail.evaluations?.length || 0 }} comments</div>
                       </div>
                     </fieldset>
                   </div>
@@ -304,10 +304,10 @@
                           </thead>
                           <tbody>
                             <tr v-for="evalItem in currentDetail.evaluations" :key="evalItem.id" class="border-bottom-light">
-                              <td class="ps-0 py-2 text-secondary small text-wrap text-break" style="max-width: 800px;">
+                              <td class="ps-0 py-2 text-muted small text-wrap text-break" style="max-width: 800px;">
                                 {{ evalItem.comments }}
                               </td>
-                              <td class="text-end pe-0 py-2 text-muted small whitespace-nowrap">
+                              <td class="text-end pe-0 py-2 text-muted small text-nowrap">
                                 {{ formatDate(evalItem.created_at) }}
                               </td>
                             </tr>
@@ -739,38 +739,166 @@ function formatDate(dateStr) {
   font-size: 1.5rem;
 }
 
-fieldset.legend-border {
-  border: 1px solid var(--border-color, #e2e8f0) !important;
-  padding: 1.25rem !important;
-  border-radius: 6px;
-  margin-bottom: 1rem;
+/* ── Evaluation Detail modal (scoped to .eval-detail-modal only) ── */
+.eval-detail-modal .modal-header,
+.eval-detail-modal .modal-footer {
+  background: var(--bg-light);
+  border-color: var(--border-color) !important;
 }
 
-fieldset.legend-border legend.legend-title {
+.eval-detail-modal .modal-header .btn-outline-secondary {
+  color: var(--text-muted);
+  border-color: var(--border-color);
+  background: transparent;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eval-detail-modal .modal-header .btn-outline-secondary i {
+  line-height: 1;
+  font-size: 0.875rem;
+}
+
+.eval-detail-modal .modal-header .btn-close {
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-position: center;
+  background-size: 1em auto;
+}
+
+.eval-detail-modal .modal-header .btn-outline-secondary:hover,
+.eval-detail-modal .modal-header .btn-outline-secondary:focus {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--text-muted);
+}
+
+[data-theme="dark"] .eval-detail-modal .modal-header .btn-outline-secondary {
+  color: #e6edf3;
+  border-color: #6e7681;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .eval-detail-modal .modal-header .btn-outline-secondary:hover,
+[data-theme="dark"] .eval-detail-modal .modal-header .btn-outline-secondary:focus {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: #8b949e;
+}
+
+[data-theme="dark"] .eval-detail-modal .modal-header .btn-close {
+  filter: invert(1) grayscale(1);
+}
+
+.eval-detail-modal .modal-footer .btn-secondary {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+
+.eval-detail-modal .modal-footer .btn-secondary:hover,
+.eval-detail-modal .modal-footer .btn-secondary:focus {
+  background: var(--bg-body);
+  border-color: var(--text-muted);
+  color: var(--text-main);
+}
+
+.eval-detail-modal fieldset.legend-border {
+  border: 1px solid var(--border-color) !important;
+  background: var(--bg-body);
+  padding: 1rem 1.1rem !important;
+  border-radius: 8px;
+  margin-bottom: 0;
+}
+
+.eval-detail-modal fieldset.legend-border legend.legend-title {
   float: none;
   width: auto;
-  padding: 0 0.5rem;
-  font-size: 0.85rem;
+  padding: 0;
+  font-size: 0.7rem;
   font-weight: 700;
-  color: var(--text-dark, #0a0b0d);
-  margin-bottom: 0;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.85rem;
+}
+
+.eval-detail-modal fieldset.legend-border legend.legend-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--primary);
+  margin-right: 0.5rem;
+  vertical-align: -1px;
+}
+
+.eval-detail-modal .eval-field-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.eval-detail-modal .eval-field-value {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+.eval-detail-modal .table thead th {
+  background: var(--bg-light) !important;
+  background-color: var(--bg-light) !important;
+  color: var(--text-muted) !important;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--border-color) !important;
+  border-right: none !important;
+  white-space: nowrap;
+}
+
+.eval-detail-modal .badge.rounded-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.4em 0.8em;
 }
 
 .border-bottom-light {
   border-bottom: 1px solid var(--border-light, #f1f5f9);
 }
 
-.feedbacks-table-container::-webkit-scrollbar {
+.eval-detail-modal .feedbacks-table-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.eval-detail-modal .feedbacks-table-container::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
-.feedbacks-table-container::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
+.eval-detail-modal .feedbacks-table-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.eval-detail-modal .feedbacks-table-container::-webkit-scrollbar-thumb {
+  background: var(--border-color);
   border-radius: 3px;
-}
-
-[data-theme="dark"] legend.legend-title {
-  color: #ffffff !important;
 }
 
 .feedback-full-text {

@@ -7,55 +7,67 @@
       <div class="content-area">
         <!-- Admin Faculty Selector -->
         <div
-          class="card shadow-none mb-4 no-print mx-3 mx-md-0"
+          class="card shadow-none mb-4 no-print mx-3 mx-md-0 reports-filter-card"
           v-if="$can('report.view.all') && user.role !== 'faculty'"
           style="position: relative; z-index: 900; overflow: visible !important"
         >
-          <div
-            class="card-body d-flex gap-3 align-items-center flex-wrap no-print"
-            style="overflow: visible !important"
-          >
-            <!-- Search Filter -->
-            <div class="search-pill-container" style="width: 220px">
-              <i class="fas fa-search search-icon"></i>
-              <input 
-                type="text" 
-                v-model="searchQuery" 
-                class="search-input-field" 
-                placeholder="Search faculty..."
-              />
-            </div>
-
-            <!-- Dept Filter (faculty only) -->
-            <div v-if="evaluateeType === 'faculty'" style="width: 200px">
-              <CustomSelect
-                v-model="selectedDepartment"
-                :options="departmentOptions"
-                placeholder="All Departments"
-                @change="handleDepartmentChange"
-              />
-            </div>
-
-            <!-- Main Faculty Selector -->
-            <div style="width: 350px">
-              <CustomSelect
-                v-model="selectedFacultyId"
-                :options="facultyOptions"
-                placeholder="Select Faculty:"
-                @change="handleFacultyChange"
-              />
-            </div>
-
-            <!-- Refresh/Reset Button -->
-            <button class="refresh-pill-btn" @click="resetFilters" title="Reset Filters">
-              <i class="fas fa-undo" :class="{ 'fa-spin': loading }"></i>
+          <div class="card-body reports-filter-body no-print" style="overflow: visible !important">
+            <!-- Small-screen filter toggle -->
+            <button
+              type="button"
+              class="filter-toggle-btn d-lg-none"
+              :aria-expanded="showFilters"
+              aria-controls="reports-filters"
+              @click="showFilters = !showFilters"
+            >
+              <i class="fas fa-filter"></i>
+              <span>Filters</span>
+              <i class="fas ms-auto" :class="showFilters ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
             </button>
 
-            <!-- Legacy history lives on the dedicated archive page -->
-            <router-link to="/archive" class="small fw-bold ms-auto" title="Review past semesters and academic years">
-              <i class="fas fa-box-archive me-1"></i>
-              View archive
-            </router-link>
+            <div id="reports-filters" class="reports-filters" :class="{ 'is-open': showFilters }">
+              <!-- Search Filter -->
+              <div class="search-pill-container filter-slot--search">
+                <i class="fas fa-search search-icon"></i>
+                <input 
+                  type="text" 
+                  v-model="searchQuery" 
+                  class="search-input-field" 
+                  placeholder="Search faculty..."
+                />
+              </div>
+
+              <!-- Dept Filter (faculty only) -->
+              <div v-if="evaluateeType === 'faculty'" class="filter-slot filter-slot--dept">
+                <CustomSelect
+                  v-model="selectedDepartment"
+                  :options="departmentOptions"
+                  placeholder="All Departments"
+                  @change="handleDepartmentChange"
+                />
+              </div>
+
+              <!-- Main Faculty Selector -->
+              <div class="filter-slot filter-slot--faculty">
+                <CustomSelect
+                  v-model="selectedFacultyId"
+                  :options="facultyOptions"
+                  placeholder="Select Faculty:"
+                  @change="handleFacultyChange"
+                />
+              </div>
+
+              <!-- Refresh/Reset Button -->
+              <button class="refresh-pill-btn" @click="resetFilters" title="Reset Filters">
+                <i class="fas fa-undo" :class="{ 'fa-spin': loading }"></i>
+              </button>
+
+              <!-- Legacy history lives on the dedicated archive page -->
+              <router-link to="/archive" class="small fw-bold ms-auto" title="Review past semesters and academic years">
+                <i class="fas fa-box-archive me-1"></i>
+                View archive
+              </router-link>
+            </div>
           </div>
         </div>
 
@@ -102,7 +114,7 @@
                   {{ subjectRatings.overall.evaluations }} evaluations
                 </span>
               </h6>
-              <div style="min-width: 260px">
+              <div class="subject-select-slot">
                 <CustomSelect
                   v-model="selectedSubject"
                   :options="subjectSelectOptions"
@@ -651,6 +663,8 @@ function onTableScroll(e) {
 // New Filters
 const searchQuery = ref("");
 const selectedDepartment = ref("all");
+// Small screens: collapse the filter row behind a toggle button
+const showFilters = ref(false);
 
 // Per-subject ratings overview ("" = overall, no subject filter)
 const subjectRatings = ref(null);
@@ -1170,6 +1184,88 @@ function badgeClass(interpretation) {
   transform: rotate(-30deg);
 }
 
+/* ── Responsive filter bar (collapse behind an icon on small screens) ── */
+.reports-filter-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: visible !important;
+}
+
+.filter-toggle-btn {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.filter-toggle-btn:hover,
+.filter-toggle-btn:focus-visible {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.reports-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem; /* same as the old gap-3 */
+  overflow: visible !important;
+}
+
+.filter-slot--search {
+  width: 220px;
+}
+
+.filter-slot--dept {
+  width: 200px;
+}
+
+.filter-slot--faculty {
+  width: 350px;
+}
+
+@media (max-width: 991.98px) {
+  .filter-toggle-btn {
+    display: flex;
+  }
+
+  .reports-filters {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .reports-filters.is-open {
+    display: flex;
+  }
+
+  .filter-slot--search,
+  .filter-slot--dept,
+  .filter-slot--faculty {
+    width: 100%;
+  }
+
+  .reports-filters .refresh-pill-btn {
+    align-self: flex-start;
+  }
+
+  .reports-filters .ms-auto {
+    margin-left: 0 !important;
+    align-self: flex-start;
+  }
+}
+
 .ai-fab-container {
   position: fixed;
   bottom: 2.5rem;
@@ -1431,6 +1527,10 @@ thead th:last-child { border-right: none; }
 }
 
 /* ── Performance by Subject ─────────────── */
+.subject-select-slot {
+  min-width: 260px;
+}
+
 .subject-rating-list {
   display: flex;
   flex-direction: column;
@@ -1438,8 +1538,8 @@ thead th:last-child { border-right: none; }
 }
 
 .subject-rating-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, auto) minmax(120px, 1fr) auto auto auto;
   align-items: center;
   gap: 0.5rem 0.85rem;
   width: 100%;
@@ -1452,6 +1552,31 @@ thead th:last-child { border-right: none; }
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
+}
+
+/* Explicit columns so a missing subject name doesn't shift the rest */
+.subject-rating-code {
+  grid-column: 1;
+}
+
+.subject-rating-name {
+  grid-column: 2;
+}
+
+.subject-rating-bar {
+  grid-column: 3;
+}
+
+.subject-rating-value {
+  grid-column: 4;
+}
+
+.subject-rating-row .badge {
+  grid-column: 5;
+}
+
+.subject-rating-count {
+  grid-column: 6;
 }
 
 .subject-rating-row:hover:not(:disabled) {
@@ -1515,6 +1640,52 @@ thead th:last-child { border-right: none; }
   text-align: right;
   font-size: 0.72rem;
   color: var(--text-muted);
+}
+
+/* Small screens: stack the row as code/name/rating → bar → badge/count */
+@media (max-width: 767.98px) {
+  .subject-select-slot {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .subject-rating-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "code name value"
+      "bar bar bar"
+      "badge badge count";
+    gap: 0.5rem 0.6rem;
+  }
+
+  .subject-rating-code {
+    grid-area: code;
+  }
+
+  .subject-rating-name {
+    grid-area: name;
+    max-width: none;
+  }
+
+  .subject-rating-value {
+    grid-area: value;
+  }
+
+  .subject-rating-bar {
+    grid-area: bar;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .subject-rating-row .badge {
+    grid-area: badge;
+    justify-self: start;
+  }
+
+  .subject-rating-count {
+    grid-area: count;
+    justify-self: end;
+  }
 }
 
 @media print {
