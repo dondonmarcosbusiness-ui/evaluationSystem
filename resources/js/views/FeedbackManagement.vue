@@ -469,7 +469,7 @@ function getTypeFromRoute() {
 }
 
 async function applyEvaluateeTypeFromRoute() {
-  if (can("view_reports") && user.value.role !== "faculty") {
+  if (can("report.view.all") && user.value.role !== "faculty") {
     const type = getTypeFromRoute();
     if (evaluateeType.value !== type) {
       await switchTab(type);
@@ -486,7 +486,7 @@ watch(
 
 // Lifecycle
 onMounted(() => {
-  if (can("view_reports") && user.value.role !== "faculty") {
+  if (can("report.view.all") && user.value.role !== "faculty") {
     evaluateeType.value = getTypeFromRoute();
   }
   fetchMeta();

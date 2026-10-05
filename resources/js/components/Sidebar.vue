@@ -63,7 +63,7 @@
           <span class="nav-tooltip">Dashboard</span>
         </router-link>
       </li>
-      <li v-if="$can('manage_courses')">
+      <li v-if="$can('course.view')">
         <router-link to="/courses" class="nav-link">
           <i class="far fa-bookmark"></i>
           <span>Course Settings</span>
@@ -72,7 +72,7 @@
       </li>
 
       <!-- ── EVALUATION ── -->
-      <template v-if="$can('give_evaluations')">
+      <template v-if="$can('evaluation.create')">
         <li class="sidebar-nav-section">
           <span class="sidebar-section-label">Evaluation</span>
         </li>
@@ -92,21 +92,21 @@
 
       <!-- Flat links when expanded -->
       <template v-if="!isCollapsed">
-        <li v-if="$can('manage_faculty')">
+        <li v-if="$can('faculty.view')">
           <router-link to="/faculty" class="nav-link">
             <i class="far fa-id-card"></i>
             <span>Faculty Accounts</span>
             <span class="nav-tooltip">Faculty Accounts</span>
           </router-link>
         </li>
-        <li v-if="$can('manage_faculty')">
+        <li v-if="$can('assignment.view')">
           <router-link to="/assignments" class="nav-link">
             <i class="far fa-folder-open"></i>
             <span>Faculty Assignments</span>
             <span class="nav-tooltip">Faculty Assignments</span>
           </router-link>
         </li>
-        <li v-if="$can('manage_categories') || $can('manage_questions')">
+        <li v-if="$can(['questionnaire.create', 'questionnaire.edit', 'questionnaire.delete'])">
           <router-link to="/questionnaire/faculty" class="nav-link">
             <i class="far fa-rectangle-list"></i>
             <span>Faculty Questionnaires</span>
@@ -139,7 +139,7 @@
             <span class="nav-tooltip">{{ user.role === "faculty" ? "My SET Report" : "Detailed SET Report" }}</span>
           </router-link>
         </li>
-        <li v-if="$can('view_reports')">
+        <li v-if="$can('report.view')">
           <router-link
             :to="reportLink('/feedbacks', 'faculty')"
             class="nav-link"
@@ -169,10 +169,10 @@
       </li>
 
       <!-- ── STUDENTS ── -->
-      <li v-if="$can('manage_users')" class="sidebar-nav-section">
+      <li v-if="$can('student.view')" class="sidebar-nav-section">
         <span class="sidebar-section-label">Students</span>
       </li>
-      <template v-if="$can('manage_users') && !isCollapsed">
+      <template v-if="$can('student.view') && !isCollapsed">
         <li>
           <router-link to="/students/regular" class="nav-link">
             <i class="far fa-user"></i>
@@ -191,7 +191,7 @@
 
       <!-- Students flyout trigger when collapsed -->
       <li
-        v-if="isCollapsed && $can('manage_users')"
+        v-if="isCollapsed && $can('student.view')"
         class="nav-item-flyout"
         :class="{ active: isStudentsActive, 'flyout-open': activeFlyout === 'students' }"
       >
@@ -204,10 +204,10 @@
       </li>
 
       <!-- ── OFFICE MANAGEMENT ── -->
-      <li v-if="$can('manage_offices') || $can('manage_faculty')" class="sidebar-nav-section">
+      <li v-if="$can('office.view')" class="sidebar-nav-section">
         <span class="sidebar-section-label">Office Management</span>
       </li>
-      <template v-if="($can('manage_offices') || $can('manage_faculty')) && !isCollapsed">
+      <template v-if="$can('office.view') && !isCollapsed">
         <li>
           <router-link to="/offices" class="nav-link">
             <i class="far fa-building"></i>
@@ -215,7 +215,7 @@
             <span class="nav-tooltip">Office Directory</span>
           </router-link>
         </li>
-        <li v-if="$can('view_reports') || $can('manage_offices')">
+        <li v-if="$can('office.report.view')">
           <router-link to="/office-reports" class="nav-link">
             <i class="far fa-chart-bar"></i>
             <span>Office Reports</span>
@@ -233,7 +233,7 @@
 
       <!-- Office flyout trigger when collapsed -->
       <li
-        v-if="isCollapsed && ($can('manage_offices') || $can('manage_faculty'))"
+        v-if="isCollapsed && $can('office.view')"
         class="nav-item-flyout"
         :class="{ active: isOfficeActive, 'flyout-open': activeFlyout === 'office' }"
       >
@@ -276,7 +276,7 @@
               <span>Faculty Assignments</span>
             </router-link>
           </li>
-          <li v-if="$can('manage_categories') || $can('manage_questions')">
+          <li v-if="$can(['questionnaire.create', 'questionnaire.edit', 'questionnaire.delete'])">
             <router-link to="/questionnaire/faculty" @click="activeFlyout = null">
               <i class="far fa-rectangle-list"></i>
               <span>Faculty Questionnaires</span>
@@ -338,7 +338,7 @@
               <span>Office Directory</span>
             </router-link>
           </li>
-          <li v-if="$can('view_reports') || $can('manage_offices')">
+          <li v-if="$can('office.report.view')">
             <router-link to="/office-reports" @click="activeFlyout = null">
               <i class="far fa-chart-bar"></i>
               <span>Office Reports</span>
@@ -391,15 +391,15 @@ const isOfficeActive = computed(() => {
 
 const canSeeFacultyReports = computed(() => {
   const can = instance?.appContext.config.globalProperties.$can;
-  return can?.("view_reports") || user.value.role === "faculty";
+  return can?.("report.view") || user.value.role === "faculty";
 });
 
 const canSeeFacultySection = computed(() => {
   const can = instance?.appContext.config.globalProperties.$can;
   return (
-    can?.("manage_faculty") ||
-    can?.("manage_categories") ||
-    can?.("manage_questions") ||
+    can?.("faculty.view") ||
+    can?.("questionnaire.create") ||
+    can?.("questionnaire.edit") ||
     canSeeFacultyReports.value
   );
 });

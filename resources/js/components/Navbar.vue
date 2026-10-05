@@ -21,11 +21,14 @@
         <i v-if="isDark" class="fas fa-sun"></i>
         <i v-else class="fas fa-moon"></i>
       </button>
-      <template v-if="$can('manage_rbac')">
-        <div v-if="isAdmin" class="topbar-divider" aria-hidden="true"></div>
-        <!-- Settings (icon only) -->
+      <div
+        v-if="$can(['settings.manage', 'backup.manage', 'permission.manage'])"
+        class="topbar-divider"
+        aria-hidden="true"
+      ></div>
+      <!-- Settings (icon only) -->
       <router-link
-        v-if="$can('manage_rbac')"
+        v-if="$can('settings.manage')"
         to="/settings"
         class="topbar-icon-btn"
         title="Settings"
@@ -35,7 +38,7 @@
       </router-link>
       <!-- Backup & Recovery (icon only) -->
       <router-link
-        v-if="$can('manage_rbac')"
+        v-if="$can('backup.manage')"
         to="/backups"
         class="topbar-icon-btn"
         title="Backup & Recovery"
@@ -43,7 +46,16 @@
       >
         <i class="fas fa-database"></i>
       </router-link>
-      </template>
+      <!-- Audit Log (icon only) -->
+      <router-link
+        v-if="$can('permission.manage')"
+        to="/audit-logs"
+        class="topbar-icon-btn"
+        title="Audit Log"
+        aria-label="Audit Log"
+      >
+        <i class="fas fa-clipboard-list"></i>
+      </router-link>
 
       <div class="topbar-divider" aria-hidden="true"></div>
 
@@ -168,6 +180,7 @@ async function logout() {
     syncThemeForUser(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("permissions");
     router.push("/login");
   }
 }

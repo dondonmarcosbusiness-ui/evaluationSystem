@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\LoginLogService;
 use Illuminate\Http\Request;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Auth;
@@ -45,6 +46,7 @@ class GoogleAuthController extends Controller
 
       // Domain validation
       if (!str_ends_with(strtolower($email), '@neustcarranglan.ph.education')) {
+        LoginLogService::record(LoginLogService::FAILED, (string) $email, null, 'domain_rejected', $request, 'google');
         return redirect('/login?error=Access denied. Only @neustcarranglan.ph.education domain is allowed.');
       }
 
@@ -67,10 +69,12 @@ class GoogleAuthController extends Controller
         }
 
         if (!$user->is_active) {
+          LoginLogService::record(LoginLogService::INACTIVE, (string) $email, $user, 'account_inactive', $request, 'google');
           return redirect($loginRedirect . '?error=Account deactivated');
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        LoginLogService::record(LoginLogService::SUCCESS, (string) $email, $user, null, $request, 'google');
         $userJson = urlencode(json_encode($user->load('roles', 'permissions', 'student', 'faculty')));
         $permsJson = urlencode(json_encode($user->getAllPermissions()->pluck('name')));
 
@@ -250,6 +254,7 @@ class GoogleAuthController extends Controller
       DB::commit();
 
       $token = $user->createToken('auth_token')->plainTextToken;
+      LoginLogService::record(LoginLogService::SUCCESS, (string) $user->email, $user, null, $request, 'google');
       return response()->json([
         'message' => 'Registration successful.',
         'token' => $token,

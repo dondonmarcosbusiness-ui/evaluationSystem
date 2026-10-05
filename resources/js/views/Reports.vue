@@ -8,7 +8,7 @@
         <!-- Admin Faculty Selector -->
         <div
           class="card shadow-none mb-4 no-print mx-3 mx-md-0"
-          v-if="$can('view_reports') && user.role !== 'faculty'"
+          v-if="$can('report.view.all') && user.role !== 'faculty'"
           style="position: relative; z-index: 900; overflow: visible !important"
         >
           <div
@@ -42,7 +42,7 @@
                 v-model="selectedFacultyId"
                 :options="facultyOptions"
                 placeholder="Select Faculty:"
-                @change="loadResults"
+                @change="handleFacultyChange"
               />
             </div>
 
@@ -87,6 +87,71 @@
                   <canvas id="reportChart"></canvas>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Performance by Subject (overall or individual) -->
+          <div v-if="subjectRatings" class="card shadow-none mb-4 subject-overview-card">
+            <div
+              class="card-header border-0 py-3 d-flex flex-wrap align-items-center justify-content-between gap-2"
+            >
+              <h6 class="mb-0 fw-bold">
+                <i class="fas fa-book-open me-2 text-primary"></i>Performance by Subject
+                <span v-if="subjectRatings.overall?.average != null" class="fw-normal text-muted ms-2 small">
+                  Overall {{ Number(subjectRatings.overall.average).toFixed(2) }}/5 ·
+                  {{ subjectRatings.overall.evaluations }} evaluations
+                </span>
+              </h6>
+              <div style="min-width: 260px">
+                <CustomSelect
+                  v-model="selectedSubject"
+                  :options="subjectSelectOptions"
+                  @change="loadResults"
+                />
+              </div>
+            </div>
+            <div class="card-body py-2">
+              <div v-if="subjectLoading" class="py-2">
+                <SkeletonLoader variant="list" :rows="3" />
+              </div>
+              <div v-else-if="subjectRatings.subjects.length" class="subject-rating-list">
+                <button
+                  v-for="s in subjectRatings.subjects"
+                  :key="s.subject_code"
+                  type="button"
+                  class="subject-rating-row"
+                  :class="{
+                    'subject-rating-row--active': selectedSubject === s.subject_code,
+                    'subject-rating-row--disabled': s.evaluations <= 0,
+                  }"
+                  :disabled="s.evaluations <= 0"
+                  :title="s.evaluations > 0 ? 'View this subject’s breakdown' : 'No evaluations yet'"
+                  @click="selectSubjectRow(s)"
+                >
+                  <span class="subject-rating-code">{{ s.subject_code }}</span>
+                  <span v-if="s.subject_name" class="subject-rating-name">{{ s.subject_name }}</span>
+                  <span class="subject-rating-bar">
+                    <span
+                      class="subject-rating-bar-fill"
+                      :class="s.average != null ? getRatingBadge(s.average) : ''"
+                      :style="{ width: s.average != null ? (Number(s.average) / 5) * 100 + '%' : '0%' }"
+                    ></span>
+                  </span>
+                  <span class="subject-rating-value">
+                    {{ s.average != null ? Number(s.average).toFixed(2) : "—" }}
+                  </span>
+                  <span
+                    class="badge rounded-pill"
+                    :class="s.average != null ? getRatingBadge(s.average) : 'bg-secondary text-white'"
+                  >
+                    {{ s.average != null ? getRatingStatus(s.average) : "No data" }}
+                  </span>
+                  <span class="subject-rating-count">{{ s.evaluations }} eval</span>
+                </button>
+              </div>
+              <p v-else class="text-muted small mb-0 py-2">
+                No subjects assigned or evaluated for the selected period.
+              </p>
             </div>
           </div>
 
@@ -534,7 +599,7 @@
 
         <!-- Empty State -->
         <div
-          v-else-if="!loading && selectedFacultyId === '' && $can('view_reports') && user.role !== 'faculty'"
+          v-else-if="!loading && selectedFacultyId === '' && $can('report.view.all') && user.role !== 'faculty'"
           class="card border-0 shadow-sm"
         >
           <div class="card-body text-center py-5 text-muted">
@@ -587,6 +652,21 @@ function onTableScroll(e) {
 const searchQuery = ref("");
 const selectedDepartment = ref("all");
 
+// Per-subject ratings overview ("" = overall, no subject filter)
+const subjectRatings = ref(null);
+const selectedSubject = ref("");
+const subjectLoading = ref(false);
+
+const subjectSelectOptions = computed(() => [
+  { label: "All subjects (Overall)", value: "" },
+  ...(subjectRatings.value?.subjects || [])
+    .filter((s) => s.evaluations > 0)
+    .map((s) => ({
+      label: s.subject_name ? `${s.subject_code} — ${s.subject_name}` : s.subject_code,
+      value: s.subject_code,
+    })),
+]);
+
 const departmentOptions = computed(() => [
   { label: "All Departments", value: "all" },
   ...departments.value.map(d => ({ label: d, value: d }))
@@ -601,6 +681,8 @@ async function resetFilters() {
   searchQuery.value = "";
   selectedDepartment.value = "all";
   selectedFacultyId.value = "all";
+  selectedSubject.value = "";
+  subjectRatings.value = null;
   await loadResults();
 }
 
@@ -674,7 +756,7 @@ function getTypeFromRoute() {
 }
 
 async function applyEvaluateeTypeFromRoute() {
-  if (can("view_reports") && user.value.role !== "faculty") {
+  if (can("report.view.all") && user.value.role !== "faculty") {
     const type = getTypeFromRoute();
     if (evaluateeType.value !== type) {
       evaluateeType.value = type;
@@ -694,7 +776,7 @@ watch(
 );
 
 onMounted(async () => {
-  if (can("view_reports") && user.value.role !== "faculty") {
+  if (can("report.view.all") && user.value.role !== "faculty") {
     evaluateeType.value = getTypeFromRoute();
     selectedFacultyId.value = "all";
     await fetchEvaluateesList();
@@ -705,6 +787,15 @@ onMounted(async () => {
     if (mine) {
       selectedFacultyId.value = mine.id;
       evaluateeType.value = 'faculty';
+      await loadSubjectRatings();
+      // Deep link from the dashboard: /reports?subject=IT-SIA01
+      const subject = route.query.subject;
+      if (
+        subject &&
+        subjectRatings.value?.subjects?.some((s) => s.subject_code === subject && s.evaluations > 0)
+      ) {
+        selectedSubject.value = String(subject);
+      }
       await loadResults();
     }
   }
@@ -717,7 +808,15 @@ async function handleDepartmentChange() {
       selectedFacultyId.value = 'all';
     }
   }
-  await loadResults();
+  selectedSubject.value = "";
+  subjectRatings.value = null;
+  await Promise.all([loadResults(), loadSubjectRatings()]);
+}
+
+async function handleFacultyChange() {
+  selectedSubject.value = "";
+  subjectRatings.value = null;
+  await Promise.all([loadResults(), loadSubjectRatings()]);
 }
 
 onUnmounted(() => {});
@@ -731,6 +830,9 @@ async function loadResults() {
     if (evaluateeType.value === "faculty" && selectedDepartment.value && selectedDepartment.value !== "all") {
       params.department = selectedDepartment.value;
     }
+    if (selectedSubject.value) {
+      params.subject_code = selectedSubject.value;
+    }
     const res = await api.get(`/evaluations/results/${selectedFacultyId.value}`, { params });
 
     results.value = res.data;
@@ -743,6 +845,33 @@ async function loadResults() {
   } finally {
     loading.value = false;
   }
+}
+
+async function loadSubjectRatings() {
+  if (!selectedFacultyId.value || selectedFacultyId.value === "all") {
+    subjectRatings.value = null;
+    return;
+  }
+  subjectLoading.value = true;
+  try {
+    const params = {};
+    if (user.value.role !== "faculty") {
+      params.faculty_id = selectedFacultyId.value;
+    }
+    const res = await api.get("/reports/my-subject-ratings", { params });
+    subjectRatings.value = res.data;
+  } catch (e) {
+    console.error("Error fetching subject ratings:", e);
+    subjectRatings.value = null;
+  } finally {
+    subjectLoading.value = false;
+  }
+}
+
+function selectSubjectRow(subject) {
+  if (!subject || subject.evaluations <= 0) return;
+  selectedSubject.value = subject.subject_code;
+  loadResults();
 }
 
 async function loadAiInsights(force = false) {
@@ -1299,6 +1428,93 @@ thead th:last-child { border-right: none; }
 [data-theme="dark"] .glass-header th {
   background: rgba(30, 41, 59, 0.6);
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+/* ── Performance by Subject ─────────────── */
+.subject-rating-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.subject-rating-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-light, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.subject-rating-row:hover:not(:disabled) {
+  border-color: var(--primary, #191970);
+  box-shadow: 0 1px 6px rgba(25, 25, 112, 0.08);
+}
+
+.subject-rating-row--active {
+  border-color: var(--primary, #191970);
+  box-shadow: 0 0 0 2px rgba(25, 25, 112, 0.15);
+}
+
+.subject-rating-row--disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.subject-rating-code {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-main);
+}
+
+.subject-rating-name {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subject-rating-bar {
+  flex: 1 1 140px;
+  min-width: 100px;
+  height: 8px;
+  background: rgba(120, 120, 130, 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.subject-rating-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.subject-rating-value {
+  min-width: 40px;
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.subject-rating-count {
+  min-width: 56px;
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--text-muted);
 }
 
 @media print {

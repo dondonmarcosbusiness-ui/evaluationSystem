@@ -4,7 +4,12 @@
       <div class="modal-content confirm-content">
         <div class="modal-body confirm-body">
           <h5 class="confirm-title">{{ state.title }}</h5>
-          <p v-if="state.message" class="confirm-message"><template v-for="(seg, i) in messageSegments" :key="i"><span v-if="seg.danger" class="confirm-danger-word">{{ seg.text }}</span><template v-else>{{ seg.text }}</template></template></p>
+          <p v-if="state.message" class="confirm-message">
+            <template v-for="(seg, i) in messageSegments" :key="i">
+              <span v-if="seg.danger" class="confirm-danger-word">{{ seg.text }}</span>
+              <template v-else>{{ seg.text }}</template>
+            </template>
+          </p>
         </div>
         <div class="modal-footer confirm-footer">
           <button type="button" class="confirm-btn confirm-yes" @click="choose(true)">
@@ -59,7 +64,13 @@ function choose(value) {
   done?.({ isConfirmed: value });
 }
 
+function onShow() {
+  // Raise this dialog (and its backdrop) above slide-in drawers — see app.css.
+  document.body.classList.add("confirm-open");
+}
+
 function onHidden() {
+  document.body.classList.remove("confirm-open");
   // Backdrop click / ESC dismisses without a choice → counts as cancel.
   if (!settled) {
     settled = true;
@@ -71,6 +82,7 @@ function onHidden() {
 
 onMounted(() => {
   modal = new Modal(modalEl.value);
+  modalEl.value.addEventListener("show.bs.modal", onShow);
   modalEl.value.addEventListener("hidden.bs.modal", onHidden);
   registerConfirmOpener((opts) => {
     state.title = opts.title ?? "Are you sure?";
@@ -86,7 +98,9 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  modalEl.value?.removeEventListener("show.bs.modal", onShow);
   modalEl.value?.removeEventListener("hidden.bs.modal", onHidden);
+  document.body.classList.remove("confirm-open");
   modal?.dispose();
   modal = null;
   registerConfirmOpener(null);

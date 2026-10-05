@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Faculty;
 use App\Models\User;
+use App\Support\Csv;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -31,6 +32,59 @@ class FacultyController extends Controller
             return response()->json($faculty);
         } catch (\Exception $e) {
             Log::error('Faculty index error: ' . $e->getMessage());
+            return response()->json(['message' => 'System error'], 500);
+        }
+    }
+
+    /**
+     * Stream every (filtered) faculty record as CSV for spreadsheet use.
+     * Column order mirrors the import template so the file can be re-imported.
+     */
+    public function export(Request $request)
+    {
+        try {
+            $faculty = Faculty::with('user')
+                ->when($request->query('query'), function ($q, $search) {
+                    $q->whereHas('user', function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%");
+                    });
+                })
+                ->when($request->query('department'), function ($q, $dept) {
+                    $q->where('department', $dept);
+                })
+                ->orderBy('id')
+                ->get();
+
+            $filename = 'faculty_accounts_' . now()->format('Y-m-d_His') . '.csv';
+
+            return response()->streamDownload(function () use ($faculty) {
+                Csv::bom();
+                $handle = fopen('php://output', 'w');
+                fputcsv($handle, [
+                    'id number', 'last name', 'first name', 'middle name',
+                    'position', 'department', 'course', 'email', 'status',
+                ]);
+
+                foreach ($faculty as $f) {
+                    $user = $f->user;
+                    fputcsv($handle, array_map(Csv::safe(...), [
+                        $user?->id_number,
+                        $user?->lastname,
+                        $user?->firstname,
+                        $user?->middlename,
+                        $f->position,
+                        $f->department,
+                        $f->course,
+                        $user?->email,
+                        $user?->is_active ? 'Active' : 'Inactive',
+                    ]));
+                }
+
+                fclose($handle);
+            }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        } catch (\Exception $e) {
+            Log::error('Faculty export error: ' . $e->getMessage());
             return response()->json(['message' => 'System error'], 500);
         }
     }

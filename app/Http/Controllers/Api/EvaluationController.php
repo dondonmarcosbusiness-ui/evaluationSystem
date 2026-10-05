@@ -8,6 +8,7 @@ use App\Models\Answer;
 use App\Models\Evaluation;
 use App\Models\Faculty;
 use App\Models\FacultyAssignment;
+use App\Notifications\EvaluationCompletedNotification;
 use App\Rules\EvaluateeExists;
 use App\Rules\ValidEvaluateeType;
 use App\Services\EvaluationAnswerRepairService;
@@ -80,14 +81,21 @@ class EvaluationController extends Controller
                 return response()->json([]);
             }
 
-            return $this->getFacultyToEvaluateNew($user, $activeSemester, $activeAcademicYear);
+            return response()->json($this->buildEvaluatees($user, $activeSemester, $activeAcademicYear));
         } catch (\Exception $e) {
             Log::error('getEvaluatees error: ' . $e->getMessage());
             return response()->json(['message' => 'Error loading evaluatees list'], 500);
         }
     }
 
-    private function getFacultyToEvaluateNew($user, $activeSemester, $activeAcademicYear)
+    /**
+     * Evaluatees assigned to the student for the period, each with an
+     * is_evaluated flag. Shared by the evaluatees endpoint and the
+     * completion check after a submission.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildEvaluatees($user, $activeSemester, $activeAcademicYear): array
     {
         $user->load('student.section_relationship.course');
         $studentSection = $user->student ? $user->student->section_relationship : null;
@@ -233,7 +241,7 @@ class EvaluationController extends Controller
             }
         }
 
-        return response()->json(array_values($facultyDataMap));
+        return array_values($facultyDataMap);
     }
 
     public function store(Request $request)
@@ -314,11 +322,42 @@ class EvaluationController extends Controller
             }
 
             DB::commit();
+
+            if ($evaluateeType === EvaluateeType::FACULTY->value) {
+                $this->notifyIfEvaluationsComplete($request->user(), $request->semester, $request->academic_year);
+            }
+
             return response()->json(['message' => 'Evaluation submitted successfully']);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Evaluation store error: ' . $e->getMessage());
             return response()->json(['message' => 'System error'], 500);
+        }
+    }
+
+    /**
+     * Send the "finished evaluating" confirmation email exactly once: when
+     * the submitted evaluation was the student's last unfinished evaluatee
+     * for the period. Mail/queue failures never break the submission.
+     */
+    private function notifyIfEvaluationsComplete(\App\Models\User $student, string $semester, string $academicYear): void
+    {
+        try {
+            $evaluatees = $this->buildEvaluatees($student, $semester, $academicYear);
+
+            if ($evaluatees === []) {
+                return;
+            }
+
+            foreach ($evaluatees as $evaluatee) {
+                if (empty($evaluatee['is_evaluated'])) {
+                    return;
+                }
+            }
+
+            $student->notify(new EvaluationCompletedNotification($semester, $academicYear));
+        } catch (\Throwable $e) {
+            Log::warning('Evaluation completion email failed: ' . $e->getMessage());
         }
     }
 
@@ -330,7 +369,7 @@ class EvaluationController extends Controller
         $studentSection = $user->student ? $user->student->section_relationship : null;
         $studentCourseName = $studentSection ? ($studentSection->course->name ?? null) : null;
 
-        // Same legacy fallback as getFacultyToEvaluateNew(): imported records
+        // Same legacy fallback as buildEvaluatees(): imported records
         // may have the section name but no section_id.
         if (!$studentSectionId && $user->student?->section && $user->student?->course) {
             $studentSectionId = \App\Models\Section::where('name', $user->student->section)
@@ -397,6 +436,53 @@ class EvaluationController extends Controller
             $evaluateeType = $request->input('evaluatee_type', 'faculty');
             $departmentFilter = $request->query('department');
 
+            // --- Data scope enforcement (own/team/all) -----------------
+            // Route middleware already guaranteed `evaluation.view`; here we
+            // verify the caller may access THIS record. Default deny: only a
+            // granted scope widens access, and a missing scope means 'own'.
+            $user = $request->user();
+            $authorization = app(\App\Services\AuthorizationService::class);
+            $scope = $authorization->scope($user, 'evaluation.view');
+
+            if ($scope === 'none') {
+                $authorization->denyAndAbort($user, 'evaluation.view', 'results_missing_scope');
+            }
+
+            if ($scope === 'own') {
+                $ownFaculty = Faculty::where('user_id', $user->id)->first();
+
+                if (!$ownFaculty || $evaluateeType !== 'faculty') {
+                    $authorization->denyAndAbort($user, 'evaluation.view', 'own_scope_unreachable');
+                }
+
+                if ($evaluateeId !== 'all' && (string) $evaluateeId !== (string) $ownFaculty->id) {
+                    // IDOR / BOLA protection: cross-record access is denied.
+                    $authorization->denyAndAbort($user, 'evaluation.view', 'cross_record_access_blocked');
+                }
+
+                // 'all' collapses to the caller's own records.
+                $evaluateeId = $ownFaculty->id;
+                $departmentFilter = null;
+            } elseif ($scope === 'team') {
+                $ownFaculty = Faculty::where('user_id', $user->id)->first();
+                $teamDepartment = $ownFaculty?->department;
+
+                if ($evaluateeType !== 'faculty' || !$teamDepartment) {
+                    $authorization->denyAndAbort($user, 'evaluation.view', 'team_scope_unavailable');
+                }
+
+                if ($evaluateeId === 'all') {
+                    // Overrides any client-provided department filter.
+                    $departmentFilter = $teamDepartment;
+                } else {
+                    $target = Faculty::find($evaluateeId);
+                    if (!$target || $target->department !== $teamDepartment) {
+                        $authorization->denyAndAbort($user, 'evaluation.view', 'cross_team_access_blocked');
+                    }
+                }
+            }
+            // scope === 'all': unrestricted (administrator behaviour).
+
             // Explicit ?semester / ?academic_year win (plain strings so archived /
             // legacy values stay queryable); 'all' disables that filter. Absent
             // params fall back to the active period for backwards compatibility.
@@ -440,6 +526,19 @@ class EvaluationController extends Controller
                 $query->where('evaluations.academic_year', $activeAcademicYear);
             }
 
+            // Individual-subject view: restrict the breakdown to one subject.
+            $subjectCode = $request->query('subject_code');
+            if ($subjectCode) {
+                $subjectParts = array_values(array_filter(array_map('trim', explode(',', $subjectCode))));
+                if ($subjectParts) {
+                    $query->where(function ($q) use ($subjectParts) {
+                        foreach ($subjectParts as $part) {
+                            $q->orWhere('evaluations.subject_code', 'LIKE', '%' . $part . '%');
+                        }
+                    });
+                }
+            }
+
             // Filter by evaluatee_type in categories to get correct questionnaire
             $query->where('evaluation_categories.evaluatee_type', $evaluateeType);
 
@@ -455,6 +554,12 @@ class EvaluationController extends Controller
                 )
                 ->groupBy('evaluation_categories.id', 'evaluation_categories.category_name', 'evaluation_categories.weight')
                 ->get();
+
+            // Subject drill-down: drop categories with no answers for this
+            // subject so they don't render as blanks or drag the score down.
+            if ($subjectCode) {
+                $results = $results->filter(fn ($row) => $row->average_rating !== null)->values();
+            }
 
             if ($results->isEmpty()) {
                 $repairedCount = app(EvaluationAnswerRepairService::class)->repairOrphans(
@@ -515,6 +620,13 @@ class EvaluationController extends Controller
                 if ($activeAcademicYear) {
                     $fallback->where('evaluations.academic_year', $activeAcademicYear);
                 }
+                if ($subjectCode && $subjectParts) {
+                    $fallback->where(function ($q) use ($subjectParts) {
+                        foreach ($subjectParts as $part) {
+                            $q->orWhere('evaluations.subject_code', 'LIKE', '%' . $part . '%');
+                        }
+                    });
+                }
 
                 $fallbackRow = $fallback->select(
                     DB::raw("'Overall Performance' as category_name"),
@@ -543,6 +655,9 @@ class EvaluationController extends Controller
                 'interpretation' => $this->interpretScore($totalScore),
                 'evaluatee_type' => $evaluateeType
             ]);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            // Never swallow authorization aborts (403) as a 500.
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Get results error: ' . $e->getMessage());
             return response()->json(['message' => 'Error computing scores'], 500);

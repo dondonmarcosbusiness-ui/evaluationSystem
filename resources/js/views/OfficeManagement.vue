@@ -26,7 +26,7 @@
                   <i class="fas fa-redo-alt small"></i>
                 </button>
                 <div class="vr mx-1 d-none d-md-block" style="height: 24px; opacity: 0.1"></div>
-                <button class="btn btn-primary btn-sm d-flex align-items-center gap-2" @click="openAddModal">
+                <button v-if="$can('office.create')" class="btn btn-primary btn-sm d-flex align-items-center gap-2" @click="openAddModal">
                   <i class="fas fa-plus"></i>
                   <span class="d-none d-xl-inline">Add Office</span>
                 </button>
@@ -91,13 +91,13 @@
                           <button class="action-menu-item" @click="viewQr(o)">
                             <span>View QR Code</span>
                           </button>
-                          <button class="action-menu-item" @click="openEditModal(o)">
+                          <button v-if="$can('office.edit')" class="action-menu-item" @click="openEditModal(o)">
                             <span>Edit</span>
                           </button>
-                          <button class="action-menu-item" @click="toggleActive(o)">
+                          <button v-if="$can('office.edit')" class="action-menu-item" @click="toggleActive(o)">
                             <span>{{ o.is_active ? "Deactivate" : "Activate" }}</span>
                           </button>
-                          <button class="action-menu-item danger" @click="deleteOffice(o.id)">
+                          <button v-if="$can('office.delete')" class="action-menu-item danger" @click="deleteOffice(o.id)">
                             <span>Delete</span>
                           </button>
                         </div>
@@ -200,7 +200,7 @@
                   <button class="btn btn-success btn-sm d-flex align-items-center gap-2" @click="printSingleQr">
                     <i class="fas fa-print"></i> Print
                   </button>
-                  <button class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2" @click="regenerateQr">
+                  <button v-if="$can('office.qr.manage')" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2" @click="regenerateQr">
                     <i class="fas fa-sync-alt"></i> Regenerate
                   </button>
                 </div>
@@ -222,7 +222,7 @@
               <button class="btn-toast btn-toast-print" @click="printSelectedQr"><i class="fas fa-print"></i> Print QR</button>
               <button class="btn-toast btn-toast-activate" @click="bulkChangeStatus(true)"><i class="fas fa-check-circle"></i> Activate</button>
               <button class="btn-toast btn-toast-deactivate" @click="bulkChangeStatus(false)"><i class="fas fa-ban"></i> Deactivate</button>
-              <button class="btn-toast btn-toast-delete" @click="bulkDelete"><i class="fas fa-trash-alt"></i> Delete</button>
+              <button v-if="$can('office.delete')" class="btn-toast btn-toast-delete" @click="bulkDelete"><i class="fas fa-trash-alt"></i> Delete</button>
             </div>
             <button class="bulk-toast-close" @click="selectedIds = []"><i class="fas fa-times"></i></button>
           </div>

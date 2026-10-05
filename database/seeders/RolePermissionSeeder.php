@@ -8,6 +8,18 @@ use App\Models\Role;
 use App\Models\Permission;
 use App\Models\User;
 
+/**
+ * Seeds the namespaced permission catalog and the default role grants from
+ * config/authorization.php (single source of truth).
+ *
+ * Defaults preserve the previous effective access exactly:
+ *   Admin   = every permission EXCEPT giving/submitting evaluations
+ *   Faculty = view own evaluations + own reports (dashboard is role-based)
+ *   Student = give evaluations
+ *
+ * Also keeps the legacy users.role (admin|faculty|student) -> Spatie role
+ * sync so existing accounts continue to work unchanged.
+ */
 class RolePermissionSeeder extends Seeder
 {
     /**
@@ -29,56 +41,36 @@ class RolePermissionSeeder extends Seeder
             app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         }
 
-        // Create Permissions
-        $permissions = [
-            'manage_rbac',
-            'manage_users',
-            'manage_faculty',
-            'manage_courses',
-            'manage_categories',
-            'manage_questions',
-            'view_dashboard',
-            'view_reports',
-            'give_evaluations',
-            'view_evaluations',
-            'manage_offices',
-        ];
+        $catalog = config('authorization.permissions', []);
+        $defaults = config('authorization.role_defaults', []);
 
-        $guards = ['web', 'sanctum'];
+        // Permissions live on the web guard only — that is the guard runtime
+        // checks resolve against (legacy sanctum duplicates are never enforced).
+        foreach (array_keys($catalog) as $name) {
+            Permission::firstOrCreate([
+                'name' => $name,
+                'guard_name' => 'web',
+            ]);
+        }
 
-        foreach ($guards as $guard) {
-            foreach ($permissions as $permission) {
-                Permission::firstOrCreate([
-                    'name' => $permission,
-                    'guard_name' => $guard
-                ]);
-            }
+        $webPermissionIds = fn (string $role): array => $this->defaultPermissionIds($role, $defaults);
 
-            // Create Roles and Assign Permissions
-
-            // Admin (Assign all permissions EXCEPT give_evaluations)
+        foreach (['web', 'sanctum'] as $guard) {
             $adminRole = Role::firstOrCreate(['name' => 'Admin', 'guard_name' => $guard]);
-            $adminPermissions = Permission::where('guard_name', $guard)
-                ->where('name', '!=', 'give_evaluations')
-                ->pluck('id')
-                ->all();
-            $adminRole->permissions()->sync($adminPermissions);
-
-            // Faculty
             $facultyRole = Role::firstOrCreate(['name' => 'Faculty', 'guard_name' => $guard]);
-            $facultyPermissions = Permission::whereIn('name', ['view_evaluations'])
-                ->where('guard_name', $guard)
-                ->pluck('id')
-                ->all();
-            $facultyRole->permissions()->sync($facultyPermissions);
-
-            // Student
             $studentRole = Role::firstOrCreate(['name' => 'Student', 'guard_name' => $guard]);
-            $studentPermissions = Permission::whereIn('name', ['give_evaluations'])
-                ->where('guard_name', $guard)
-                ->pluck('id')
-                ->all();
-            $studentRole->permissions()->sync($studentPermissions);
+
+            if ($guard === 'web') {
+                $adminRole->permissions()->sync($webPermissionIds('Admin'));
+                $facultyRole->permissions()->sync($webPermissionIds('Faculty'));
+                $studentRole->permissions()->sync($webPermissionIds('Student'));
+            } else {
+                // Sanctum-guard roles are never resolved during permission
+                // checks; keep them permission-less to avoid duplicate rows.
+                $adminRole->permissions()->sync([]);
+                $facultyRole->permissions()->sync([]);
+                $studentRole->permissions()->sync([]);
+            }
         }
 
         // Sync all existing users to their respective Spatie roles
@@ -97,5 +89,32 @@ class RolePermissionSeeder extends Seeder
                 $user->roles()->sync($studentRoleIds);
             }
         }
+
+        // Flush AFTER the pivot syncs above — Spatie does not invalidate its
+        // cache on relation syncs, and reads during seeding would otherwise
+        // repopulate it from a half-synced state.
+        if ($cacheDriver === 'database' && ! Schema::hasTable($cacheTable)) {
+            // Skip cache invalidation until the Laravel cache table exists.
+        } else {
+            app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        }
+    }
+
+    /**
+     * Resolve the configured default permission ids for a role.
+     */
+    private function defaultPermissionIds(string $role, array $defaults): array
+    {
+        $rule = $defaults[$role] ?? ['only' => []];
+
+        $query = Permission::where('guard_name', 'web');
+
+        if (isset($rule['except'])) {
+            $query->whereNotIn('name', $rule['except']);
+        } else {
+            $query->whereIn('name', $rule['only'] ?? []);
+        }
+
+        return $query->pluck('id')->all();
     }
 }

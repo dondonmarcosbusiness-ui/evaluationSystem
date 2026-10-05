@@ -267,7 +267,7 @@ async function resetFilters() {
     /* keep current selections */
   }
   selectedDepartment.value = "all";
-  if (user.value.role !== "faculty" || !can("view_reports")) {
+  if (user.value.role !== "faculty" || !can("report.view.all")) {
     selectedFacultyId.value = "all";
   }
   await loadResults();

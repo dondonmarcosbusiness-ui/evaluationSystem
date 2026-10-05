@@ -23,6 +23,21 @@ class AuditLogService
             return null;
         }
 
+        // Double-write guard: a retried/double-submitted save that produces the
+        // exact same diff must not create a second (duplicate) row. Older rows
+        // with real differences are never touched.
+        $recent = AuditLog::where('action', $action)
+            ->where('user_id', $user->id)
+            ->where('auditable_type', $model ? get_class($model) : null)
+            ->where('auditable_id', $model?->id)
+            ->where('created_at', '>=', now()->subSeconds(5))
+            ->orderByDesc('created_at')
+            ->first();
+
+        if ($recent && $recent->old_values == $oldValues && $recent->new_values == $newValues) {
+            return null;
+        }
+
         return AuditLog::create([
             'user_id' => $user->id,
             'action' => $action,

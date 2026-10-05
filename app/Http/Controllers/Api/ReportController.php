@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Enrollment;
 use App\Models\Faculty;
+use App\Models\FacultyAssignment;
 use App\Models\User;
 use App\Models\Evaluation;
+use App\Services\AuthorizationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -13,13 +16,69 @@ use Illuminate\Support\Facades\Log;
 
 class ReportController extends Controller
 {
+    /**
+     * Central authorization layer (fail closed, default deny).
+     */
+    private function authorization(): AuthorizationService
+    {
+        return app(AuthorizationService::class);
+    }
+
+    /**
+     * Resolved data scope for report access: 'none' | 'own' | 'team' | 'all'.
+     * 'own' unless broader scope permissions are granted.
+     */
+    private function reportScope(User $user): string
+    {
+        return $this->authorization()->scope($user, 'report.view');
+    }
+
+    private function denyReportAccess(User $user, string $reason): never
+    {
+        $this->authorization()->denyAndAbort($user, 'report.view', $reason);
+    }
+
+    /**
+     * Data-scope descriptor for aggregate report queries.
+     *  - null            => unrestricted ('all' scope)
+     *  - ['scope'=>'team'=>...] => constrain to own department
+     *  - ['id'=>...]     => constrain to own evaluatee (match-nothing sentinel
+     *                       '__none__' when the caller has no record, so a
+     *                       missing profile can never widen access)
+     */
+    private function reportScopeDescriptor(User $user, string $evaluateeType): ?array
+    {
+        $scope = $this->reportScope($user);
+
+        if ($scope === 'all') {
+            return null;
+        }
+
+        $faculty = Faculty::where('user_id', $user->id)->first();
+
+        if ($scope === 'team') {
+            return [
+                'scope' => 'team',
+                'department' => $faculty?->department ?: '__none__',
+                'type' => $evaluateeType,
+            ];
+        }
+
+        return ['id' => $faculty?->id ?? '__none__', 'type' => 'faculty'];
+    }
+
     private function resolveOwnEvaluatee(User $user): ?array
     {
-        if ($user->role === 'faculty') {
-            $faculty = Faculty::where('user_id', $user->id)->first();
-            return $faculty ? ['id' => $faculty->id, 'type' => 'faculty'] : null;
+        // 'all' scope keeps the historical unrestricted behaviour.
+        if ($this->reportScope($user) === 'all') {
+            return null;
         }
-        return null;
+
+        $faculty = Faculty::where('user_id', $user->id)->first();
+
+        // Fail closed: no profile => a sentinel that matches nothing, never
+        // an unrestricted (null) result.
+        return ['id' => $faculty?->id ?? '__none__', 'type' => 'faculty'];
     }
 
     /** @param \Illuminate\Database\Query\Builder $query */
@@ -42,7 +101,26 @@ class ReportController extends Controller
             return;
         }
 
-        if ($ownEvaluatee['type'] === 'faculty' && $evaluateeType === 'faculty') {
+        // Team scope: same department (faculty.department). A correlated
+        // sub-query is used so it composes with queries that already join
+        // the faculty table.
+        if (($ownEvaluatee['scope'] ?? null) === 'team') {
+            if ($evaluateeType === 'faculty') {
+                $department = $ownEvaluatee['department'];
+                $query->whereExists(function ($sub) use ($department, $table) {
+                    $sub->selectRaw('1')
+                        ->from('faculty')
+                        ->whereColumn(DB::raw("COALESCE($table.evaluatee_id, $table.faculty_id)"), 'faculty.id')
+                        ->where('faculty.department', $department);
+                });
+            } else {
+                $query->where($table . '.evaluatee_id', '__none__');
+            }
+
+            return;
+        }
+
+        if (($ownEvaluatee['type'] ?? null) === 'faculty' && $evaluateeType === 'faculty') {
             $this->applyFacultyEvaluationScope($query, $ownEvaluatee['id'], $table);
             return;
         }
@@ -182,8 +260,12 @@ class ReportController extends Controller
     {
         $user = $request->user();
         $evaluateeType = $request->input('evaluatee_type', 'faculty');
-        $ownEvaluatee = $this->resolveOwnEvaluatee($user);
-        $scopedEvaluateeId = ($ownEvaluatee && $ownEvaluatee['type'] === $evaluateeType) ? $ownEvaluatee['id'] : null;
+        $ownEvaluatee = $this->reportScopeDescriptor($user, $evaluateeType);
+        $scopedEvaluateeId = (
+            $ownEvaluatee
+            && ($ownEvaluatee['scope'] ?? null) !== 'team'
+            && ($ownEvaluatee['type'] ?? null) === $evaluateeType
+        ) ? $ownEvaluatee['id'] : null;
 
         $settings = \App\Models\Setting::cachedAll();
         [$activeSemester, $activeAcademicYear] = $this->resolvePeriod($request);
@@ -250,13 +332,29 @@ class ReportController extends Controller
         }
 
         $totalEvaluations = Evaluation::query();
-        if ($ownEvaluatee && $ownEvaluatee['type'] === $evaluateeType) {
+        if ($ownEvaluatee && ($ownEvaluatee['scope'] ?? null) === 'team') {
+            if ($evaluateeType === 'faculty') {
+                $teamDepartment = $ownEvaluatee['department'];
+                $totalEvaluations->whereExists(function ($sub) use ($teamDepartment) {
+                    $sub->selectRaw('1')
+                        ->from('faculty')
+                        ->whereColumn(DB::raw('COALESCE(evaluations.evaluatee_id, evaluations.faculty_id)'), 'faculty.id')
+                        ->where('faculty.department', $teamDepartment);
+                });
+            } else {
+                $totalEvaluations->where('evaluations.evaluatee_id', '__none__');
+            }
+        } elseif ($ownEvaluatee && ($ownEvaluatee['type'] ?? null) === $evaluateeType) {
             if ($ownEvaluatee['type'] === 'faculty') {
                 $totalEvaluations->forFacultyMember($ownEvaluatee['id']);
             } else {
                 $totalEvaluations->where('evaluatee_type', $evaluateeType)
                     ->where('evaluatee_id', $ownEvaluatee['id']);
             }
+        } elseif ($ownEvaluatee) {
+            // Own scope but a different evaluatee type: fail closed instead of
+            // falling back to unrestricted counts.
+            $totalEvaluations->where('evaluatee_id', '__none__');
         } else {
             $totalEvaluations->where('evaluatee_type', $evaluateeType);
         }
@@ -310,8 +408,10 @@ class ReportController extends Controller
             ->values();
 
         return response()->json([
-            'total_faculty' => $scopedEvaluateeId ? 1 : Faculty::count(),
-            'total_students' => $scopedEvaluateeId ? $totalEvaluations->distinct('student_id')->count() : User::where('role', 'student')->has('student')->count(),
+            'total_faculty' => ($ownEvaluatee && ($ownEvaluatee['scope'] ?? null) === 'team')
+                ? Faculty::where('department', $ownEvaluatee['department'])->count()
+                : ($scopedEvaluateeId ? 1 : Faculty::count()),
+            'total_students' => $ownEvaluatee ? $totalEvaluations->distinct('student_id')->count() : User::where('role', 'student')->has('student')->count(),
             'total_evaluations' => $totalEvaluationsCount,
             'average_rating' => $avgQuery->avg('evaluation_answers.rating') ?: 0,
             'performance_overview' => $categoryAverages,
@@ -323,6 +423,23 @@ class ReportController extends Controller
 
     public function facultySummary(Request $request)
     {
+        // Data scope: 'all' sees every faculty, 'team' sees own department,
+        // 'own' sees only the caller (default deny for anything wider).
+        $user = $request->user();
+        $scope = $this->reportScope($user);
+        if ($scope === 'none') {
+            $this->denyReportAccess($user, 'faculty_summary');
+        }
+
+        $own = $scope === 'all' ? null : $this->resolveOwnEvaluatee($user);
+        $teamDepartment = null;
+        if ($scope === 'team') {
+            $teamDepartment = Faculty::where('user_id', $user->id)->first()?->department;
+            if (!$teamDepartment) {
+                $this->denyReportAccess($user, 'faculty_summary_team_unavailable');
+            }
+        }
+
         // Explicit ?semester / ?academic_year win; absent params fall back to active period.
         [$activeSemester, $activeAcademicYear] = $this->resolvePeriod($request);
 
@@ -332,6 +449,15 @@ class ReportController extends Controller
             ->join('evaluation_categories', 'evaluation_questions.category_id', '=', 'evaluation_categories.id')
             ->when($activeSemester, fn($q) => $q->where('evaluations.semester', $activeSemester))
             ->when($activeAcademicYear, fn($q) => $q->where('evaluations.academic_year', $activeAcademicYear))
+            ->when($scope === 'own', fn($q) => $q->where('evaluations.faculty_id', $own['id']))
+            ->when($scope === 'team', function ($q) use ($teamDepartment) {
+                $q->whereExists(function ($sub) use ($teamDepartment) {
+                    $sub->selectRaw('1')
+                        ->from('faculty')
+                        ->whereColumn('faculty.id', 'evaluations.faculty_id')
+                        ->where('faculty.department', $teamDepartment);
+                });
+            })
             ->select(
                 'evaluations.faculty_id',
                 DB::raw('SUM(evaluation_answers.rating * evaluation_categories.weight / (SELECT COUNT(*) FROM evaluation_questions WHERE category_id = evaluation_categories.id)) as weighted_score')
@@ -340,7 +466,13 @@ class ReportController extends Controller
             ->groupBy('evaluations.faculty_id')
             ->pluck('weighted_score', 'faculty_id');
 
-        $faculty = Faculty::with('user')->get();
+        $facultyQuery = Faculty::with('user');
+        if ($scope === 'own') {
+            $facultyQuery->whereKey($own['id']);
+        } elseif ($scope === 'team') {
+            $facultyQuery->where('department', $teamDepartment);
+        }
+        $faculty = $facultyQuery->get();
 
         return response()->json($faculty->map(function ($f) use ($scores) {
             return [
@@ -361,7 +493,39 @@ class ReportController extends Controller
     {
         $isAll = $facultyId === 'all';
         $departmentFilter = $request->query('department');
-        
+
+        // Data scope enforcement (own/team/all) — default deny.
+        $user = $request->user();
+        $scope = $this->reportScope($user);
+        if ($scope === 'none') {
+            $this->denyReportAccess($user, 'evaluatee_report');
+        }
+        if ($scope === 'own') {
+            $own = $this->resolveOwnEvaluatee($user);
+            if (($own['id'] ?? '') === '__none__') {
+                $this->denyReportAccess($user, 'evaluatee_report_no_profile');
+            }
+            if ($isAll) {
+                $facultyId = $own['id'];
+                $isAll = false;
+            } elseif ((string) $facultyId !== (string) $own['id']) {
+                $this->denyReportAccess($user, 'cross_record_access_blocked');
+            }
+        } elseif ($scope === 'team') {
+            $teamDepartment = Faculty::where('user_id', $user->id)->first()?->department;
+            if (!$teamDepartment) {
+                $this->denyReportAccess($user, 'evaluatee_report_team_unavailable');
+            }
+            if ($isAll) {
+                $departmentFilter = $teamDepartment;
+            } else {
+                $target = Faculty::find($facultyId);
+                if (!$target || $target->department !== $teamDepartment) {
+                    $this->denyReportAccess($user, 'cross_team_access_blocked');
+                }
+            }
+        }
+
         // Explicit ?semester / ?academic_year win; absent params fall back to active period.
         [$activeSemester, $activeAcademicYear] = $this->resolvePeriod($request);
 
@@ -537,6 +701,38 @@ class ReportController extends Controller
         $departmentFilter = $request->query('department');
         $evaluateeType    = $request->input('evaluatee_type', 'faculty');
 
+        // Data scope enforcement (own/team/all) — default deny.
+        $user = $request->user();
+        $scope = $this->reportScope($user);
+        if ($scope === 'none') {
+            $this->denyReportAccess($user, 'ai_insights');
+        }
+        if ($scope === 'own') {
+            $own = $this->resolveOwnEvaluatee($user);
+            if (($own['id'] ?? '') === '__none__') {
+                $this->denyReportAccess($user, 'ai_insights_no_profile');
+            }
+            if ($evaluateeId === 'all') {
+                $evaluateeId = $own['id'];
+            } elseif ((string) $evaluateeId !== (string) $own['id']) {
+                $this->denyReportAccess($user, 'cross_record_access_blocked');
+            }
+            $departmentFilter = null;
+        } elseif ($scope === 'team') {
+            $teamDepartment = Faculty::where('user_id', $user->id)->first()?->department;
+            if (!$teamDepartment) {
+                $this->denyReportAccess($user, 'ai_insights_team_unavailable');
+            }
+            if ($evaluateeId === 'all') {
+                $departmentFilter = $teamDepartment;
+            } else {
+                $target = Faculty::find($evaluateeId);
+                if (!$target || $target->department !== $teamDepartment) {
+                    $this->denyReportAccess($user, 'cross_team_access_blocked');
+                }
+            }
+        }
+
         // Explicit ?semester / ?academic_year win; absent params fall back to active period.
         [$activeSemester, $activeAcademicYear] = $this->resolvePeriod($request);
 
@@ -699,18 +895,34 @@ class ReportController extends Controller
             $this->applyFacultyEvaluationScope($query, $own['id']);
         }
 
-        if ($semester && $semester !== 'all') {
-            $query->where('evaluations.semester', $semester);
-        }
-        if ($academicYear && $academicYear !== 'all') {
-            $query->where('evaluations.academic_year', $academicYear);
+        $subjectCode = $request->input('subject_code');
+
+        if ($subjectCode) {
+            // Subject drill-down: return every comment for that subject across
+            // ALL sections, year levels and periods (semester/year filters are
+            // intentionally bypassed). subject_code may hold several codes
+            // concatenated ("IT-SIA01, IT-PE01"), so match each part.
+            $subjects = array_values(array_filter(array_map('trim', explode(',', $subjectCode))));
+            if ($subjects) {
+                $query->where(function ($q) use ($subjects) {
+                    foreach ($subjects as $subject) {
+                        $q->orWhere('evaluations.subject_code', 'LIKE', '%' . $subject . '%');
+                    }
+                });
+            }
+        } else {
+            if ($semester && $semester !== 'all') {
+                $query->where('evaluations.semester', $semester);
+            }
+            if ($academicYear && $academicYear !== 'all') {
+                $query->where('evaluations.academic_year', $academicYear);
+            }
         }
 
         $feedbacks = $query->select(
                 'evaluations.id',
                 'evaluations.comments as text',
                 'evaluations.subject_code',
-                'evaluations.year_section',
                 'evaluations.semester',
                 'evaluations.academic_year',
                 'evaluations.created_at',
@@ -719,9 +931,170 @@ class ReportController extends Controller
             ->orderBy('evaluations.created_at', 'desc')
             ->get();
 
+        // Main dashboard list: keep only the most recent comment per subject
+        // (already sorted desc). Subject drill-down (subject_code param)
+        // always returns every comment instead.
+        if (!$subjectCode && $request->boolean('latest_per_subject')) {
+            $seen = [];
+            $feedbacks = $feedbacks->filter(function ($feedback) use (&$seen) {
+                $key = $feedback->subject_code ?: '__no_subject__';
+                if (isset($seen[$key])) {
+                    return false;
+                }
+                $seen[$key] = true;
+                return true;
+            })->values();
+        }
+
         return response()->json([
             'evaluatee_type' => $own['type'],
             'feedbacks'      => $feedbacks,
+        ]);
+    }
+
+    /**
+     * Overall + per-subject ratings for one faculty. Covers every subject the
+     * faculty is assigned (FacultyAssignment / Enrollment) plus every subject
+     * that received evaluations, so faculty can view performance for all
+     * subjects at once or drill into an individual subject.
+     */
+    public function mySubjectRatings(Request $request)
+    {
+        $user = $request->user();
+
+        // Data scope enforcement: 'all' may read anyone, 'team' only own
+        // department, 'own' only the caller. Default deny.
+        $scope = $this->reportScope($user);
+        if ($scope === 'none') {
+            $this->denyReportAccess($user, 'subject_ratings');
+        }
+
+        $facultyId = $request->input('faculty_id');
+
+        if ($scope === 'all') {
+            if (!$facultyId) {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+        } else {
+            $mine = Faculty::where('user_id', $user->id)->first();
+
+            if ($facultyId) {
+                if ($scope === 'own') {
+                    if (!$mine || (string) $mine->id !== (string) $facultyId) {
+                        return response()->json(['message' => 'Unauthorized.'], 403);
+                    }
+                } else { // team
+                    if (!$mine || !$mine->department) {
+                        return response()->json(['message' => 'Unauthorized.'], 403);
+                    }
+                    $target = Faculty::find($facultyId);
+                    if (!$target || $target->department !== $mine->department) {
+                        return response()->json(['message' => 'Unauthorized.'], 403);
+                    }
+                }
+            } else {
+                if (!$mine || ($scope === 'team' && !$mine->department)) {
+                    return response()->json(['message' => 'Unauthorized.'], 403);
+                }
+                $facultyId = $mine->id;
+            }
+        }
+
+        [$semester, $academicYear] = $this->resolvePeriod($request);
+
+        $evalRows = DB::table('evaluations')
+            ->leftJoin(DB::raw('(SELECT evaluation_id, AVG(rating) as avg_rating FROM evaluation_answers GROUP BY evaluation_id) as ea'),
+                'evaluations.id', '=', 'ea.evaluation_id')
+            ->where(function ($q) use ($facultyId) {
+                $q->where('evaluations.faculty_id', $facultyId)
+                    ->orWhere(function ($q2) use ($facultyId) {
+                        $q2->where('evaluations.evaluatee_type', 'faculty')
+                            ->where('evaluations.evaluatee_id', $facultyId);
+                    });
+            })
+            ->whereNotNull('evaluations.subject_code')
+            ->where('evaluations.subject_code', '!=', '')
+            ->when($semester, fn ($q) => $q->where('evaluations.semester', $semester))
+            ->when($academicYear, fn ($q) => $q->where('evaluations.academic_year', $academicYear))
+            ->select('evaluations.subject_code', 'ea.avg_rating')
+            ->get();
+
+        $perSubject = [];
+        $overallSum = 0.0;
+        $overallCount = 0;
+
+        foreach ($evalRows as $row) {
+            if ($row->avg_rating === null) {
+                continue;
+            }
+            $overallSum += $row->avg_rating;
+            $overallCount++;
+            // One evaluation may carry several codes ("IT-SIA01, IT-PE01").
+            foreach (explode(',', (string) $row->subject_code) as $part) {
+                $code = trim($part);
+                if ($code === '') {
+                    continue;
+                }
+                $perSubject[$code]['sum'] = ($perSubject[$code]['sum'] ?? 0) + $row->avg_rating;
+                $perSubject[$code]['count'] = ($perSubject[$code]['count'] ?? 0) + 1;
+            }
+        }
+
+        // Subjects the faculty is assigned to, even with no evaluations yet.
+        $names = [];
+        $assignments = FacultyAssignment::with('subject')
+            ->where('faculty_id', $facultyId)
+            ->when($semester, fn ($q) => $q->where(fn ($q2) => $q2->whereNull('semester')->orWhere('semester', $semester)))
+            ->when($academicYear, fn ($q) => $q->where(fn ($q2) => $q2->whereNull('academic_year')->orWhere('academic_year', $academicYear)))
+            ->get();
+        foreach ($assignments as $assignment) {
+            $subject = $assignment->subject;
+            if (!$subject) {
+                continue;
+            }
+            $code = $subject->code ?? $subject->name;
+            if ($code) {
+                $names[$code] = $subject->name;
+            }
+        }
+
+        $enrollments = Enrollment::with('subject')
+            ->where('instructor_id', $facultyId)
+            ->when($semester, fn ($q) => $q->where('semester', $semester))
+            ->when($academicYear, fn ($q) => $q->where('academic_year', $academicYear))
+            ->get();
+        foreach ($enrollments as $enrollment) {
+            $subject = $enrollment->subject;
+            if (!$subject) {
+                continue;
+            }
+            $code = $subject->code ?? $subject->name;
+            if ($code) {
+                $names[$code] = $subject->name;
+            }
+        }
+
+        $subjects = [];
+        foreach (array_unique(array_merge(array_keys($names), array_keys($perSubject))) as $code) {
+            $agg = $perSubject[$code] ?? null;
+            $subjects[] = [
+                'subject_code' => $code,
+                'subject_name' => $names[$code] ?? null,
+                'average'      => $agg ? round($agg['sum'] / $agg['count'], 2) : null,
+                'evaluations'  => $agg['count'] ?? 0,
+            ];
+        }
+        usort($subjects, fn ($a, $b) => strcmp($a['subject_code'], $b['subject_code']));
+
+        return response()->json([
+            'faculty_id'     => $facultyId,
+            'semester'       => $semester,
+            'academic_year'  => $academicYear,
+            'overall'        => [
+                'average'     => $overallCount ? round($overallSum / $overallCount, 2) : null,
+                'evaluations' => $overallCount,
+            ],
+            'subjects'       => $subjects,
         ]);
     }
 
@@ -729,12 +1102,28 @@ class ReportController extends Controller
     {
         $evaluateeType = $request->input('evaluatee_type', 'faculty');
 
-        $own = $this->resolveOwnEvaluatee($request->user());
-        if ($own) {
-            if ($own['type'] !== $evaluateeType) {
-                return response()->json(['message' => 'Unauthorized.'], 403);
+        // Data scope enforcement (own/team/all) — default deny.
+        $user = $request->user();
+        $scope = $this->reportScope($user);
+        if ($scope === 'none') {
+            $this->denyReportAccess($user, 'feedbacks');
+        }
+
+        if ($scope === 'team') {
+            $teamDepartment = Faculty::where('user_id', $user->id)->first()?->department;
+            if (!$teamDepartment) {
+                $this->denyReportAccess($user, 'feedbacks_team_unavailable');
             }
-            $request->merge(['faculty_id' => $own['id']]);
+            // Overrides any client-provided department filter.
+            $request->merge(['department' => $teamDepartment]);
+        } else {
+            $own = $this->resolveOwnEvaluatee($user);
+            if ($own) {
+                if ($own['type'] !== $evaluateeType || $own['id'] === '__none__') {
+                    return response()->json(['message' => 'Unauthorized.'], 403);
+                }
+                $request->merge(['faculty_id' => $own['id']]);
+            }
         }
 
         // Faculty feedback query (original logic)
@@ -822,7 +1211,26 @@ class ReportController extends Controller
 
     public function getFeedbackDetail(Request $request, $id)
     {
-        $own = $this->resolveOwnEvaluatee($request->user());
+        // Data scope enforcement (own/team/all) — default deny.
+        $user = $request->user();
+        $scope = $this->reportScope($user);
+        if ($scope === 'none') {
+            $this->denyReportAccess($user, 'feedback_detail');
+        }
+
+        if ($scope === 'team') {
+            $mine = Faculty::where('user_id', $user->id)->first();
+            $target = Faculty::find($id);
+            if (!$mine || !$mine->department || !$target || $target->department !== $mine->department) {
+                $this->denyReportAccess($user, 'cross_team_access_blocked');
+            }
+            // Constrained to own department: keep respondent identities hidden
+            // exactly like the own-scope path.
+            $own = ['id' => $id, 'type' => 'faculty'];
+        } else {
+            $own = $this->resolveOwnEvaluatee($user);
+        }
+
         if ($own) {
             if ($own['type'] !== 'faculty' || (string) $own['id'] !== (string) $id) {
                 return response()->json(['message' => 'Unauthorized.'], 403);

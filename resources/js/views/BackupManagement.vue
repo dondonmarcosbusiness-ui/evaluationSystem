@@ -25,7 +25,7 @@
           <div class="col-md-4">
             <div class="stats-card h-100">
               <div class="d-flex align-items-center gap-3">
-                <div class="icon-box success" :class="{ 'warning': isBackupOld }">
+                <div class="icon-box success" :class="{ warning: isBackupOld }">
                   <i class="fas fa-history"></i>
                 </div>
                 <div>
@@ -93,66 +93,72 @@
             <div v-else class="table-scroll" @scroll="onTableScroll">
               <table class="table table-hover align-middle mb-0">
                 <thead :class="{ 'glass-header': tableScrolled }" class="bg-light">
-                <tr>
-                  <th class="ps-4 py-3 text-uppercase small fw-bold text-muted">Date Created</th>
-                  <th class="py-3 text-uppercase small fw-bold text-muted">File Name</th>
-                  <th class="py-3 text-uppercase small fw-bold text-muted">File Size</th>
-                  <th class="pe-4 py-3 text-end text-uppercase small fw-bold text-muted">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="backup in backups" :key="backup.filename">
-                  <td class="ps-4">
-                    <span class="fw-medium">{{ formatDate(backup.created_at) }}</span>
-                    <div class="text-muted small">{{ formatTime(backup.created_at) }}</div>
-                  </td>
-                  <td>
-                    <div class="d-flex align-items-center gap-2">
-                      <i class="fas fa-file-alt text-primary"></i>
-                      <span>{{ backup.filename }}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge bg-light text-dark fw-normal px-2 py-1">{{ backup.size }}</span>
-                  </td>
-                  <td class="pe-4 text-end">
-                    <div class="d-flex justify-content-end gap-2">
-                      <button
-                        class="btn btn-sm btn-outline-primary"
-                        @click="downloadBackup(backup.filename)"
-                        title="Download SQL"
-                      >
-                        <i class="fas fa-download"></i>
-                      </button>
-                      <button
-                        class="btn btn-sm btn-outline-success"
-                        @click="confirmRestore(backup.filename)"
-                        title="Restore Database"
-                      >
-                        <i class="fas fa-undo-alt"></i>
-                      </button>
-                      <button
-                        class="btn btn-sm btn-outline-danger"
-                        @click="deleteBackup(backup.filename)"
-                        title="Delete Permanently"
-                      >
-                        <i class="fas fa-trash-alt"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
+                  <tr>
+                    <th class="ps-4 py-3 text-uppercase small fw-bold text-muted">Date Created</th>
+                    <th class="py-3 text-uppercase small fw-bold text-muted">File Name</th>
+                    <th class="py-3 text-uppercase small fw-bold text-muted">File Size</th>
+                    <th class="pe-4 py-3 text-end text-uppercase small fw-bold text-muted">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="backup in backups" :key="backup.filename">
+                    <td class="ps-4">
+                      <span class="fw-medium">{{ formatDate(backup.created_at) }}</span>
+                      <div class="text-muted small">{{ formatTime(backup.created_at) }}</div>
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-file-alt text-primary"></i>
+                        <span>{{ backup.filename }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge bg-light text-dark fw-normal px-2 py-1">{{ backup.size }}</span>
+                    </td>
+                    <td class="pe-4 text-end">
+                      <div class="d-flex justify-content-end gap-2">
+                        <button
+                          class="btn btn-sm btn-outline-primary"
+                          @click="downloadBackup(backup.filename)"
+                          title="Download SQL"
+                        >
+                          <i class="fas fa-download"></i>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-outline-success"
+                          @click="confirmRestore(backup.filename)"
+                          title="Restore Database"
+                        >
+                          <i class="fas fa-undo-alt"></i>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-outline-danger"
+                          @click="deleteBackup(backup.filename)"
+                          title="Delete Permanently"
+                        >
+                          <i class="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
               </table>
-              </div>
+            </div>
           </div>
         </div>
 
         <!-- Alerts -->
-        <div v-if="isBackupOld" class="alert alert-warning mt-4 d-flex align-items-center gap-3 recommendation-alert border">
+        <div
+          v-if="isBackupOld"
+          class="alert alert-warning mt-4 d-flex align-items-center gap-3 recommendation-alert border"
+        >
           <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
           <div>
             <h6 class="alert-heading fw-bold mb-1 text-dark">Backup Recommendation</h6>
-            <p class="mb-0 text-dark opacity-75">It has been more than 3 days since the last backup. We recommend generating a new backup to ensure your data is safe.</p>
+            <p class="mb-0 text-dark opacity-75">
+              It has been more than 3 days since the last backup. We recommend generating a new backup to ensure your
+              data is safe.
+            </p>
           </div>
         </div>
       </div>
@@ -172,17 +178,19 @@
                 </div>
                 <h6 class="fw-bold">Are you absolutely sure?</h6>
                 <p class="text-muted">
-                  Restoring <strong>{{ selectedFile }}</strong> will overwrite your current database. This action cannot be undone.
+                  Restoring
+                  <strong>{{ selectedFile }}</strong>
+                  will overwrite your current database. This action cannot be undone.
                 </p>
               </div>
 
               <div class="mb-3">
                 <label class="form-label small fw-bold">Verify Admin Password</label>
-                <input
+                <PasswordInput
                   v-model="verifyPassword"
-                  type="password"
                   class="form-control"
                   placeholder="Enter your password to confirm"
+                  autocomplete="current-password"
                 />
               </div>
             </div>
@@ -204,6 +212,7 @@ import { ref, onMounted, computed } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
+import PasswordInput from "../components/PasswordInput.vue";
 import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 import api from "../services/api";
 import { format } from "date-fns";
@@ -268,7 +277,7 @@ async function toggleAutoBackup() {
     Swal.fire({
       icon: "success",
       title: "Updated",
-      text: `Auto-backup ${autoBackupEnabled.value ? 'enabled' : 'disabled'} successfully.`,
+      text: `Auto-backup ${autoBackupEnabled.value ? "enabled" : "disabled"} successfully.`,
       timer: 1500,
       showConfirmButton: false,
     });
@@ -281,12 +290,12 @@ async function toggleAutoBackup() {
 async function downloadBackup(filename) {
   try {
     const response = await api.get(`/backups/download/${filename}`, {
-      responseType: 'blob'
+      responseType: "blob",
     });
     const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.setAttribute('download', filename);
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -327,7 +336,7 @@ async function restoreDatabase() {
   try {
     await api.post("/backups/restore", {
       filename: selectedFile.value,
-      password: verifyPassword.value
+      password: verifyPassword.value,
     });
     showRestoreModal.value = false;
     await Swal.fire({
@@ -390,10 +399,22 @@ function formatTime(dateString) {
   font-size: 1.25rem;
 }
 
-.icon-box.primary { background: rgba(13, 110, 253, 0.1); color: #0d6efd; }
-.icon-box.success { background: rgba(25, 135, 84, 0.1); color: #198754; }
-.icon-box.warning { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
-.icon-box.info { background: rgba(13, 202, 240, 0.1); color: #0dcaf0; }
+.icon-box.primary {
+  background: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+}
+.icon-box.success {
+  background: rgba(25, 135, 84, 0.1);
+  color: #198754;
+}
+.icon-box.warning {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+}
+.icon-box.info {
+  background: rgba(13, 202, 240, 0.1);
+  color: #0dcaf0;
+}
 
 [data-theme="dark"] .value {
   color: white !important;
@@ -506,8 +527,15 @@ function formatTime(dateString) {
 }
 
 /* Sticky Table Header with Glassmorphism */
-.table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
-table { border-collapse: separate; border-spacing: 0; }
+.table-scroll {
+  max-height: 60vh;
+  overflow-y: auto;
+  border-radius: 8px;
+}
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
 thead th {
   position: sticky;
   top: 0;
@@ -517,7 +545,9 @@ thead th {
   box-shadow: none;
   border-right: 1px solid var(--border-light);
 }
-thead th:last-child { border-right: none; }
+thead th:last-child {
+  border-right: none;
+}
 .glass-header th {
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(12px) saturate(180%);

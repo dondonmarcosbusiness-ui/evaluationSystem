@@ -54,7 +54,7 @@
         <!-- Admin Action Bar -->
         <div
           class="card mb-4 no-print shadow-none mx-3 mx-md-0"
-          v-if="$can('view_reports') && user.role !== 'faculty'"
+          v-if="$can('report.view.all') && user.role !== 'faculty'"
           style="position: relative; z-index: 900; overflow: visible !important"
         >
           <div
@@ -431,7 +431,7 @@
         </div>
 
         <div
-          v-else-if="!loading && selectedFacultyId === '' && $can('view_reports') && user.role !== 'faculty'"
+          v-else-if="!loading && selectedFacultyId === '' && $can('report.view.all') && user.role !== 'faculty'"
           class="card shadow-none mx-3 mx-md-0"
         >
           <div class="card-body text-center py-5 text-muted">
@@ -902,7 +902,7 @@ function getTypeFromRoute() {
 }
 
 async function applyEvaluateeTypeFromRoute() {
-  if (can("view_reports") && user.value.role !== "faculty") {
+  if (can("report.view.all") && user.value.role !== "faculty") {
     const type = getTypeFromRoute();
     if (evaluateeType.value !== type) {
       evaluateeType.value = type;
@@ -934,7 +934,7 @@ onMounted(async () => {
     console.error("Failed to load initial data", e);
   }
 
-  if (can("view_reports") && user.value.role !== "faculty") {
+  if (can("report.view.all") && user.value.role !== "faculty") {
     evaluateeType.value = getTypeFromRoute();
     await fetchEvaluateesList();
     await loadResults();

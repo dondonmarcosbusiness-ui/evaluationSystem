@@ -22,7 +22,18 @@ class YearLevelTest extends TestCase
 
     private function grant(User $user, array $permissions): User
     {
+        $legacyMap = config('authorization.legacy_map', []);
+        $expanded = [];
+
         foreach ($permissions as $name) {
+            $expanded[] = $name;
+
+            foreach ($legacyMap[$name] ?? [] as $mapped) {
+                $expanded[] = $mapped;
+            }
+        }
+
+        foreach (array_unique($expanded) as $name) {
             Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
             $user->givePermissionTo($name);
         }
@@ -320,7 +331,7 @@ class YearLevelTest extends TestCase
     public function test_detailed_report_filters_respondents_by_year()
     {
         $this->openEvaluationPeriod();
-        $admin = $this->grant($this->makeUser('admin', 'admin5@test.com'), ['manage_faculty']);
+        $admin = $this->grant($this->makeUser('admin', 'admin5@test.com'), ['manage_faculty', 'report.view', 'report.view.all']);
         $course = $this->makeCourse();
         $section = $this->makeSection($course, '1st', '1-A');
         $faculty = $this->makeFaculty();
@@ -374,7 +385,7 @@ class YearLevelTest extends TestCase
     public function test_detailed_report_year_filter_falls_back_to_section_year()
     {
         $this->openEvaluationPeriod();
-        $admin = $this->grant($this->makeUser('admin', 'admin9@test.com'), ['manage_faculty']);
+        $admin = $this->grant($this->makeUser('admin', 'admin9@test.com'), ['manage_faculty', 'report.view', 'report.view.all']);
         $course = $this->makeCourse();
         $section = $this->makeSection($course, '4th', '4A');
         $faculty = $this->makeFaculty();
@@ -431,7 +442,7 @@ class YearLevelTest extends TestCase
     public function test_detailed_report_flags_fully_untagged_respondents()
     {
         $this->openEvaluationPeriod();
-        $admin = $this->grant($this->makeUser('admin', 'admin10@test.com'), ['manage_faculty']);
+        $admin = $this->grant($this->makeUser('admin', 'admin10@test.com'), ['manage_faculty', 'report.view', 'report.view.all']);
         $course = $this->makeCourse();
         $faculty = $this->makeFaculty();
 

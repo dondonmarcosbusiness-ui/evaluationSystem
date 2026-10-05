@@ -61,7 +61,7 @@
                   <i class="fas fa-table-list"></i>
                 </button>
               </div>
-              <button class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openCategoryModal()">
+              <button v-if="$can('questionnaire.create')" class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openCategoryModal()">
                 <i class="fas fa-plus-circle me-2"></i>
                 New Sector
               </button>
@@ -89,10 +89,10 @@
                       <i class="fas fa-folder-open"></i>
                     </div>
                     <div class="d-flex gap-1">
-                      <button class="btn-action-minimal" @click.stop="openCategoryModal(cat)">
+                      <button v-if="$can('questionnaire.edit')" class="btn-action-minimal" @click.stop="openCategoryModal(cat)">
                         <i class="fas fa-edit"></i>
                       </button>
-                      <button class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)">
+                      <button v-if="$can('questionnaire.delete')" class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)">
                         <i class="fas fa-trash-alt"></i>
                       </button>
                     </div>
@@ -146,7 +146,7 @@
               <p class="text-muted mb-4">
                 You haven't added any evaluation sectors yet. Create your first one to begin adding questions.
               </p>
-              <button class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
+              <button v-if="$can('questionnaire.create')" class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
                 Create First Sector
               </button>
             </div>
@@ -215,10 +215,10 @@
                           Manage
                           <i class="fas fa-chevron-right ms-1"></i>
                         </button>
-                        <button class="btn-action-minimal" @click.stop="openCategoryModal(cat)" title="Edit sector">
+                        <button v-if="$can('questionnaire.edit')" class="btn-action-minimal" @click.stop="openCategoryModal(cat)" title="Edit sector">
                           <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)" title="Delete sector">
+                        <button v-if="$can('questionnaire.delete')" class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)" title="Delete sector">
                           <i class="fas fa-trash-alt"></i>
                         </button>
                       </div>
@@ -237,7 +237,7 @@
               <p class="text-muted mb-4">
                 You haven't added any evaluation sectors yet. Create your first one to begin adding questions.
               </p>
-              <button class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
+              <button v-if="$can('questionnaire.create')" class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
                 Create First Sector
               </button>
             </div>
@@ -267,6 +267,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                   <h6 class="text-uppercase ls-1 fw-800 small text-muted mb-0">Criteria List</h6>
                   <button
+                    v-if="$can('questionnaire.create')"
                     class="btn btn-primary btn-sm px-3 rounded-pill fw-bold shadow-sm text-white"
                     @click="openQuestionModal(activeCategory?.id)"
                   >
@@ -299,10 +300,10 @@
                           </p>
                         </div>
                         <div class="d-flex gap-1 flex-shrink-0">
-                          <button class="btn-action-icon-sm" @click="openQuestionModal(activeCategory?.id, q)">
+                          <button v-if="$can('questionnaire.edit')" class="btn-action-icon-sm" @click="openQuestionModal(activeCategory?.id, q)">
                             <i class="fas fa-pen"></i>
                           </button>
-                          <button class="btn-action-icon-sm danger" @click="deleteQuestion(activeCategory?.id, q.id)">
+                          <button v-if="$can('questionnaire.delete')" class="btn-action-icon-sm danger" @click="deleteQuestion(activeCategory?.id, q.id)">
                             <i class="fas fa-trash-alt"></i>
                           </button>
                         </div>

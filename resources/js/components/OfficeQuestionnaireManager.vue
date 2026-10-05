@@ -29,7 +29,7 @@
             <h5 class="value mb-0 mt-1">{{ totalQuestionsCount }}</h5>
           </div>
         </div>
-        <button class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openCategoryModal()">
+        <button v-if="$can('office.questionnaire.create')" class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openCategoryModal()">
           <i class="fas fa-plus-circle me-2"></i>
           New Category
         </button>
@@ -52,10 +52,10 @@
                   <i class="fas fa-folder-open"></i>
                 </div>
                 <div class="d-flex gap-1">
-                  <button class="btn-action-minimal" @click.stop="openCategoryModal(cat)">
+                  <button v-if="$can('office.questionnaire.edit')" class="btn-action-minimal" @click.stop="openCategoryModal(cat)">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)">
+                  <button v-if="$can('office.questionnaire.delete')" class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)">
                     <i class="fas fa-trash-alt"></i>
                   </button>
                 </div>
@@ -103,7 +103,7 @@
           <p class="text-muted mb-4">
             You haven't added any evaluation categories yet. Create your first one to begin adding questions.
           </p>
-          <button class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
+          <button v-if="$can('office.questionnaire.create')" class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
             Create First Category
           </button>
         </div>
@@ -130,6 +130,7 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
               <h6 class="text-uppercase ls-1 fw-800 small text-muted mb-0">Question List</h6>
               <button
+                v-if="$can('office.questionnaire.create')"
                 class="btn btn-primary btn-sm px-3 rounded-pill fw-bold shadow-sm text-white"
                 @click="openQuestionModal(activeCategory?.id)"
               >
@@ -156,10 +157,10 @@
                       <p class="mb-1 fw-600 text-main">{{ q.question_text }}</p>
                     </div>
                     <div class="d-flex gap-1 flex-shrink-0">
-                      <button class="btn-action-icon-sm" @click="openQuestionModal(activeCategory?.id, q)">
+                      <button v-if="$can('office.questionnaire.edit')" class="btn-action-icon-sm" @click="openQuestionModal(activeCategory?.id, q)">
                         <i class="fas fa-pen"></i>
                       </button>
-                      <button class="btn-action-icon-sm danger" @click="deleteQuestion(activeCategory?.id, q.id)">
+                      <button v-if="$can('office.questionnaire.delete')" class="btn-action-icon-sm danger" @click="deleteQuestion(activeCategory?.id, q.id)">
                         <i class="fas fa-trash-alt"></i>
                       </button>
                     </div>

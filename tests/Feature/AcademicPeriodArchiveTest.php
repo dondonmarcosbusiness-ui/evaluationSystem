@@ -6,6 +6,7 @@ use App\Models\Answer;
 use App\Models\Category;
 use App\Models\Evaluation;
 use App\Models\Faculty;
+use App\Models\Permission;
 use App\Models\Question;
 use App\Models\Setting;
 use App\Models\User;
@@ -16,6 +17,16 @@ use Tests\TestCase;
 class AcademicPeriodArchiveTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function grant(User $user, array $permissions): User
+    {
+        foreach ($permissions as $name) {
+            Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+            $user->givePermissionTo($name);
+        }
+
+        return $user;
+    }
 
     private function makeUser(string $role, string $email): User
     {
@@ -86,7 +97,7 @@ class AcademicPeriodArchiveTest extends TestCase
     public function test_settings_update_rejects_archived_active_period()
     {
         $this->seedSettings();
-        $admin = $this->makeUser('admin', 'admin@test.com');
+        $admin = $this->grant($this->makeUser('admin', 'admin@test.com'), ['settings.manage']);
 
         $this->actingAs($admin, 'sanctum')->postJson('/api/settings', [
             'settings' => [
@@ -103,7 +114,7 @@ class AcademicPeriodArchiveTest extends TestCase
     public function test_settings_update_keeps_active_period_usable()
     {
         $this->seedSettings();
-        $admin = $this->makeUser('admin', 'admin@test.com');
+        $admin = $this->grant($this->makeUser('admin', 'admin@test.com'), ['settings.manage']);
 
         $this->actingAs($admin, 'sanctum')->postJson('/api/settings', [
             'settings' => [
@@ -141,7 +152,7 @@ class AcademicPeriodArchiveTest extends TestCase
     public function test_get_results_defaults_to_active_but_allows_legacy_period()
     {
         $this->seedSettings();
-        $admin = $this->makeUser('admin', 'admin@test.com');
+        $admin = $this->grant($this->makeUser('admin', 'admin@test.com'), ['evaluation.view', 'evaluation.view.all']);
         $faculty = $this->makeFacultyWithEvaluation('1st Semester', '2025-2026', 5);
 
         // Second response for the same faculty in a legacy period.

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Csv;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -55,6 +56,84 @@ class StudentController extends Controller
             return response()->json($students);
         } catch (\Exception $e) {
             Log::error('Student index error: ' . $e->getMessage());
+            return response()->json(['message' => 'System error'], 500);
+        }
+    }
+
+    /**
+     * Stream every (filtered) student record as CSV for spreadsheet use.
+     * Column order mirrors the import template so the file can be re-imported.
+     */
+    public function export(Request $request)
+    {
+        try {
+            $students = User::with('student.section_relationship')
+                ->where('role', 'student')
+                ->when($request->query('query'), function ($q, $search) {
+                    $q->where(function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%");
+                    });
+                })
+                ->when($request->query('course'), function ($q, $course) {
+                    $q->whereHas('student', fn ($sq) => $sq->where('course', $course));
+                })
+                ->when($request->query('section_id'), function ($q, $sectionId) {
+                    $section = \App\Models\Section::find($sectionId);
+                    $q->whereHas('student', function ($sq) use ($sectionId, $section) {
+                        $sq->where('section_id', $sectionId);
+                        if ($section) {
+                            $sq->orWhere('section', $section->name)
+                               ->orWhere('section', 'like', "%{$section->name}%");
+                        }
+                    });
+                })
+                ->when($request->query('student_type'), function ($q, $type) {
+                    $q->whereHas('student', function ($sq) use ($type) {
+                        if ($type === 'regular') {
+                            $sq->where(function ($sub) {
+                                $sub->where('student_type', 'regular')
+                                    ->orWhereNull('student_type')
+                                    ->orWhere('student_type', '');
+                            });
+                        } else {
+                            $sq->where('student_type', $type);
+                        }
+                    });
+                })
+                ->orderBy('name')
+                ->get();
+
+            $filename = 'student_accounts_' . now()->format('Y-m-d_His') . '.csv';
+
+            return response()->streamDownload(function () use ($students) {
+                Csv::bom();
+                $handle = fopen('php://output', 'w');
+                fputcsv($handle, [
+                    'id number', 'last name', 'first name', 'middle name',
+                    'course', 'section', 'year level', 'student type', 'email', 'status',
+                ]);
+
+                foreach ($students as $user) {
+                    $stu = $user->student;
+                    fputcsv($handle, array_map(Csv::safe(...), [
+                        $user->id_number,
+                        $user->lastname,
+                        $user->firstname,
+                        $user->middlename,
+                        $stu?->course,
+                        $stu?->section ?: $stu?->section_relationship?->name,
+                        $stu?->year_level,
+                        $stu?->student_type ?: 'regular',
+                        $user->email,
+                        $user->is_active ? 'Active' : 'Inactive',
+                    ]));
+                }
+
+                fclose($handle);
+            }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        } catch (\Exception $e) {
+            Log::error('Student export error: ' . $e->getMessage());
             return response()->json(['message' => 'System error'], 500);
         }
     }

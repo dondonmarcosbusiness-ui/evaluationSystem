@@ -39,7 +39,7 @@
      Sidebar: text 15px / icon 16px / submenu 14px / label 12px. */
 
   /* Theme Variables — Flat minimal light */
-  --bg-body: #F8FAFC;
+  --bg-body: #f8fafc;
   --bg-card: #ffffff;
   --bg-topbar: #ffffff;
   --bg-light: #eef0f3;
@@ -229,8 +229,6 @@
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(255, 255, 255, 0.18) !important;
 }
-
-
 
 [data-theme="dark"] .card,
 [data-theme="dark"] .card-body {
@@ -769,19 +767,19 @@ h6 {
 
 .nav-item-flyout:hover .arrow,
 .nav-item-flyout.flyout-open .arrow,
-.nav-item-flyout.active>.nav-link .arrow {
+.nav-item-flyout.active > .nav-link .arrow {
   transform: translateX(0);
   opacity: 1;
 }
 
-.nav-item-flyout.active>.nav-link {
+.nav-item-flyout.active > .nav-link {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
   font-weight: 600;
   box-shadow: inset 3px 0 0 #fff;
 }
 
-.nav-item-flyout.active>.nav-link i {
+.nav-item-flyout.active > .nav-link i {
   color: #fff;
 }
 
@@ -800,7 +798,7 @@ h6 {
 
 /* Invisible Hover Bridge to prevent cursor loss */
 .flyout-menu::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -10px;
   bottom: -10px;
@@ -811,7 +809,7 @@ h6 {
 
 /* Little triangle caret on the left edge, pointing back at the sidebar trigger */
 .flyout-menu::after {
-  content: '';
+  content: "";
   position: absolute;
   left: -5px;
   top: 17px;
@@ -869,7 +867,9 @@ h6 {
   font-size: 0.9rem;
   opacity: 0.6;
   color: #6b7280;
-  transition: color 0.18s ease, transform 0.18s ease;
+  transition:
+    color 0.18s ease,
+    transform 0.18s ease;
 }
 
 .flyout-nav li a:hover {
@@ -1923,24 +1923,24 @@ select,
   transition: all 0.2s ease;
 }
 
-.likert-option input:hover+.likert-label {
+.likert-option input:hover + .likert-label {
   background: #f1f5f9;
   border-color: var(--primary);
 }
 
-.likert-option input:checked+.likert-label {
+.likert-option input:checked + .likert-label {
   background: var(--primary);
   border-color: var(--primary);
   box-shadow: 0 4px 12px rgba(25, 25, 112, 0.15);
 }
 
-.likert-option input:checked+.likert-label .likert-val {
+.likert-option input:checked + .likert-label .likert-val {
   background: #ffffff;
   color: var(--primary);
   border-color: #ffffff;
 }
 
-.likert-option input:checked+.likert-label .likert-text {
+.likert-option input:checked + .likert-label .likert-text {
   color: #ffffff;
 }
 
@@ -2197,7 +2197,7 @@ select,
   .navbar,
   .card-header i.fa-search,
   .card-header .btn,
-  .card-header+.card-body select,
+  .card-header + .card-body select,
   .sidebar-overlay,
   .sidebar-toggle,
   .mobile-header {
@@ -2684,6 +2684,121 @@ select,
   color: #ffffff !important;
 }
 
+/* ── Toolbar Action Buttons: icon-only, label expands on hover ── */
+.btn.btn-expand {
+  --expand-accent: #0d6efd;
+  --expand-soft: rgba(13, 110, 253, 0.08);
+  --expand-border: rgba(13, 110, 253, 0.35);
+  --expand-glow: rgba(13, 110, 253, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  min-height: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--expand-accent);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  flex-shrink: 0;
+  transform: none !important;
+  transition:
+    max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease !important;
+}
+
+.btn-expand .btn-expand-label {
+  display: inline-block;
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateX(-6px);
+  transition:
+    max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.25s ease 0.05s,
+    transform 0.3s ease;
+}
+
+.btn-expand > i,
+.btn-expand > svg {
+  flex-shrink: 0;
+}
+
+.btn-expand:hover,
+.btn-expand:focus-visible,
+.btn-expand.is-open {
+  max-width: 240px;
+  background: var(--expand-soft);
+  border-color: var(--expand-border);
+  color: var(--expand-accent);
+  box-shadow: none !important;
+}
+
+.btn-expand:hover .btn-expand-label,
+.btn-expand:focus-visible .btn-expand-label,
+.btn-expand.is-open .btn-expand-label {
+  max-width: 180px;
+  margin-left: 8px;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.btn-expand.is-upload {
+  --expand-accent: var(--success);
+  --expand-soft: rgba(14, 159, 110, 0.1);
+  --expand-border: rgba(14, 159, 110, 0.4);
+  --expand-glow: rgba(14, 159, 110, 0.22);
+}
+
+.btn-expand.is-solid {
+  --expand-accent: var(--primary);
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.btn-expand.is-solid:hover,
+.btn-expand.is-solid:focus-visible,
+.btn-expand.is-solid.is-open {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: #ffffff;
+  box-shadow: none !important;
+}
+
+.btn-expand:disabled {
+  opacity: 0.75;
+  cursor: default;
+}
+
+/* Dark theme accents (GitHub-dark palette) */
+[data-theme="dark"] .btn-expand {
+  --expand-accent: #58a6ff;
+  --expand-soft: rgba(88, 166, 255, 0.12);
+  --expand-border: rgba(88, 166, 255, 0.4);
+  --expand-glow: rgba(88, 166, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #30363d;
+}
+
+[data-theme="dark"] .btn-expand.is-upload {
+  --expand-accent: #3fb950;
+  --expand-soft: rgba(63, 185, 80, 0.14);
+  --expand-border: rgba(63, 185, 80, 0.45);
+  --expand-glow: rgba(63, 185, 80, 0.25);
+}
+
 /* ── SweetAlert Premium Theme Integration ────── */
 .swal2-popup {
   border-radius: var(--card-radius) !important;
@@ -2893,7 +3008,6 @@ select,
   background: rgba(255, 255, 255, 0.12);
 }
 
-
 /* ══ Global Select & Dropdown Styling (matches .form-control) ══ */
 select.form-select,
 .form-select {
@@ -2912,7 +3026,9 @@ select.form-select,
   font-size: 14px;
   font-weight: 500;
   color: var(--text-main);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
   cursor: pointer;
 }
 
@@ -3068,7 +3184,9 @@ select.form-select:focus,
   top: 0;
   z-index: 2;
   background: var(--bg-card);
-  transition: background 0.3s ease, backdrop-filter 0.3s ease;
+  transition:
+    background 0.3s ease,
+    backdrop-filter 0.3s ease;
 }
 
 .table-scroll thead.glass-header th {
@@ -3287,6 +3405,23 @@ body.modal-open .nav-tooltip {
   z-index: 1040 !important;
 }
 
+/* Confirm dialogs must stack above slide-in drawers (permission drawer sits at
+   1060) so they are never clipped behind one. ConfirmDialog.vue toggles
+   body.confirm-open while a question is on screen. */
+body.confirm-open .confirm-dialog {
+  z-index: 1070 !important;
+}
+
+body.confirm-open .modal-backdrop {
+  z-index: 1065 !important;
+}
+
+/* Page scroll lock while a slide-in drawer (permission manager) is open.
+   !important so Bootstrap's modal-open inline overflow can't drop it. */
+body.drawer-open {
+  overflow: hidden !important;
+}
+
 .btn,
 .btn-primary-glass,
 .btn-primary-premium,
@@ -3466,7 +3601,10 @@ select.form-select:focus {
 .btn,
 .nav-link,
 .flyout-nav li a {
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease !important;
 }
 
 /* ── Year Level Tab Menu (flat minimal, shared) ── */
@@ -3498,7 +3636,9 @@ select.form-select:focus {
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .year-tab:hover {
@@ -3767,7 +3907,7 @@ button:hover {
   box-shadow: inset 2px 0 0 #fff !important;
 }
 
-.nav-item-flyout.active>.nav-link {
+.nav-item-flyout.active > .nav-link {
   box-shadow: inset 3px 0 0 #fff !important;
 }
 

@@ -20,6 +20,7 @@ const OfficeEvaluationForm = () => import("../views/OfficeEvaluationForm.vue");
 const OfficeReports = () => import("../views/OfficeReports.vue");
 const ArchiveReports = () => import("../views/ArchiveReports.vue");
 const QrFeedback = () => import("../views/QrFeedback.vue");
+const AuditLogs = () => import("../views/AuditLogs.vue");
 
 const routes = [
   { path: "/", redirect: "/login" },
@@ -34,19 +35,19 @@ const routes = [
     path: "/faculty",
     name: "FacultyManagement",
     component: FacultyManagement,
-    meta: { requiresAuth: true, permission: "manage_faculty" },
+    meta: { requiresAuth: true, permission: "faculty.view" },
   },
   {
     path: "/offices",
     name: "OfficeManagement",
     component: OfficeManagement,
-    meta: { requiresAuth: true, permission: ["manage_offices", "manage_faculty"] },
+    meta: { requiresAuth: true, permission: "office.view" },
   },
   {
     path: "/evaluate-office/:officeId",
     name: "OfficeEvaluationForm",
     component: OfficeEvaluationForm,
-    meta: { requiresAuth: true, permission: "give_evaluations" },
+    meta: { requiresAuth: true, permission: "evaluation.create" },
   },
   {
     path: "/qr/:token",
@@ -57,27 +58,27 @@ const routes = [
     path: "/office-reports",
     name: "OfficeReports",
     component: OfficeReports,
-    meta: { requiresAuth: true, permission: ["manage_offices", "manage_faculty"] },
+    meta: { requiresAuth: true, permission: "office.report.view" },
   },
   {
     path: "/questionnaire/office",
     name: "OfficeQuestionnaireManagement",
     component: OfficeQuestionnaireManagement,
-    meta: { requiresAuth: true, permission: ["manage_offices", "manage_faculty"] },
+    meta: { requiresAuth: true, permission: "office.view" },
   },
   {
     path: "/students/regular",
     name: "RegularStudents",
     component: StudentManagement,
     props: { defaultType: "regular" },
-    meta: { requiresAuth: true, permission: "manage_users" },
+    meta: { requiresAuth: true, permission: "student.view" },
   },
   {
     path: "/students/irregular",
     name: "IrregularStudents",
     component: StudentManagement,
     props: { defaultType: "irregular" },
-    meta: { requiresAuth: true, permission: "manage_users" },
+    meta: { requiresAuth: true, permission: "student.view" },
   },
   {
     path: "/students",
@@ -87,19 +88,19 @@ const routes = [
     path: "/courses",
     name: "CourseManagement",
     component: CourseManagement,
-    meta: { requiresAuth: true, permission: "manage_courses" },
+    meta: { requiresAuth: true, permission: "course.view" },
   },
   {
     path: "/assignments",
     name: "AssignmentManagement",
     component: AssignmentManagement,
-    meta: { requiresAuth: true, permission: "manage_faculty" },
+    meta: { requiresAuth: true, permission: "assignment.view" },
   },
   {
     path: "/questionnaire/faculty",
     name: "QuestionnaireManagementFaculty",
     component: QuestionnaireManagement,
-    meta: { requiresAuth: true, permission: ["manage_categories", "manage_questions"] },
+    meta: { requiresAuth: true, permission: ["questionnaire.create", "questionnaire.edit", "questionnaire.delete"] },
   },
   {
     path: "/questionnaire",
@@ -109,19 +110,19 @@ const routes = [
     path: "/settings",
     name: "Settings",
     component: Settings,
-    meta: { requiresAuth: true, permission: "manage_rbac" },
+    meta: { requiresAuth: true, permission: "settings.manage" },
   },
   {
     path: "/backups",
     name: "BackupManagement",
     component: BackupManagement,
-    meta: { requiresAuth: true, permission: "manage_rbac" },
+    meta: { requiresAuth: true, permission: "backup.manage" },
   },
   {
     path: "/evaluate",
     name: "EvaluationForm",
     component: EvaluationForm,
-    meta: { requiresAuth: true, permission: "give_evaluations" },
+    meta: { requiresAuth: true, permission: "evaluation.create" },
   },
   {
     path: "/reports",
@@ -145,7 +146,13 @@ const routes = [
     path: "/feedbacks",
     name: "FeedbackManagement",
     component: FeedbackManagement,
-    meta: { requiresAuth: true, permission: "view_reports" },
+    meta: { requiresAuth: true, permission: "report.view" },
+  },
+  {
+    path: "/audit-logs",
+    name: "AuditLogs",
+    component: AuditLogs,
+    meta: { requiresAuth: true, permission: "permission.manage" },
   },
 ];
 
@@ -164,16 +171,12 @@ router.beforeEach((to, from, next) => {
   const userPermissions = JSON.parse(localStorage.getItem("permissions") || "[]");
 
   const can = (permission) => {
-    if (user.role === "admin") return true;
     if (!permission) return true;
     if (Array.isArray(permission)) {
       return permission.some((p) => userPermissions.includes(p));
     }
     return userPermissions.includes(permission);
   };
-
-  const reportPaths = ["/reports", "/set-report", "/archive", "/feedbacks"];
-  const isReportRoute = reportPaths.includes(to.path);
 
   const applyTheme = () => {
     if (to.path === "/login" || !isAuthenticated) {

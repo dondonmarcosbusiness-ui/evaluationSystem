@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Rules\PasswordPolicy;
+use App\Services\LoginLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -28,6 +29,7 @@ class AuthController extends Controller
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
             $minutes = ceil($seconds / 60);
+            LoginLogService::record(LoginLogService::LOCKED, $login, null, 'rate_limited', $request);
             return response()->json([
                 'message' => "Too many login attempts. For security, your account is locked for {$minutes} minutes."
             ], 429);
@@ -45,6 +47,7 @@ class AuthController extends Controller
                 $remaining = max(0, 5 - $attempts);
                 
                 Log::warning("Failed login attempt #{$attempts} for {$login} from {$ip}");
+                LoginLogService::record(LoginLogService::FAILED, $login, $user, 'invalid_credentials', $request);
 
                 return response()->json([
                     'message' => 'Invalid credentials. You have ' . $remaining . ' attempts remaining before lockout.'
@@ -53,6 +56,7 @@ class AuthController extends Controller
 
             if (!$user->is_active) {
                 RateLimiter::clear($throttleKey);
+                LoginLogService::record(LoginLogService::INACTIVE, $login, $user, 'account_inactive', $request);
                 return response()->json([
                     'message' => 'Your account has been deactivated. Please contact the administrator.'
                 ], 403);
@@ -60,6 +64,7 @@ class AuthController extends Controller
 
             RateLimiter::clear($throttleKey);
             $token = $user->createToken('auth_token')->plainTextToken;
+            LoginLogService::record(LoginLogService::SUCCESS, $login, $user, null, $request);
 
             return response()->json([
                 'message' => 'Login successful',

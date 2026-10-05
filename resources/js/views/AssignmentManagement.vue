@@ -40,7 +40,7 @@
               </button>
             </div>
 
-            <button class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openAddModal">
+            <button v-if="$can('assignment.create')" class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openAddModal">
               <i class="fas fa-plus-circle me-2"></i>
               New Assignment
             </button>
@@ -185,7 +185,7 @@
                           <span>Section {{ a.section?.name }}</span>
                         </div>
                       </div>
-                      <button class="btn-unlink-minimal" @click="deleteAssignment(a.id)">
+                      <button v-if="$can('assignment.delete')" class="btn-unlink-minimal" @click="deleteAssignment(a.id)">
                         <i class="fas fa-unlink"></i>
                       </button>
                     </div>

@@ -24,8 +24,18 @@ class CourseSubjectImportTest extends TestCase
             'role' => 'admin',
             'is_active' => true,
         ]);
-        Permission::firstOrCreate(['name' => 'manage_courses', 'guard_name' => 'web']);
-        $user->givePermissionTo('manage_courses');
+        $permissions = [
+            'course.view',
+            'course.create',
+            'course.edit',
+            'course.delete',
+            'course.import',
+        ];
+
+        foreach ($permissions as $name) {
+            Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+            $user->givePermissionTo($name);
+        }
 
         return $user;
     }

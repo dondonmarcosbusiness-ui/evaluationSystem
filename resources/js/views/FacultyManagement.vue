@@ -52,13 +52,33 @@
                 <div class="vr mx-1 d-none d-md-block" style="height: 24px; opacity: 0.1"></div>
 
                 <!-- Action Buttons -->
-                <button class="btn btn-outline-success btn-sm d-flex align-items-center gap-2 px-3" @click="openUploadModal">
-                  <i class="fas fa-file-csv"></i>
-                  <span class="d-none d-xl-inline">Upload CSV</span>
+                <button
+                  class="btn btn-expand"
+                  :class="{ 'is-open': exporting }"
+                  :disabled="exporting"
+                  title="Export the current list (with filters) as CSV"
+                  @click="exportCsv"
+                >
+                  <i class="fas" :class="exporting ? 'fa-spinner fa-spin' : 'fa-file-arrow-down'"></i>
+                  <span class="btn-expand-label">{{ exporting ? "Exporting…" : "Export CSV" }}</span>
                 </button>
-                <button class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-3" @click="openAddModal">
+                <button
+                  v-if="$can('faculty.import')"
+                  class="btn btn-expand is-upload"
+                  title="Upload CSV"
+                  @click="openUploadModal"
+                >
+                  <i class="fas fa-file-csv"></i>
+                  <span class="btn-expand-label">Upload CSV</span>
+                </button>
+                <button
+                  v-if="$can('faculty.create')"
+                  class="btn btn-expand is-solid"
+                  title="Add Faculty"
+                  @click="openAddModal"
+                >
                   <i class="fas fa-plus"></i>
-                  <span class="d-none d-xl-inline">Add Faculty</span>
+                  <span class="btn-expand-label">Add Faculty</span>
                 </button>
               </div>
             </div>
@@ -71,108 +91,116 @@
               <div v-else key="table" class="table-scroll" @scroll="onTableScroll">
                 <table class="table table-hover mb-0">
                   <thead :class="{ 'glass-header': tableScrolled }">
-                  <tr>
-                    <th style="width: 40px">
-                      <div class="form-check m-0">
-                        <input class="form-check-input" type="checkbox" v-model="selectAll" />
-                      </div>
-                    </th>
-                    <th>#</th>
-                    <th>ID Number</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Department</th>
-                    <th>Course</th>
-                    <th>Position</th>
-                    <th>Status</th>
-                    <th class="text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(f, i) in faculty" :key="f.id">
-                    <td>
-                      <div class="form-check m-0">
-                        <input class="form-check-input" type="checkbox" :value="f.id" v-model="selectedIds" />
-                      </div>
-                    </td>
-                    <td class="text-muted small">
-                      {{
-                        pagination?.current_page
-                          ? (pagination.current_page - 1) * (pagination.per_page || 10) + i + 1
-                          : i + 1
-                      }}
-                    </td>
-                    <td class="small fw-bold text-indigo">
-                      {{ f.user?.id_number || "N/A" }}
-                    </td>
-                    <td class="fw-semibold">
-                      {{ f.user?.name }}
-                      <div
-                        v-if="f.user?.is_google_linked"
-                        class="badge bg-success bg-opacity-10 text-success small ms-1"
-                        style="font-size: 0.6rem"
-                      >
-                        <i class="fab fa-google"></i>
-                      </div>
-                    </td>
-                    <td class="text-muted small">
-                      {{ f.user?.email }}
-                    </td>
-                    <td>{{ f.department }}</td>
-                    <td>
-                      <span
-                        class="badge"
-                        :class="
-                          f.course && f.course.includes('All Course')
-                            ? 'badge-all-course'
-                            : 'bg-primary bg-opacity-10 text-primary'
-                        "
-                      >
-                        {{ f.course || "N/A" }}
-                      </span>
-                    </td>
-                    <td>{{ f.position }}</td>
-                    <td>
-                      <span class="badge-status" :class="f.user?.is_active ? 'active' : 'inactive'">
-                        <i class="fas fa-circle me-1"></i>
-                        {{ f.user?.is_active ? "Active" : "Inactive" }}
-                      </span>
-                    </td>
-                    <td class="text-center">
-                      <div
-                        class="dropdown action-dropdown"
-                        :class="{ show: openMenuId === f.id, 'drop-up': i >= faculty.length - 2 }"
-                      >
-                        <button
-                          class="action-trigger"
-                          @click.stop="toggleMenu(f.id)"
-                          title="Actions"
-                          aria-label="Row actions"
-                        >
-                          <i class="fas fa-ellipsis-v"></i>
-                        </button>
-                        <div v-show="openMenuId === f.id" class="action-menu">
-                          <button class="action-menu-item" @click="openEditModal(f)">
-                            <span>Edit</span>
-                          </button>
-                          <button class="action-menu-item" @click="toggleActive(f)">
-                            <span>{{ f.user?.is_active ? "Deactivate" : "Activate" }}</span>
-                          </button>
-                          <button class="action-menu-item" @click="openRBACModal(f.user)">
-                            <span>Manage Access</span>
-                          </button>
-                          <button class="action-menu-item danger" @click="deleteFaculty(f.id)">
-                            <span>Delete</span>
-                          </button>
+                    <tr>
+                      <th style="width: 40px">
+                        <div class="form-check m-0">
+                          <input class="form-check-input" type="checkbox" v-model="selectAll" />
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-if="!faculty.length">
-                    <td colspan="10" class="text-center text-muted py-4">No faculty records yet.</td>
-                  </tr>
-                </tbody>
-              </table>
+                      </th>
+                      <th>#</th>
+                      <th>ID Number</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Department</th>
+                      <th>Course</th>
+                      <th>Position</th>
+                      <th>Status</th>
+                      <th class="text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(f, i) in faculty" :key="f.id">
+                      <td>
+                        <div class="form-check m-0">
+                          <input class="form-check-input" type="checkbox" :value="f.id" v-model="selectedIds" />
+                        </div>
+                      </td>
+                      <td class="text-muted small">
+                        {{
+                          pagination?.current_page
+                            ? (pagination.current_page - 1) * (pagination.per_page || 10) + i + 1
+                            : i + 1
+                        }}
+                      </td>
+                      <td class="small fw-bold text-indigo">
+                        {{ f.user?.id_number || "N/A" }}
+                      </td>
+                      <td class="fw-semibold">
+                        {{ f.user?.name }}
+                        <div
+                          v-if="f.user?.is_google_linked"
+                          class="badge bg-success bg-opacity-10 text-success small ms-1"
+                          style="font-size: 0.6rem"
+                        >
+                          <i class="fab fa-google"></i>
+                        </div>
+                      </td>
+                      <td class="text-muted small">
+                        {{ f.user?.email }}
+                      </td>
+                      <td>{{ f.department }}</td>
+                      <td>
+                        <span
+                          class="badge"
+                          :class="
+                            f.course && f.course.includes('All Course')
+                              ? 'badge-all-course'
+                              : 'bg-primary bg-opacity-10 text-primary'
+                          "
+                        >
+                          {{ f.course || "N/A" }}
+                        </span>
+                      </td>
+                      <td>{{ f.position }}</td>
+                      <td>
+                        <span class="badge-status" :class="f.user?.is_active ? 'active' : 'inactive'">
+                          <i class="fas fa-circle me-1"></i>
+                          {{ f.user?.is_active ? "Active" : "Inactive" }}
+                        </span>
+                      </td>
+                      <td class="text-center">
+                        <div
+                          class="dropdown action-dropdown"
+                          :class="{ show: openMenuId === f.id, 'drop-up': i >= faculty.length - 2 }"
+                        >
+                          <button
+                            class="action-trigger"
+                            @click.stop="toggleMenu(f.id)"
+                            title="Actions"
+                            aria-label="Row actions"
+                          >
+                            <i class="fas fa-ellipsis-v"></i>
+                          </button>
+                          <div v-show="openMenuId === f.id" class="action-menu">
+                            <button v-if="$can('faculty.edit')" class="action-menu-item" @click="openEditModal(f)">
+                              <span>Edit</span>
+                            </button>
+                            <button v-if="$can('faculty.edit')" class="action-menu-item" @click="toggleActive(f)">
+                              <span>{{ f.user?.is_active ? "Deactivate" : "Activate" }}</span>
+                            </button>
+                            <button
+                              v-if="$can('permission.manage')"
+                              class="action-menu-item"
+                              @click="openAccessDrawer(f.user)"
+                            >
+                              <span>Manage Access</span>
+                            </button>
+                            <button
+                              v-if="$can('faculty.delete')"
+                              class="action-menu-item danger"
+                              @click="deleteFaculty(f.id)"
+                            >
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr v-if="!faculty.length">
+                      <td colspan="10" class="text-center text-muted py-4">No faculty records yet.</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </Transition>
 
@@ -268,11 +296,11 @@
                     </label>
                     <div class="input-group-custom">
                       <span class="input-icon"><i class="fas fa-lock"></i></span>
-                      <input
+                      <PasswordInput
                         v-model="form.password"
-                        type="password"
                         class="input-custom with-icon"
                         :placeholder="editMode ? 'Leave blank to keep' : 'Min 6 characters'"
+                        autocomplete="new-password"
                       />
                     </div>
                   </div>
@@ -404,15 +432,15 @@
               </div>
               <input type="file" ref="fileInput" class="form-control" accept=".csv" />
             </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-success" @click="uploadCsv" :disabled="uploading">
-              <i class="fas fa-upload me-2"></i>
-              {{ uploading ? "Uploading…" : "Upload" }}
-            </button>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-success" @click="uploadCsv" :disabled="uploading">
+                <i class="fas fa-upload me-2"></i>
+                {{ uploading ? "Uploading…" : "Upload" }}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       </div>
       <!-- Bulk Actions Toast -->
       <Transition name="toast-slide">
@@ -423,14 +451,21 @@
               faculty selected
             </div>
             <div class="bulk-toast-actions">
-              <button class="btn-toast btn-toast-activate" @click="bulkChangeStatus(true)">
-                <i class="fas fa-check-circle"></i> Activate
+              <button v-if="$can('faculty.edit')" class="btn-toast btn-toast-activate" @click="bulkChangeStatus(true)">
+                <i class="fas fa-check-circle"></i>
+                Activate
               </button>
-              <button class="btn-toast btn-toast-deactivate" @click="bulkChangeStatus(false)">
-                <i class="fas fa-ban"></i> Deactivate
+              <button
+                v-if="$can('faculty.edit')"
+                class="btn-toast btn-toast-deactivate"
+                @click="bulkChangeStatus(false)"
+              >
+                <i class="fas fa-ban"></i>
+                Deactivate
               </button>
-              <button class="btn-toast btn-toast-delete" @click="bulkDelete">
-                <i class="fas fa-trash-alt"></i> Delete
+              <button v-if="$can('faculty.delete')" class="btn-toast btn-toast-delete" @click="bulkDelete">
+                <i class="fas fa-trash-alt"></i>
+                Delete
               </button>
             </div>
             <button class="bulk-toast-close" @click="selectedIds = []">
@@ -440,11 +475,11 @@
         </div>
       </Transition>
 
-      <!-- RBAC Modal -->
-      <UserRBACModal
-        :show="showRBACModal"
+      <!-- Access Drawer -->
+      <UserRBACDrawer
+        :show="showAccessDrawer"
         :user="selectedUser"
-        @close="showRBACModal = false"
+        @close="showAccessDrawer = false"
         @updated="fetchFaculty"
       />
     </div>
@@ -456,9 +491,12 @@ import { ref, onMounted, onUnmounted, computed } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
-import UserRBACModal from "../components/UserRBACModal.vue";
+import UserRBACDrawer from "../components/UserRBACDrawer.vue";
+import PasswordInput from "../components/PasswordInput.vue";
 import Pagination from "../components/Pagination.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
+import { downloadCsv } from "../helpers/download.js";
+import { notifySuccess, notifyError } from "../composables/useSnackbar.js";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
 import { confirmAction } from "../composables/useConfirm.js";
@@ -477,6 +515,7 @@ const formError = ref("");
 const selectedIds = ref([]);
 const tableScrolled = ref(false);
 const openMenuId = ref(null);
+const exporting = ref(false);
 
 function toggleMenu(id) {
   openMenuId.value = openMenuId.value === id ? null : id;
@@ -507,8 +546,8 @@ const uploading = ref(false);
 const uploadError = ref("");
 const uploadSuccess = ref("");
 
-// RBAC State
-const showRBACModal = ref(false);
+// Access drawer state
+const showAccessDrawer = ref(false);
 const selectedUser = ref(null);
 
 const blankForm = () => ({
@@ -645,7 +684,8 @@ function changePerPage(n) {
   fetchFaculty(1);
 }
 
-async function fetchFaculty(page = 1) {  loading.value = true;
+async function fetchFaculty(page = 1) {
+  loading.value = true;
   closeMenu();
   try {
     const params = new URLSearchParams({
@@ -671,6 +711,22 @@ async function fetchCourses() {
     availableCourses.value = res.data;
   } catch (e) {
     console.error("Failed to fetch courses:", e);
+  }
+}
+
+async function exportCsv() {
+  exporting.value = true;
+  try {
+    await downloadCsv(
+      "/faculty/export",
+      { query: filters.value.query, department: filters.value.department },
+      "faculty_accounts.csv",
+    );
+    notifySuccess("Faculty accounts exported as CSV.");
+  } catch (e) {
+    notifyError(e?.message || "Export failed. Please try again.");
+  } finally {
+    exporting.value = false;
   }
 }
 
@@ -709,10 +765,10 @@ function closeModal() {
   showModal.value = false;
 }
 
-function openRBACModal(user) {
+function openAccessDrawer(user) {
   closeMenu();
   selectedUser.value = user;
-  showRBACModal.value = true;
+  showAccessDrawer.value = true;
 }
 
 async function saveFaculty() {
@@ -751,7 +807,7 @@ async function saveFaculty() {
 async function toggleActive(f) {
   closeMenu();
   const action = f.user?.is_active ? "deactivate" : "activate";
-  
+
   const result = await confirmAction({
     title: "Are you sure?",
     message: `Do you want to ${action} ${f.user?.name}?`,
@@ -811,7 +867,7 @@ async function deleteFaculty(id) {
 
 async function bulkDelete() {
   if (!selectedIds.value.length) return;
-  
+
   const result = await confirmAction({
     title: "Bulk Delete?",
     message: `Delete ${selectedIds.value.length} selected faculty? This cannot be undone.`,
@@ -832,7 +888,7 @@ async function bulkDelete() {
 async function bulkChangeStatus(status) {
   if (!selectedIds.value.length) return;
   const action = status ? "activate" : "deactivate";
-  
+
   const result = await confirmAction({
     title: "Bulk Update?",
     message: `Are you sure you want to bulk ${action} the selected faculty?`,
@@ -1077,21 +1133,16 @@ async function uploadCsv() {
   position: absolute;
   inset: 0;
   border-radius: 16px;
-  background: conic-gradient(
-    from var(--border-angle),
-    #ffc107,
-    #ff7b00,
-    #191970,
-    #232380,
-    #232380,
-    #191970,
-    #ffc107
-  );
+  background: conic-gradient(from var(--border-angle), #ffc107, #ff7b00, #191970, #232380, #232380, #191970, #ffc107);
   animation: spin-border 2s linear infinite;
   z-index: 0;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
   mask-composite: exclude;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   padding: 2px;
 }
@@ -1255,7 +1306,12 @@ async function uploadCsv() {
   width: 100%;
   max-width: 100%;
 }
-table { border-collapse: separate; border-spacing: 0; table-layout: auto; width: 100%; }
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+  width: 100%;
+}
 thead th {
   position: sticky;
   top: 0;
@@ -1272,7 +1328,9 @@ thead th {
   padding: 14px 16px;
   white-space: nowrap;
 }
-thead th:last-child { border-right: none; }
+thead th:last-child {
+  border-right: none;
+}
 tbody td {
   padding: 14px 16px;
   font-size: 0.85rem;

@@ -26,7 +26,7 @@
                 <i class="fas fa-search"></i>
                 <input v-model="searchQuery" type="text" placeholder="Search course..." @input="handleSearch" />
               </div>
-              <button class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openAddModal">
+              <button v-if="$can('course.create')" class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openAddModal">
                 <i class="fas fa-plus-circle me-2"></i>
                 New Course
               </button>
@@ -86,10 +86,11 @@
                         >
                           <i class="fas fa-cog"></i>
                         </button>
-                        <button class="btn-action-minimal" title="Edit course" @click="openEditModal(course)">
+                        <button v-if="$can('course.edit')" class="btn-action-minimal" title="Edit course" @click="openEditModal(course)">
                           <i class="fas fa-edit"></i>
                         </button>
                         <button
+                          v-if="$can('course.delete')"
                           class="btn-action-minimal danger"
                           title="Delete course"
                           @click="deleteCourse(course.id)"
@@ -205,11 +206,11 @@
                         Subject Bank
                       </span>
                       <div class="d-flex gap-2 flex-shrink-0">
-                        <button class="btn-add-inline" @click="openSubjectUpload">
+                        <button v-if="$can('course.import')" class="btn-add-inline" @click="openSubjectUpload">
                           <i class="fas fa-upload"></i>
                           Upload
                         </button>
-                        <button class="btn-add-inline" @click="openSubjectAdder">
+                        <button v-if="$can('course.edit')" class="btn-add-inline" @click="openSubjectAdder">
                           <i class="fas fa-plus"></i>
                           Add Subject{{ detailYearTab !== "all" ? ` to ${detailYearTab} Year` : "" }}
                         </button>
@@ -266,7 +267,7 @@
                         />
                         <span class="bulk-toast-number">{{ selectedSubjectIds.length }}</span>
                         <span class="small fw-600 text-muted">selected</span>
-                        <button class="btn-inline-save danger ms-auto" :disabled="!selectedSubjectIds.length || bulkDeletingSubjects" @click="bulkDeleteSubjects">
+                        <button v-if="$can('course.delete')" class="btn-inline-save danger ms-auto" :disabled="!selectedSubjectIds.length || bulkDeletingSubjects" @click="bulkDeleteSubjects">
                           <i class="fas fa-trash-alt me-1"></i>
                           {{ bulkDeletingSubjects ? "Deleting…" : "Delete" }}
                         </button>
@@ -285,7 +286,7 @@
                         <span v-if="sub.code" class="subject-code-chip">{{ sub.code }}</span>
                         <span class="fw-600 text-main small">{{ sub.name }}</span>
                         <span class="badge bg-primary bg-opacity-10 text-primary ms-auto small">{{ sub.year_level ?? "All years" }}</span>
-                        <button v-if="sub.id" class="btn-remove-inline" title="Remove subject" @click="removeDetailSubject(sub.id)">
+                        <button v-if="sub.id && $can('course.delete')" class="btn-remove-inline" title="Remove subject" @click="removeDetailSubject(sub.id)">
                           <i class="fas fa-times"></i>
                         </button>
                       </div>
@@ -301,7 +302,7 @@
                         <i class="fas fa-users-rectangle text-primary opacity-60"></i>
                         Academic Sections
                       </span>
-                      <button class="btn-add-inline" @click="openSectionAdder">
+                      <button v-if="$can('course.edit')" class="btn-add-inline" @click="openSectionAdder">
                         <i class="fas fa-plus"></i>
                         Add Section{{ detailYearTab !== "all" ? ` to ${detailYearTab} Year` : "" }}
                       </button>
@@ -323,7 +324,7 @@
                         <div class="pill-dot"></div>
                         <span>{{ sec.text }}</span>
                         <span class="badge bg-primary bg-opacity-10 text-primary ms-1 small">{{ sec.year_level ?? "All years" }}</span>
-                        <button v-if="sec.id" class="btn-remove-inline" title="Remove section" @click="removeDetailSection(sec.id)">
+                        <button v-if="sec.id && $can('course.delete')" class="btn-remove-inline" title="Remove section" @click="removeDetailSection(sec.id)">
                           <i class="fas fa-times"></i>
                         </button>
                       </div>

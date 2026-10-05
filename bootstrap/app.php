@@ -16,7 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            // Fail-closed, audit-logging wrapper around Spatie's permission
+            // middleware (default deny + 403 on any authorization failure).
+            'permission' => \App\Http\Middleware\EnsurePermission::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'audit.office' => \App\Http\Middleware\LogOfficeActivity::class,
         ]);

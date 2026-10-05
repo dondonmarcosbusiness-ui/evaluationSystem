@@ -159,7 +159,7 @@
               <button class="btn btn-outline-secondary" @click="step = 1">← {{ t.back_btn }}</button>
               <button
                 class="btn btn-success flex-fill"
-                :disabled="answeredCount < totalQuestions || submitting || (aiAnalysis && aiAnalysis.moderation_status === 'inappropriate')"
+                :disabled="answeredCount < totalQuestions || submitting || (aiAnalysis && aiAnalysis.moderation_status === 'inappropriate') || !$can('evaluation.submit')"
                 @click="submitEvaluation"
               >
                 <i class="fas fa-paper-plane me-2"></i>

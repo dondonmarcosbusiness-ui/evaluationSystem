@@ -1,83 +1,80 @@
 <template>
   <Teleport to="body">
     <div ref="modalEl" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title fw-bold text-primary">
-            {{ hasPassword ? t.change_password_title : t.set_password_title }}
-          </h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-            :disabled="submitting"
-          ></button>
-        </div>
-
-        <form @submit.prevent="submit">
-          <div class="modal-body">
-            <p class="text-muted small mb-3">{{ t.password_requirements }}</p>
-
-            <div v-if="hasPassword" class="mb-3">
-              <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.current_password }}</label>
-              <input
-                v-model="form.current_password"
-                type="password"
-                class="form-control"
-                :class="{ 'is-invalid': errors.current_password }"
-                autocomplete="current-password"
-              />
-              <div v-if="errors.current_password" class="invalid-feedback d-block">
-                {{ errors.current_password }}
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.new_password }}</label>
-              <input
-                v-model="form.password"
-                type="password"
-                class="form-control"
-                :class="{ 'is-invalid': errors.password }"
-                autocomplete="new-password"
-              />
-              <div v-if="errors.password" class="invalid-feedback d-block">{{ errors.password }}</div>
-            </div>
-
-            <div class="mb-1">
-              <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.confirm_password }}</label>
-              <input
-                v-model="form.password_confirmation"
-                type="password"
-                class="form-control"
-                :class="{ 'is-invalid': errors.password_confirmation }"
-                autocomplete="new-password"
-              />
-              <div v-if="errors.password_confirmation" class="invalid-feedback d-block">
-                {{ errors.password_confirmation }}
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-footer">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold text-primary">
+              {{ hasPassword ? t.change_password_title : t.set_password_title }}
+            </h5>
             <button
               type="button"
-              class="btn btn-light flex-fill rounded-3"
+              class="btn-close"
               data-bs-dismiss="modal"
+              aria-label="Close"
               :disabled="submitting"
-            >
-              {{ t.cancel }}
-            </button>
-            <button type="submit" class="btn btn-primary flex-fill rounded-3" :disabled="submitting">
-              <i v-if="submitting" class="fas fa-spinner fa-spin me-1"></i>
-              {{ submitting ? t.saving_password : t.save_password }}
-            </button>
+            ></button>
           </div>
-        </form>
+
+          <form @submit.prevent="submit">
+            <div class="modal-body">
+              <p class="text-muted small mb-3">{{ t.password_requirements }}</p>
+
+              <div v-if="hasPassword" class="mb-3">
+                <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.current_password }}</label>
+                <PasswordInput
+                  v-model="form.current_password"
+                  class="form-control"
+                  :class="{ 'is-invalid': errors.current_password }"
+                  autocomplete="current-password"
+                />
+                <div v-if="errors.current_password" class="invalid-feedback d-block">
+                  {{ errors.current_password }}
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.new_password }}</label>
+                <PasswordInput
+                  v-model="form.password"
+                  class="form-control"
+                  :class="{ 'is-invalid': errors.password }"
+                  autocomplete="new-password"
+                />
+                <div v-if="errors.password" class="invalid-feedback d-block">{{ errors.password }}</div>
+              </div>
+
+              <div class="mb-1">
+                <label class="form-label small fw-bold text-muted text-uppercase ls-1">{{ t.confirm_password }}</label>
+                <PasswordInput
+                  v-model="form.password_confirmation"
+                  class="form-control"
+                  :class="{ 'is-invalid': errors.password_confirmation }"
+                  autocomplete="new-password"
+                />
+                <div v-if="errors.password_confirmation" class="invalid-feedback d-block">
+                  {{ errors.password_confirmation }}
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-light flex-fill rounded-3"
+                data-bs-dismiss="modal"
+                :disabled="submitting"
+              >
+                {{ t.cancel }}
+              </button>
+              <button type="submit" class="btn btn-primary flex-fill rounded-3" :disabled="submitting">
+                <i v-if="submitting" class="fas fa-spinner fa-spin me-1"></i>
+                {{ submitting ? t.saving_password : t.save_password }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
     </div>
   </Teleport>
 </template>
@@ -85,6 +82,7 @@
 <script setup>
 import { ref, reactive, watch, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { Modal } from "bootstrap";
+import PasswordInput from "./PasswordInput.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
 import { useLanguage } from "../helpers/language.js";
