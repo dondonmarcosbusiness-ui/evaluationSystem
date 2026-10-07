@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\QuestionnaireController;
 use App\Http\Controllers\Api\EvaluationController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\EvaluationScheduleController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\PermissionController;
@@ -63,6 +64,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // System Settings (write is privileged; read is needed by every flow)
     Route::get('/settings', [SettingController::class, 'index']);
     Route::post('/settings', [SettingController::class, 'update'])->middleware('permission:settings.manage');
+
+    // Evaluation scheduling — per department windows plus one "All departments"
+    // default row. Read (status) is needed by students; management is admin-only.
+    Route::get('/evaluation-schedules/status', [EvaluationScheduleController::class, 'status']);
+    Route::get('/evaluation-schedules', [EvaluationScheduleController::class, 'index'])->middleware('permission:settings.manage');
+    Route::post('/evaluation-schedules', [EvaluationScheduleController::class, 'store'])->middleware('permission:settings.manage');
+    Route::put('/evaluation-schedules/{schedule}', [EvaluationScheduleController::class, 'update'])->middleware('permission:settings.manage');
+    Route::delete('/evaluation-schedules/{schedule}', [EvaluationScheduleController::class, 'destroy'])->middleware('permission:settings.manage');
 
     // Faculty & Student Management
     Route::get('faculty/all', [FacultyController::class, 'all'])->middleware('auth:sanctum');
@@ -178,6 +187,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/download/{filename}', [\App\Http\Controllers\Api\BackupController::class, 'download']);
         Route::delete('/{filename}', [\App\Http\Controllers\Api\BackupController::class, 'delete']);
         Route::post('/restore', [\App\Http\Controllers\Api\BackupController::class, 'restore']);
+        Route::post('/upload', [\App\Http\Controllers\Api\BackupController::class, 'upload']);
         Route::post('/toggle-auto', [\App\Http\Controllers\Api\BackupController::class, 'toggleAutoBackup']);
     });
 

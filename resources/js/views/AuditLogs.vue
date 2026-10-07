@@ -296,7 +296,7 @@ onMounted(() => {
 <style scoped>
 .audit-th {
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
@@ -313,14 +313,14 @@ onMounted(() => {
 
 .audit-time {
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
   white-space: nowrap;
 }
 
 .audit-user {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -334,7 +334,7 @@ onMounted(() => {
   padding: 0.3rem 0.6rem;
   border-radius: 999px;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
@@ -417,7 +417,7 @@ onMounted(() => {
 
 .audit-detail-label {
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);

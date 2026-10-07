@@ -131,9 +131,9 @@ async function submitFeedback() {
 .office-header { display: flex; align-items: center; gap: 1rem; padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--card-radius); }
 .office-icon { width: 56px; height: 56px; border-radius: 16px; background: rgba(25, 25, 112, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
 .form-section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--card-radius); padding: 1.25rem; }
-.label-custom { display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.label-custom { display: block; font-size: 0.75rem; font-weight: 500; margin-bottom: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
 .gender-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.gender-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 1.4rem; border: 2px solid var(--border-light); border-radius: 8px; background: var(--bg-card); color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.gender-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 1.4rem; border: 2px solid var(--border-light); border-radius: 8px; background: var(--bg-card); color: var(--text-muted); font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
 .gender-btn:hover { border-color: var(--primary); color: var(--text-dark); }
 .gender-btn.active { border-color: var(--primary); background: rgba(25, 25, 112, 0.06); color: var(--primary); }
 .category-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--card-radius); overflow: hidden; }
@@ -142,7 +142,7 @@ async function submitFeedback() {
 .question-row:last-child { border-bottom: none; }
 .question-text { font-size: 0.9rem; font-weight: 500; color: var(--text-dark); }
 .yesno-group { display: flex; gap: 8px; }
-.yesno-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 1.4rem; border: 2px solid var(--border-light); border-radius: 8px; background: var(--bg-card); color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.yesno-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 1.4rem; border: 2px solid var(--border-light); border-radius: 8px; background: var(--bg-card); color: var(--text-muted); font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
 .yesno-btn:hover { border-color: var(--primary); color: var(--text-dark); }
 .yesno-btn.yes.active { border-color: #22c55e; background: rgba(34, 197, 94, 0.08); color: #16a34a; }
 .yesno-btn.no.active { border-color: #ef4444; background: rgba(239, 68, 68, 0.08); color: #dc2626; }

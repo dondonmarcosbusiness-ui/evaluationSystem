@@ -8,6 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // A restored backup can revert the migrations table while the table
+        // itself survives (it is newer than the dump), so guard against
+        // re-creating it.
+        if (Schema::hasTable('login_logs')) {
+            return;
+        }
+
         Schema::create('login_logs', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete();

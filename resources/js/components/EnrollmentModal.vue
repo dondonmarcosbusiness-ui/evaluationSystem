@@ -304,7 +304,7 @@ async function removeEnrollment(id) {
 }
 .load-code-tag {
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -324,7 +324,7 @@ async function removeEnrollment(id) {
 .form-label-premium {
   display: block;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   margin-bottom: 0.4rem;
@@ -335,7 +335,7 @@ async function removeEnrollment(id) {
   border-radius: 0.75rem;
   background: var(--bg-card);
   border: 1px solid var(--border-light);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
 }
 .border-dashed {

@@ -1039,7 +1039,7 @@ async function uploadCsv() {
 
 .form-section-modern .section-label {
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
@@ -1049,7 +1049,7 @@ async function uploadCsv() {
 .label-custom {
   display: block;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 0.65rem;
   margin-left: 0.25rem;
   color: var(--text-muted);
@@ -1112,7 +1112,7 @@ async function uploadCsv() {
   border-radius: 12px;
   color: #ef4444;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* Bulk Actions Toast */
@@ -1175,7 +1175,7 @@ async function uploadCsv() {
 .bulk-toast-count {
   color: var(--text-dark);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -1192,7 +1192,7 @@ async function uploadCsv() {
   background: var(--primary);
   color: #fff;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .bulk-toast-actions {
@@ -1206,7 +1206,7 @@ async function uploadCsv() {
   border-radius: 8px;
   border: none;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;

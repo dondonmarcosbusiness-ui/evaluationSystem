@@ -1,6 +1,6 @@
 /* ===================================
    NEUST Evaluation System – Global CSS
-   Font: Calibri Light (system font, no webfont import needed)
+   Font: Arial / Verdana / Tahoma — PH government GWTD standard (system fonts, no webfont import needed)
    Light theme: GitHub light reference — body #ffffff / subtle #f6f8fa
    card #ffffff / border #d0d7de / text #1f2328 / muted #59636e
    sidebar (light): dark blue #191970 / sidebar (dark): #010409
@@ -14,6 +14,9 @@
   --warning: #ffc107;
   --danger: #f05252;
   --dark: #0a0b0d;
+
+  /* Government Website Template Design (GWTD) font stack */
+  --font-sans: Arial, Verdana, Tahoma, sans-serif;
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 80px;
   --sidebar-mobile-width: 280px;
@@ -484,7 +487,7 @@ body {
 }
 
 body {
-  font-family: "Calibri Light", Calibri, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-main);
   background-color: var(--bg-body);
   min-height: 100vh;
@@ -572,7 +575,7 @@ h6 {
 .page-title,
 h1 {
   font-size: 28px !important;
-  font-weight: 700 !important;
+  font-weight: 500 !important;
   letter-spacing: -0.01em;
   line-height: 1.25;
 }
@@ -580,30 +583,30 @@ h1 {
 .section-title,
 h2 {
   font-size: 22px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   letter-spacing: -0.01em;
   line-height: 1.3;
 }
 
 h3 {
   font-size: 18px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   line-height: 1.35;
 }
 
 h4 {
   font-size: 16px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
 }
 
 h5 {
   font-size: 15px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
 }
 
 h6 {
   font-size: 14px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
 }
 
 .ls-1 {
@@ -611,11 +614,24 @@ h6 {
 }
 
 .fw-800 {
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .fw-600 {
-  font-weight: 600;
+  font-weight: 500;
+}
+
+/* Thin typography: the GWTD fonts (Arial / Verdana / Tahoma) only ship
+   regular and bold, so any weight ≥600 renders as chunky bold. The UI uses
+   regular weight throughout — hierarchy comes from size and color.
+   Printed output is exempt (see the @media print block below). */
+b,
+strong,
+th,
+.fw-bold,
+.fw-semibold,
+.fw-bolder {
+  font-weight: 500 !important;
 }
 
 /* ── Sidebar ───────────────────────── */
@@ -654,7 +670,7 @@ h6 {
 .sidebar-brand h5,
 .sidebar-brand h6 {
   color: #fff !important;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.875rem;
   line-height: 1.3;
 }
@@ -716,7 +732,7 @@ h6 {
   background: rgba(255, 255, 255, 0.15);
   box-shadow: inset 2px 0 0 #fff;
   color: #fff;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .sidebar-nav li a i,
@@ -775,7 +791,7 @@ h6 {
 .nav-item-flyout.active > .nav-link {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
-  font-weight: 600;
+  font-weight: 500;
   box-shadow: inset 3px 0 0 #fff;
 }
 
@@ -827,7 +843,7 @@ h6 {
 .flyout-header {
   padding: 8px 12px;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #374151;
@@ -885,7 +901,7 @@ h6 {
 .flyout-nav li a.router-link-active {
   background: #eff6ff;
   color: #2563eb;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .flyout-nav li a.router-link-active i {
@@ -947,7 +963,7 @@ h6 {
 .sidebar-section-label {
   display: block;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.5);
@@ -1198,7 +1214,7 @@ h6 {
   padding: 6px 14px;
   border-radius: 4px;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
@@ -1262,7 +1278,7 @@ h6 {
 
 .topbar-title {
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--text-dark);
 }
@@ -1278,7 +1294,7 @@ h6 {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .avatar {
@@ -1290,7 +1306,7 @@ h6 {
   place-items: center;
   color: #fff;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .topbar-title slot,
@@ -1302,7 +1318,7 @@ h6 {
 
 .topbar-breadcrumb-item {
   opacity: 0.5;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
 }
 
@@ -1322,7 +1338,7 @@ h6 {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .avatar {
@@ -1334,7 +1350,7 @@ h6 {
   place-items: center;
   color: #fff;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   transition: all 0.3s ease;
 }
 
@@ -1425,7 +1441,7 @@ h6 {
   background: var(--bg-card);
   color: var(--text-dark);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   box-shadow: none;
 }
@@ -1488,14 +1504,14 @@ h6 {
 .stat-label {
   font-size: 0.75rem;
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .stat-value {
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: -0.02em;
   color: var(--text-dark);
   line-height: 1.2;
@@ -1517,7 +1533,7 @@ h6 {
 .card-header {
   padding: 14px 20px;
   border-bottom: 1px solid var(--border-color);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 16px;
   background: transparent;
   color: var(--text-dark) !important;
@@ -1558,7 +1574,7 @@ h6 {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 500;
   background: var(--bg-light);
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
@@ -1590,7 +1606,7 @@ h6 {
 
 /* ── Buttons ─────────────────────────── */
 .btn {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .btn-primary {
@@ -1654,7 +1670,7 @@ h6 {
 /* ── Form ────────────────────────────── */
 .form-label {
   color: var(--text-dark);
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 8px;
   font-size: 14px;
 }
@@ -1784,7 +1800,7 @@ select,
 }
 
 .login-logo h4 {
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-dark);
   margin-top: 0.5rem;
   font-size: 1.1rem;
@@ -1909,14 +1925,14 @@ select,
   border: 1px solid var(--border-color);
   margin-right: 1rem;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-dark);
   transition: all 0.2s ease;
 }
 
 .likert-text {
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1958,7 +1974,7 @@ select,
   color: #ffffff;
   padding: 0.75rem 1.75rem;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -1969,7 +1985,7 @@ select,
 
 .question-text {
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-dark);
   margin-bottom: 1.75rem;
   line-height: 1.5;
@@ -2283,6 +2299,16 @@ select,
   .page-break {
     page-break-after: always;
   }
+
+  /* Printed output keeps bold weight (government document convention). */
+  b,
+  strong,
+  th,
+  .fw-bold,
+  .fw-semibold,
+  .fw-bolder {
+    font-weight: 700 !important;
+  }
 }
 
 .print-only {
@@ -2302,7 +2328,7 @@ select,
 
 .report-title {
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   color: var(--text-dark);
   margin-bottom: 0;
@@ -2318,7 +2344,7 @@ select,
   display: inline-block;
   padding: 0.25rem 0.6rem;
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 500;
   border-radius: 6px;
   letter-spacing: 0.02em;
   transition: all 0.2s ease;
@@ -2405,7 +2431,7 @@ select,
   display: inline-block;
   padding: 0.35rem 0.85rem;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   background: rgba(14, 39, 138, 0.05);
   color: var(--primary);
   border: 1px solid rgba(14, 39, 138, 0.1);
@@ -2417,7 +2443,7 @@ select,
   align-items: center;
   padding: 0.4rem 0.75rem;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   background: var(--bg-light);
   border: 1px solid var(--border-light);
@@ -2455,7 +2481,7 @@ select,
   gap: 0.35rem;
   padding: 0.3rem 0.75rem;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   border-radius: 50px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -2573,7 +2599,7 @@ select,
   background: transparent;
   border-radius: 8px;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-dark);
   cursor: pointer;
   text-align: left;
@@ -2703,7 +2729,7 @@ select,
   background: var(--bg-card);
   color: var(--expand-accent);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   flex-shrink: 0;
@@ -2803,7 +2829,7 @@ select,
 .swal2-popup {
   border-radius: var(--card-radius) !important;
   padding: 2rem !important;
-  font-family: "Calibri Light", Calibri, "Segoe UI", sans-serif !important;
+  font-family: var(--font-sans) !important;
 }
 
 /* ── Mobile Optimization (Full Screen Cards) ────── */
@@ -2918,7 +2944,7 @@ select,
   border-radius: 50px;
   background: rgba(25, 25, 112, 0.05);
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.85rem;
 }
 
@@ -2986,7 +3012,7 @@ select,
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: var(--radius-md);
-  font-weight: 700;
+  font-weight: 500;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
@@ -3328,7 +3354,7 @@ select.form-select:focus,
 
 .modal-header .modal-title {
   color: var(--text-dark);
-  font-weight: 800;
+  font-weight: 500;
 }
 
 /* 3d. Consistent modal gutters — every dialog uses the standard 1.5rem
@@ -3357,7 +3383,7 @@ select.form-select:focus,
 
 .per-page-select {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -3577,7 +3603,7 @@ select.form-select:focus {
 .table thead th {
   background: var(--bg-light) !important;
   border-bottom: 1px solid var(--border-color) !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
 }
 
 .icon-box,
@@ -3648,7 +3674,7 @@ select.form-select:focus {
   background: transparent;
   color: var(--text-muted);
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
@@ -3734,7 +3760,7 @@ select.form-select:focus {
 
 .bulk-toast-count {
   font-size: 0.8rem !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   white-space: nowrap !important;
 }
 
@@ -3758,7 +3784,7 @@ select.form-select:focus {
   border-radius: 8px !important;
   border: 1px solid var(--border-color) !important;
   font-size: 0.75rem !important;
-  font-weight: 700 !important;
+  font-weight: 500 !important;
   box-shadow: none !important;
   transform: none !important;
   min-height: 32px !important;
@@ -3900,7 +3926,7 @@ select.form-select:focus {
 
 .user-popover-name {
   font-size: 0.875rem !important;
-  font-weight: 700 !important;
+  font-weight: 500 !important;
   line-height: 1.3 !important;
 }
 

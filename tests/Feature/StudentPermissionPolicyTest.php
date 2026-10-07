@@ -257,6 +257,11 @@ class StudentPermissionPolicyTest extends TestCase
             ->assertStatus(200);
 
         Notification::assertSentTo($student, EvaluationCompletedNotification::class);
+
+        $fresh = $student->fresh();
+        $this->assertNotNull($fresh->evaluations_completed_at);
+        $this->assertSame('1st Semester', $fresh->evaluations_completed_semester);
+        $this->assertSame('2024-2025', $fresh->evaluations_completed_academic_year);
     }
 
     public function test_completion_email_not_sent_while_evaluatees_remain(): void
@@ -290,11 +295,13 @@ class StudentPermissionPolicyTest extends TestCase
             ->assertStatus(200);
 
         Notification::assertNotSentTo($student, EvaluationCompletedNotification::class);
+        $this->assertNull($student->fresh()->evaluations_completed_at);
 
         $this->actingAs($student, 'sanctum')
             ->postJson('/api/evaluations', $this->evaluationPayload($facultyB))
             ->assertStatus(200);
 
         Notification::assertSentToTimes($student, EvaluationCompletedNotification::class, 1);
+        $this->assertNotNull($student->fresh()->evaluations_completed_at);
     }
 }

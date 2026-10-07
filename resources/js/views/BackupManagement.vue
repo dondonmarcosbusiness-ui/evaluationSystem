@@ -30,7 +30,9 @@
                 </div>
                 <div>
                   <div class="label">Last Backup</div>
-                  <div class="value small">{{ lastBackup || "Never" }}</div>
+                  <div class="value small">
+                    {{ lastBackup ? formatDate(lastBackup) + " " + formatTime(lastBackup) : "Never" }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -67,14 +69,24 @@
               <h5 class="fw-bold mb-0">Backup History</h5>
               <p class="text-muted small mb-0">The system automatically keeps the 5 most recent backups.</p>
             </div>
-            <button
-              class="btn btn-primary px-4 py-2 d-flex align-items-center gap-2 shadow-sm"
-              @click="createBackup"
-              :disabled="creating"
-            >
-              <i class="fas fa-plus-circle" :class="{ 'fa-spin': creating }"></i>
-              {{ creating ? "Generating..." : "Backup Now" }}
-            </button>
+            <div class="d-flex gap-2">
+              <button
+                class="btn btn-outline-primary px-4 py-2 d-flex align-items-center gap-2 shadow-sm"
+                @click="openUploadModal"
+                :disabled="loading"
+              >
+                <i class="fas fa-upload"></i>
+                Upload Backup
+              </button>
+              <button
+                class="btn btn-primary px-4 py-2 d-flex align-items-center gap-2 shadow-sm"
+                @click="createBackup"
+                :disabled="creating"
+              >
+                <i class="fas fa-plus-circle" :class="{ 'fa-spin': creating }"></i>
+                {{ creating ? "Generating..." : "Backup Now" }}
+              </button>
+            </div>
           </div>
 
           <div class="card-body p-0">
@@ -203,6 +215,65 @@
           </div>
         </div>
       </div>
+
+      <!-- Upload Modal -->
+      <div ref="uploadModalEl" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0">
+              <h5 class="modal-title fw-bold">Upload Backup</h5>
+              <button type="button" class="btn-close" @click="showUploadModal = false"></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-muted small">
+                Upload a previously downloaded
+                <strong>.sql</strong>
+                backup file. Its contents will replace your current database and the file will be kept in your backup
+                history.
+              </p>
+
+              <div class="mb-3">
+                <label class="form-label small fw-bold">Backup File</label>
+                <input
+                  type="file"
+                  ref="uploadFileInput"
+                  class="form-control"
+                  accept=".sql,.txt"
+                  @change="onUploadFileChange"
+                />
+                <div v-if="uploadError" class="text-danger small mt-1">{{ uploadError }}</div>
+                <div v-else-if="uploadFile" class="text-success small mt-1">
+                  <i class="fas fa-check-circle me-1"></i>
+                  {{ uploadFile.name }} ({{ uploadFileSize }})
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-bold">Verify Admin Password</label>
+                <PasswordInput
+                  v-model="uploadPassword"
+                  class="form-control"
+                  placeholder="Enter your password to confirm"
+                  autocomplete="current-password"
+                />
+              </div>
+
+              <div class="alert alert-warning small mb-0 d-flex align-items-start gap-2 border">
+                <i class="fas fa-exclamation-triangle mt-1 opacity-75"></i>
+                <span>
+                  Restoring an uploaded backup will overwrite your current data. This action cannot be undone.
+                </span>
+              </div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center gap-2">
+              <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+              <button class="btn btn-primary px-4" @click="uploadBackup" :disabled="uploading">
+                {{ uploading ? "Uploading..." : "Upload & Restore" }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -235,6 +306,25 @@ const { modalEl: restoreModalEl } = useBootstrapModal(showRestoreModal);
 const selectedFile = ref("");
 const verifyPassword = ref("");
 const restoring = ref(false);
+
+const showUploadModal = ref(false);
+const { modalEl: uploadModalEl } = useBootstrapModal(showUploadModal);
+const uploadFileInput = ref(null);
+const uploadFile = ref(null);
+const uploadPassword = ref("");
+const uploading = ref(false);
+const uploadError = ref("");
+
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
+
+const uploadFileSize = computed(() => {
+  if (!uploadFile.value) return "";
+  const bytes = uploadFile.value.size;
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const pow = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  return `${(bytes / Math.pow(1024, pow)).toFixed(pow === 0 ? 0 : 2)} ${units[pow]}`;
+});
 
 onMounted(fetchBackups);
 
@@ -354,6 +444,64 @@ async function restoreDatabase() {
   }
 }
 
+function openUploadModal() {
+  uploadFile.value = null;
+  uploadPassword.value = "";
+  uploadError.value = "";
+  if (uploadFileInput.value) uploadFileInput.value.value = "";
+  showUploadModal.value = true;
+}
+
+function onUploadFileChange(e) {
+  uploadFile.value = e.target.files?.[0] || null;
+  uploadError.value = "";
+
+  if (uploadFile.value && uploadFile.value.size > MAX_UPLOAD_SIZE) {
+    uploadError.value = "File is too large. Maximum allowed size is 10 MB.";
+    uploadFile.value = null;
+    e.target.value = "";
+  }
+}
+
+async function uploadBackup() {
+  uploadError.value = "";
+
+  if (!uploadFile.value) {
+    uploadError.value = "Please select a backup file.";
+    return;
+  }
+  if (!uploadPassword.value) {
+    Swal.fire("Required", "Password is required for verification.", "warning");
+    return;
+  }
+
+  uploading.value = true;
+  try {
+    const formData = new FormData();
+    formData.append("file", uploadFile.value);
+    formData.append("password", uploadPassword.value);
+
+    await api.post("/backups/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    showUploadModal.value = false;
+    await Swal.fire({
+      icon: "success",
+      title: "Success",
+      text: "Backup uploaded and restored successfully! The system will now reload.",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+    window.location.reload();
+  } catch (err) {
+    uploadError.value = err.response?.data?.message || "Upload failed.";
+    Swal.fire("Upload Failed", uploadError.value, "error");
+  } finally {
+    uploading.value = false;
+  }
+}
+
 const isBackupOld = computed(() => {
   if (!lastBackup.value) return true;
   const last = new Date(lastBackup.value);
@@ -423,7 +571,7 @@ function formatTime(dateString) {
 .label {
   color: #6c757d;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.025em;
 }
@@ -435,7 +583,7 @@ function formatTime(dateString) {
 .value {
   color: #212529;
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 [data-theme="dark"] .card {

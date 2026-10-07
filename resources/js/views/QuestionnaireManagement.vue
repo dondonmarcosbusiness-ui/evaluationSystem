@@ -107,6 +107,9 @@
                   <div class="small text-danger fw-bold mb-2" v-else>
                     <i class="fas fa-language me-1"></i> No Tagalog translation
                   </div>
+                  <div class="small text-muted mb-2" v-if="cat.reference">
+                    <i class="fas fa-balance-scale me-1"></i>{{ cat.reference }}
+                  </div>
 
                   <div class="mt-auto pt-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -182,6 +185,9 @@
                           <i class="fas fa-folder-open"></i>
                         </div>
                         <span class="fw-800 text-main">{{ cat.category_name }}</span>
+                      </div>
+                      <div class="small text-muted text-truncate mt-1" style="max-width: 260px" v-if="cat.reference" :title="cat.reference">
+                        <i class="fas fa-balance-scale me-1"></i>{{ cat.reference }}
                       </div>
                     </td>
                     <td>
@@ -298,6 +304,9 @@
                           <p class="mb-0 small text-danger fw-bold" v-else>
                             <i class="fas fa-exclamation-circle me-1"></i> Missing Tagalog translation
                           </p>
+                          <p class="mb-0 mt-1 small text-muted" v-if="q.reference">
+                            <i class="fas fa-balance-scale me-1"></i>{{ q.reference }}
+                          </p>
                         </div>
                         <div class="d-flex gap-1 flex-shrink-0">
                           <button v-if="$can('questionnaire.edit')" class="btn-action-icon-sm" @click="openQuestionModal(activeCategory?.id, q)">
@@ -354,6 +363,17 @@
                     v-model="catForm.category_name_tl"
                     class="form-control-premium border-primary-subtle"
                     placeholder="e.g., Kakayahan sa Pagtuturo"
+                  />
+                </div>
+                <div class="mb-4">
+                  <label class="form-label-premium">
+                    Source Reference
+                    <span class="text-muted fw-600">(optional)</span>
+                  </label>
+                  <input
+                    v-model="catForm.reference"
+                    class="form-control-premium"
+                    placeholder="e.g., CHED CMO No. 19, s. 2025, Annex A - Domain A (Items 1-6)"
                   />
                 </div>
                 <div class="mb-2">
@@ -417,7 +437,7 @@
                     placeholder="Clearly describe what students should evaluate..."
                   ></textarea>
                 </div>
-                <div class="mb-0">
+                <div class="mb-3">
                   <label class="form-label-premium text-primary">Instructional Prompt (Tagalog)</label>
                   <textarea
                     v-model="qForm.question_text_tl"
@@ -425,6 +445,17 @@
                     rows="3"
                     placeholder="Isalin sa Tagalog ang katanungan..."
                   ></textarea>
+                </div>
+                <div class="mb-0">
+                  <label class="form-label-premium">
+                    Source Reference
+                    <span class="text-muted fw-600">(optional)</span>
+                  </label>
+                  <input
+                    v-model="qForm.reference"
+                    class="form-control-premium"
+                    placeholder="e.g., CHED CMO No. 19, s. 2025, Annex A, Domain A, Item 1"
+                  />
                 </div>
               </div>
               <div class="modal-footer">
@@ -466,7 +497,7 @@ const viewMode = ref("cards");
 
 const showCatModal = ref(false);
 const editCatId = ref(null);
-const catForm = ref({ category_name: "", category_name_tl: "", weight_percent: 20 });
+const catForm = ref({ category_name: "", category_name_tl: "", reference: "", weight_percent: 20 });
 const weightSegments = [5, 10, 15, 20, 25, 30, 40, 50];
 
 const activeCategoryId = ref(null);
@@ -476,7 +507,7 @@ const activeCategory = computed(() => selectedCategory.value);
 const showQModal = ref(false);
 const activeCatId = ref(null);
 const editQId = ref(null);
-const qForm = ref({ question_text: "", question_text_tl: "" });
+const qForm = ref({ question_text: "", question_text_tl: "", reference: "" });
 
 const { modalEl: catModalEl } = useBootstrapModal(showCatModal);
 // Modal chaining: only one Bootstrap modal open at a time. Opening a
@@ -585,11 +616,12 @@ function openCategoryModal(cat = null) {
     catForm.value = {
       category_name: cat.category_name,
       category_name_tl: cat.category_name_tl || "",
+      reference: cat.reference || "",
       weight_percent: Math.round(cat.weight * 100),
     };
   } else {
     editCatId.value = null;
-    catForm.value = { category_name: "", category_name_tl: "", weight_percent: 20 };
+    catForm.value = { category_name: "", category_name_tl: "", reference: "", weight_percent: 20 };
   }
   showCatModal.value = true;
 }
@@ -600,6 +632,7 @@ async function saveCategory() {
   const payload = {
     category_name: catForm.value.category_name,
     category_name_tl: catForm.value.category_name_tl,
+    reference: catForm.value.reference,
     weight: catForm.value.weight_percent / 100,
     evaluatee_type: evaluateeType.value,
   };
@@ -651,11 +684,12 @@ function openQuestionModal(catId, q = null) {
     editQId.value = q.id;
     qForm.value = { 
       question_text: q.question_text,
-      question_text_tl: q.question_text_tl || "" 
+      question_text_tl: q.question_text_tl || "",
+      reference: q.reference || ""
     };
   } else {
     editQId.value = null;
-    qForm.value = { question_text: "", question_text_tl: "" };
+    qForm.value = { question_text: "", question_text_tl: "", reference: "" };
   }
   // Chain: park the metrics parent first; the child opens when the
   // parent's hide transition completes (see metrics modal onHidden).
@@ -719,13 +753,13 @@ async function deleteQuestion(catId, qId) {
   letter-spacing: 0.05em;
 }
 .fw-800 {
-  font-weight: 800;
+  font-weight: 500;
 }
 .fw-700 {
-  font-weight: 700;
+  font-weight: 500;
 }
 .fw-600 {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .bg-card {
@@ -735,7 +769,7 @@ async function deleteQuestion(catId, qId) {
 /* Slim Stats Bar */
 .stat-item-inline .label {
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -796,7 +830,7 @@ async function deleteQuestion(catId, qId) {
 
 .sector-table thead th {
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -836,7 +870,7 @@ async function deleteQuestion(catId, qId) {
   display: inline-flex;
   align-items: center;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   background: var(--bg-light);
   border: 1px solid var(--border-light);
@@ -850,7 +884,7 @@ async function deleteQuestion(catId, qId) {
   background: transparent;
   color: var(--primary);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.4rem 0.6rem;
@@ -925,7 +959,7 @@ async function deleteQuestion(catId, qId) {
   background: var(--bg-light);
   color: var(--text-muted);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   line-height: 1;
@@ -1058,7 +1092,7 @@ async function deleteQuestion(catId, qId) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
+  font-weight: 500;
   font-size: 0.85rem;
   flex-shrink: 0;
 }
@@ -1088,7 +1122,7 @@ async function deleteQuestion(catId, qId) {
 .form-label-premium {
   display: block;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -1102,7 +1136,7 @@ async function deleteQuestion(catId, qId) {
   background: var(--bg-light);
   border: 1px solid var(--border-light);
   color: var(--text-dark);
-  font-weight: 600;
+  font-weight: 500;
   transition: all 0.3s;
 }
 
@@ -1124,7 +1158,7 @@ async function deleteQuestion(catId, qId) {
   background: var(--primary);
   border: none;
   color: #fff;
-  font-weight: 800;
+  font-weight: 500;
   transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease;
 }
 
@@ -1159,7 +1193,7 @@ async function deleteQuestion(catId, qId) {
   background: var(--bg-light);
   border: 1px solid var(--border-light);
   color: var(--text-muted);
-  font-weight: 700;
+  font-weight: 500;
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 

@@ -9,6 +9,7 @@ use App\Models\LoginLog;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\LoginLogService;
+use App\Services\OnlinePresenceService;
 use Illuminate\Http\Request;
 
 /**
@@ -22,6 +23,10 @@ class DashboardController extends Controller
 {
     private const ONLINE_WINDOW_DEFAULT = 5; // minutes
     private const SERIES_DAYS = 7;
+
+    public function __construct(private readonly OnlinePresenceService $presence)
+    {
+    }
 
     public function status(Request $request)
     {
@@ -43,11 +48,11 @@ class DashboardController extends Controller
             $period->where('academic_year', $academicYear);
         }
 
-        $ongoingEvaluations = (clone $period)->count();
-        $studentsFinished = (clone $period)->distinct()->count('student_id');
+        $evaluationsSubmitted = (clone $period)->count();
+        $studentsFinished = $this->studentsFinished($semester, $academicYear);
 
         $evalSeries = $this->dailySeries(Evaluation::query()->where('created_at', '>=', $start));
-        $finishedSeries = $this->dailySeries(
+        $submittedSeries = $this->dailySeries(
             Evaluation::query()->where('created_at', '>=', $start),
             'student_id'
         );
@@ -73,6 +78,10 @@ class DashboardController extends Controller
         // ── Students active online ──
         $online = $this->onlineStudents($minutes);
 
+        // Raise today's peak while the dashboard samples presence.
+        $online['peak_today'] = $this->presence->recordPeak($online['total_online']);
+        $online['peak_date'] = now()->toDateString();
+
         return response()->json([
             'generated_at' => now()->toIso8601String(),
             'period' => [
@@ -81,14 +90,39 @@ class DashboardController extends Controller
             ],
             'series_labels' => $labels,
             'students_finished' => $studentsFinished,
-            'students_finished_series' => $finishedSeries,
-            'ongoing_evaluations' => $ongoingEvaluations,
-            'ongoing_evaluations_series' => $evalSeries,
+            'students_submitted_series' => $submittedSeries,
+            'evaluations_submitted' => $evaluationsSubmitted,
+            'evaluations_submitted_series' => $evalSeries,
             'failed_logins' => $failedLogins,
             'failed_logins_series' => $failedSeries,
             'access_errors_visible' => $canSeeAccessErrors,
             'online_students' => $online,
         ]);
+    }
+
+    /**
+     * Students who evaluated every evaluatee for the period.
+     *
+     * Backed by the period-scoped flag written on the student's final
+     * submission (and by the backfill migration), so the dashboard stays a
+     * cheap count instead of rebuilding each student's evaluatee list on every
+     * load. Period columns must match; with no active period configured the
+     * filter mirrors the evaluation query above and stays unscoped.
+     */
+    private function studentsFinished(?string $semester, ?string $academicYear): int
+    {
+        $query = User::query()
+            ->where('role', 'student')
+            ->whereNotNull('evaluations_completed_at');
+
+        if ($semester) {
+            $query->where('evaluations_completed_semester', $semester);
+        }
+        if ($academicYear) {
+            $query->where('evaluations_completed_academic_year', $academicYear);
+        }
+
+        return $query->count();
     }
 
     /**

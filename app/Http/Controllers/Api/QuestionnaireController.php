@@ -74,6 +74,7 @@ class QuestionnaireController extends Controller
     {
         $request->validate([
             'category_name' => 'required',
+            'reference' => 'nullable|string|max:255',
             'weight' => 'required|numeric|min:0|max:1',
             'evaluatee_type' => ['required', new ValidEvaluateeType()],
         ]);
@@ -91,12 +92,13 @@ class QuestionnaireController extends Controller
     {
         $request->validate([
             'category_name' => 'required',
+            'reference' => 'nullable|string|max:255',
             'weight' => 'required|numeric|min:0|max:1',
             'evaluatee_type' => ['sometimes', new ValidEvaluateeType()],
         ]);
 
         $category = Category::findOrFail($id);
-        $category->update($request->only(['category_name', 'category_name_tl', 'weight', 'evaluatee_type']));
+        $category->update($request->only(['category_name', 'category_name_tl', 'reference', 'weight', 'evaluatee_type']));
         return response()->json($category);
     }
 
@@ -117,6 +119,7 @@ class QuestionnaireController extends Controller
         $request->validate([
             'category_id' => 'required|exists:evaluation_categories,id',
             'question_text' => 'required',
+            'reference' => 'nullable|string|max:255',
         ]);
 
         $question = Question::create($request->all());
@@ -127,10 +130,11 @@ class QuestionnaireController extends Controller
     {
         $request->validate([
             'question_text' => 'required',
+            'reference' => 'nullable|string|max:255',
         ]);
 
         $question = Question::findOrFail($id);
-        $question->update($request->only(['question_text', 'question_text_tl']));
+        $question->update($request->only(['question_text', 'question_text_tl', 'reference']));
         return response()->json($question);
     }
 

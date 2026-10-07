@@ -93,7 +93,7 @@ const changePerPage = (value) => {
   background: transparent;
   border: none;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--primary);
   padding: 6px 12px;
   border-radius: var(--radius-md);

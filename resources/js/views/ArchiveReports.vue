@@ -312,7 +312,7 @@ async function loadResults() {
 
 .stat-label {
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);

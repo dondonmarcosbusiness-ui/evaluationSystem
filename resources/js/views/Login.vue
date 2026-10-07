@@ -529,7 +529,7 @@ function loginWithGoogle() {
   /* app.css forces h1 colour / size with !important — override explicitly. */
   color: #ffffff !important;
   font-size: var(--fs-title) !important;
-  font-weight: 700 !important;
+  font-weight: 500 !important;
   line-height: var(--lh-title);
   letter-spacing: -0.01em;
 }
@@ -538,7 +538,7 @@ function loginWithGoogle() {
   margin: 0 0 var(--gap-tagline-desc);
   color: rgba(255, 255, 255, 0.92);
   font-size: var(--fs-tagline);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.5;
 }
 
@@ -585,7 +585,7 @@ function loginWithGoogle() {
   /* app.css forces h2 colour / size with !important — override explicitly. */
   color: var(--login-ink) !important;
   font-size: var(--fs-heading) !important;
-  font-weight: 700 !important;
+  font-weight: 500 !important;
   line-height: 1.2;
   letter-spacing: -0.015em;
 }
@@ -635,7 +635,7 @@ function loginWithGoogle() {
   color: #3c4043;
   font-family: inherit;
   font-size: var(--fs-button);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
   transition:
@@ -668,7 +668,7 @@ function loginWithGoogle() {
 
 .login-google__domain {
   color: #3f4652;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -680,7 +680,7 @@ function loginWithGoogle() {
   margin: var(--gap-divider) 0;
   color: var(--login-muted-soft);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.08em;
 }
 
@@ -710,7 +710,7 @@ function loginWithGoogle() {
   margin-bottom: var(--gap-label);
   color: var(--login-ink);
   font-size: var(--fs-label);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -845,7 +845,7 @@ function loginWithGoogle() {
   color: #ffffff;
   font-family: inherit;
   font-size: var(--fs-button);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
   transition:
@@ -886,7 +886,7 @@ function loginWithGoogle() {
   color: var(--login-muted);
   font-family: inherit;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 }
 

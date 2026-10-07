@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\DB;
 
 class OfficeFeedbackController extends Controller
 {
+    /** Feedback submissions allowed per office, per student/device, per day. */
+    private const DAILY_FEEDBACK_LIMIT = 3;
+
     public function index(Request $request)
     {
         try {
@@ -51,7 +54,7 @@ class OfficeFeedbackController extends Controller
             return response()->json(['message' => 'This office is not currently accepting feedback'], 422);
         }
 
-        // Rate limit: one feedback per office per day
+        // Rate limit: DAILY_FEEDBACK_LIMIT feedbacks per office per day
         $studentId = null;
         $user = $request->user() ?? auth('sanctum')->user();
 
@@ -73,8 +76,15 @@ class OfficeFeedbackController extends Controller
             $duplicateQuery = null;
         }
 
-        if ($duplicateQuery && $duplicateQuery->whereDate('submitted_at', now()->toDateString())->exists()) {
-            return response()->json(['message' => 'You have already submitted feedback for this office today'], 422);
+        $todayCount = $duplicateQuery
+            ? $duplicateQuery->whereDate('submitted_at', now()->toDateString())->count()
+            : 0;
+
+        if ($todayCount >= self::DAILY_FEEDBACK_LIMIT) {
+            return response()->json([
+                'message' => 'You have reached the limit of ' . self::DAILY_FEEDBACK_LIMIT
+                    . ' feedback submissions for this office today',
+            ], 422);
         }
 
         $userAgent = $request->userAgent();

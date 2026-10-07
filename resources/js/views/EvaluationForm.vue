@@ -79,9 +79,16 @@
                 </span>
                 <span class="eval-category-count">{{ cat.questions?.length || 0 }} questions</span>
               </div>
+              <p class="category-ref" v-if="cat.reference">
+                <i class="fas fa-file-signature me-1"></i>{{ cat.reference }}
+              </p>
               <div v-for="q in cat.questions" :key="q.id" class="eval-question">
                 <p class="question-text">
                   {{ currentLang === 'tl' && q.question_text_tl ? q.question_text_tl : q.question_text }}
+                </p>
+
+                <p class="question-ref" v-if="q.reference">
+                  <i class="fas fa-balance-scale me-1"></i>{{ q.reference }}
                 </p>
 
                 <div class="likert-scale" role="radiogroup">
@@ -596,14 +603,14 @@ async function submitEvaluation() {
 
 .eval-fab__label strong {
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-dark);
   font-variant-numeric: tabular-nums;
 }
 
 .eval-fab__label small {
   font-size: 0.6rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -628,7 +635,7 @@ async function submitEvaluation() {
 }
 
 .eval-category-name {
-  font-weight: 800;
+  font-weight: 500;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -637,7 +644,7 @@ async function submitEvaluation() {
 
 .eval-category-count {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -655,8 +662,25 @@ async function submitEvaluation() {
   font-size: 1rem;
   font-weight: 500;
   color: var(--text-dark);
-  margin-bottom: 1rem;
+  margin-bottom: 0.35rem;
   line-height: 1.5;
+}
+
+.question-ref {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.category-ref {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  margin: -0.35rem 0 0.75rem;
 }
 
 /* ── Minimal likert options with dividers ── */
@@ -719,7 +743,7 @@ async function submitEvaluation() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.9rem;
   transition: all 0.15s ease;
 }
@@ -731,7 +755,7 @@ async function submitEvaluation() {
 }
 
 .likert-text {
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   font-size: 0.68rem;
   letter-spacing: 0.5px;
@@ -741,7 +765,7 @@ async function submitEvaluation() {
 
 .likert-option input:checked + .likert-label .likert-text {
   color: var(--primary, #191970);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .fade-in {
@@ -824,7 +848,7 @@ async function submitEvaluation() {
   border-radius: 0;
   margin-bottom: -1px;
   padding: 0.875rem 1rem;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
   color: var(--text-muted);
   background: transparent;
@@ -846,7 +870,7 @@ async function submitEvaluation() {
   color: var(--primary, #191970);
   background: transparent;
   border-bottom-color: var(--primary, #191970);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .evaluatee-tab-panel {

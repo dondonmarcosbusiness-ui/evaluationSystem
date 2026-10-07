@@ -555,7 +555,7 @@ function formatPerm(name) {
   padding: 0.3rem 0.7rem;
   border-radius: 50px;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1.2;

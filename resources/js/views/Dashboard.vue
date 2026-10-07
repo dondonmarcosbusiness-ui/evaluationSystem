@@ -68,10 +68,10 @@
                 </div>
               </div>
               <div class="card summary-mini flex-grow-1">
-                <div class="mini-icon"><i class="fas fa-file-alt"></i></div>
+                <div class="mini-icon"><i class="fas fa-arrow-trend-up"></i></div>
                 <div class="mini-body">
-                  <div class="mini-label">Evaluations</div>
-                  <div class="mini-value">{{ stats.total_evaluations }}</div>
+                  <div class="mini-label">Peak Online Today</div>
+                  <div class="mini-value">{{ onlineStudents.peak_today || 0 }}</div>
                 </div>
               </div>
             </div>
@@ -888,9 +888,9 @@ const status = ref({
   period: {},
   series_labels: [],
   students_finished: 0,
-  students_finished_series: [],
-  ongoing_evaluations: 0,
-  ongoing_evaluations_series: [],
+  students_submitted_series: [],
+  evaluations_submitted: 0,
+  evaluations_submitted_series: [],
   failed_logins: null,
   failed_logins_series: [],
   access_errors_visible: false,
@@ -898,6 +898,8 @@ const status = ref({
     window_minutes: 5,
     total_online: 0,
     total_students: 0,
+    peak_today: 0,
+    peak_date: null,
     by_department: [],
     by_year: [],
     by_department_year: [],
@@ -953,9 +955,9 @@ const statusItems = computed(() => {
   return [
     {
       tone: "success",
-      label: "students finish evaluating",
+      label: "students finished evaluating",
       value: status.value.students_finished ?? 0,
-      detail: "distinct students this period",
+      detail: "completed every evaluatee this period",
     },
     {
       tone: "danger",
@@ -965,8 +967,8 @@ const statusItems = computed(() => {
     },
     {
       tone: "primary",
-      label: "ongoing evaluations",
-      value: status.value.ongoing_evaluations ?? 0,
+      label: "evaluations submitted",
+      value: status.value.evaluations_submitted ?? 0,
       detail: statusPeriodLabel.value,
     },
   ];
@@ -1191,6 +1193,9 @@ const fetchStatus = async () => {
   }
 };
 
+// 60s poll for the live "Students Online" panel (cleared on unmount).
+let statusTimer = null;
+
 const fetchLoginLogs = async () => {
   if (!can("permission.manage")) return;
   try {
@@ -1351,6 +1356,8 @@ onMounted(async () => {
   if (dashboardMode.value === "summary") {
     fetchDashboardStats(activeTab.value);
     fetchStatus();
+    // Keep the "Students Online" panel live (and today's peak sampling).
+    statusTimer = setInterval(fetchStatus, 60000);
     fetchLoginLogs();
     if (can("office.report.view")) {
       fetchOfficeStats();
@@ -1422,6 +1429,7 @@ function destroyCharts() {
 onUnmounted(() => {
   destroyCharts();
   clearTimeout(accessSearchTimer);
+  clearInterval(statusTimer);
 });
 
 function initCharts() {
@@ -1704,7 +1712,7 @@ function initCharts() {
   border-radius: 8px;
   background: var(--primary);
   color: #fff;
-  font-weight: 800;
+  font-weight: 500;
   font-size: 1rem;
   display: flex;
   align-items: center;
@@ -1715,7 +1723,7 @@ function initCharts() {
 .faculty-hero-badge {
   display: inline-block;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--primary);
@@ -1727,7 +1735,7 @@ function initCharts() {
 
 .faculty-hero-title {
   font-size: clamp(1.25rem, 4vw, 1.5rem);
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin: 0 0 0.35rem;
   line-height: 1.25;
@@ -1813,7 +1821,7 @@ function initCharts() {
 
 .faculty-action-title {
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 500;
   margin: 0 0 0.15rem;
   color: var(--text-main);
 }
@@ -1870,7 +1878,7 @@ function initCharts() {
 
 .faculty-feedback-title {
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 500;
   margin: 0 0 0.15rem;
   color: var(--text-main);
 }
@@ -1950,7 +1958,7 @@ function initCharts() {
 
 .faculty-feedback-tag {
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
@@ -2023,7 +2031,7 @@ function initCharts() {
 
 .faculty-rating-code {
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-main);
@@ -2055,7 +2063,7 @@ function initCharts() {
 .faculty-rating-value {
   min-width: 40px;
   text-align: right;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .faculty-rating-count {
@@ -2277,7 +2285,7 @@ function initCharts() {
 }
 
 .section-divider-text h6 {
-  font-weight: 800;
+  font-weight: 500;
   font-size: 0.95rem;
   color: var(--text-main);
 }
@@ -2302,7 +2310,7 @@ function initCharts() {
 
 .visitor-heatmap-table th {
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   text-align: center;
   padding: 4px 2px;
@@ -2321,7 +2329,7 @@ function initCharts() {
 
 .visitor-heatmap-table .heat-year-cell {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
   text-align: left;
   padding: 6px 8px 6px 2px;
@@ -2343,7 +2351,7 @@ function initCharts() {
 
 .visitor-heatmap-table .heat-month-value {
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1;
   display: block;
 }
@@ -2415,7 +2423,7 @@ function initCharts() {
 
 .hero-eyebrow {
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -2429,7 +2437,7 @@ function initCharts() {
 
 .summary-hero-value {
   font-size: 2.5rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1;
   color: var(--text-main);
   letter-spacing: -0.03em;
@@ -2437,7 +2445,7 @@ function initCharts() {
 
 .summary-hero-scale {
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
@@ -2461,7 +2469,7 @@ function initCharts() {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--tone);
 }
 
@@ -2486,7 +2494,7 @@ function initCharts() {
 
 .rating-mini-count {
   text-align: right;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
 }
@@ -2525,7 +2533,7 @@ function initCharts() {
 
 .mini-label {
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--text-muted);
@@ -2534,7 +2542,7 @@ function initCharts() {
 
 .mini-value {
   font-size: 1.55rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.05;
   color: var(--text-main);
   letter-spacing: -0.02em;
@@ -2560,7 +2568,7 @@ function initCharts() {
   align-items: center;
   gap: 6px;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--badge-success-bg);
@@ -2613,7 +2621,7 @@ function initCharts() {
 
 .status-value {
   font-size: 1.3rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.1;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
@@ -2621,7 +2629,7 @@ function initCharts() {
 
 .status-label {
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -2649,7 +2657,7 @@ function initCharts() {
 
 .online-hero-value {
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1;
   color: var(--success);
   font-variant-numeric: tabular-nums;
@@ -2668,7 +2676,7 @@ function initCharts() {
 
 .breakdown-heading {
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
@@ -2718,7 +2726,7 @@ function initCharts() {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -2755,7 +2763,7 @@ function initCharts() {
 
 .year-name {
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
@@ -2763,7 +2771,7 @@ function initCharts() {
 
 .year-count {
   font-size: 1.3rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.15;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
@@ -2771,7 +2779,7 @@ function initCharts() {
 
 .year-count span {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
@@ -2824,7 +2832,7 @@ function initCharts() {
 
 .access-num {
   font-size: 1.3rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.15;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
@@ -2832,7 +2840,7 @@ function initCharts() {
 
 .access-lab {
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
@@ -2866,7 +2874,7 @@ function initCharts() {
 
 .access-status {
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 2px 6px;
@@ -2925,7 +2933,7 @@ function initCharts() {
   background: var(--bg-card);
   color: var(--text-main);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 6px 12px;
   border-radius: 999px;
   transition: all 0.2s ease;
@@ -2939,7 +2947,7 @@ function initCharts() {
 
 .access-viewall-count {
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 500;
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--bg-light);
@@ -2971,7 +2979,7 @@ function initCharts() {
   background: var(--bg-card);
   color: var(--text-muted);
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 5px 9px;

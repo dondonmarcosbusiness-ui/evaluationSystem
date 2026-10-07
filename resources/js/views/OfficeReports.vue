@@ -687,7 +687,7 @@ onMounted(async () => {
 .filter-label {
   display: block;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 0.4rem;
   margin-left: 0.25rem;
   color: var(--text-muted);
@@ -768,7 +768,7 @@ onMounted(async () => {
   padding: 0.5rem 1.25rem;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -817,7 +817,7 @@ onMounted(async () => {
 .label-custom {
   display: block;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 0.35rem;
   margin-left: 0.15rem;
   color: var(--text-muted);
@@ -852,15 +852,15 @@ onMounted(async () => {
 }
 
 .fw-600 {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .fw-700 {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .fw-800 {
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .ls-1 {

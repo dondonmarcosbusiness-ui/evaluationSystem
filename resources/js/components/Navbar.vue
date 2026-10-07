@@ -259,7 +259,7 @@ async function logout() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.75rem;
   letter-spacing: 0.03em;
   flex-shrink: 0;
@@ -273,7 +273,7 @@ async function logout() {
 
 .navbar-profile-name {
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   max-width: 140px;
   overflow: hidden;
@@ -315,7 +315,7 @@ async function logout() {
 
 .navbar-dropdown-name {
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
 }
 

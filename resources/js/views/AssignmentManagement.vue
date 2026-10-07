@@ -744,7 +744,7 @@ async function deleteAssignment(id) {
   border-radius: 0 !important;
   padding: 14px 4px 13px !important;
   font-size: 0.92rem !important;
-  font-weight: 700 !important;
+  font-weight: 500 !important;
   letter-spacing: -0.01em !important;
   color: #64748b !important;
   white-space: nowrap !important;
@@ -784,7 +784,7 @@ async function deleteAssignment(id) {
   letter-spacing: 0.05em;
 }
 .fw-800 {
-  font-weight: 800;
+  font-weight: 500;
 }
 .bg-card {
   background: var(--bg-card);
@@ -914,7 +914,7 @@ async function deleteAssignment(id) {
   background: var(--primary);
   color: white;
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   border-radius: 6px;
   letter-spacing: 0.05em;
 }
@@ -925,7 +925,7 @@ async function deleteAssignment(id) {
 }
 .faculty-dept-v3 {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
 }
@@ -940,7 +940,7 @@ async function deleteAssignment(id) {
 }
 .mini-load-more {
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
   margin-left: 4px;
 }
@@ -986,7 +986,7 @@ async function deleteAssignment(id) {
 
 .load-code-tag {
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--primary);
   background: rgba(25, 25, 112, 0.08);
   padding: 2px 8px;
@@ -1011,7 +1011,7 @@ async function deleteAssignment(id) {
 .form-label-premium {
   display: block;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   margin-bottom: 0.5rem;
@@ -1045,7 +1045,7 @@ async function deleteAssignment(id) {
   background: var(--bg-card);
   color: var(--text-muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
   transition: all 0.15s ease;
 }
@@ -1064,7 +1064,7 @@ async function deleteAssignment(id) {
   border-radius: 1rem;
   background: var(--bg-light);
   border: 1px solid var(--border-light);
-  font-weight: 600;
+  font-weight: 500;
 }
 .form-control-premium:focus {
   outline: none;
@@ -1078,7 +1078,7 @@ async function deleteAssignment(id) {
   background: #fee2e2;
   color: var(--danger);
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   border: 1px solid #fecaca;
 }
 
@@ -1089,7 +1089,7 @@ async function deleteAssignment(id) {
   border: none;
   color: #fff;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
@@ -1123,7 +1123,7 @@ async function deleteAssignment(id) {
   border: 1px solid var(--border-light);
   color: var(--text-muted);
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
@@ -1182,7 +1182,7 @@ async function deleteAssignment(id) {
 .assignment-table thead th {
   padding: 14px 16px;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
@@ -1229,7 +1229,7 @@ async function deleteAssignment(id) {
   background: rgba(25, 25, 112, 0.08);
   color: var(--primary);
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 .subjects-cell {
   display: flex;
@@ -1244,13 +1244,13 @@ async function deleteAssignment(id) {
   background: var(--bg-light);
   border: 1px solid var(--border-color);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
   white-space: nowrap;
 }
 .subject-more {
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
 }
 .btn-manage-load {
@@ -1263,7 +1263,7 @@ async function deleteAssignment(id) {
   background: var(--bg-card);
   color: var(--primary);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }

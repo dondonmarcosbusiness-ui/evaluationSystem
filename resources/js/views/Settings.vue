@@ -14,7 +14,7 @@
             <div>
               <h2 class="fw-800 mb-1">Global Settings</h2>
               <p class="text-muted mb-0">
-                Manage the active academic period, session security, and the evaluation cycle for the entire
+                Manage the active academic period, session security, and evaluation windows for the entire
                 institution.
               </p>
             </div>
@@ -150,64 +150,61 @@
               </section>
             </div>
 
-            <!-- Right Column: Evaluation Control + Archived Periods -->
+            <!-- Right Column: Session Timeout + Archived Periods -->
             <div class="col-lg-5 d-flex flex-column gap-4">
               <section class="card settings-card">
                 <header class="settings-card-head">
-                  <div class="icon-box bg-warning-soft rounded-3">
-                    <i class="fas fa-power-off text-warning"></i>
+                  <div class="icon-box bg-danger-soft rounded-3">
+                    <i class="fas fa-shield-halved text-danger"></i>
                   </div>
                   <div>
-                    <h5 class="mb-0 fw-bold">Evaluation Control</h5>
-                    <p class="text-muted small mb-0">Availability of forms for active students</p>
+                    <h5 class="mb-0 fw-bold">Session Timeout</h5>
+                    <p class="text-muted small mb-0">
+                      Inactive admins are signed out automatically — students and faculty are never affected.
+                    </p>
                   </div>
                 </header>
                 <div class="card-body">
-                  <div
-                    class="status-banner transition-all"
-                    :class="settings.evaluation_status === 'open' ? 'status-open' : 'status-closed'"
-                  >
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                      <div class="d-flex align-items-center gap-2">
-                        <div v-if="settings.evaluation_status === 'open'" class="pulse-indicator"></div>
-                        <span
-                          class="fw-800 text-uppercase ls-1 small"
-                          :class="settings.evaluation_status === 'open' ? 'text-success' : 'text-muted'"
-                        >
-                          {{ settings.evaluation_status === "open" ? "Evaluation Live" : "Evaluation Offline" }}
-                        </span>
-                      </div>
+                  <div class="timeout-box">
+                    <div class="d-flex align-items-center justify-content-between gap-3">
+                      <label class="fw-600 mb-0" for="sessionTimeoutToggle">
+                        Enable session timeout for admins
+                        <i
+                          class="fas fa-info-circle text-muted ms-1"
+                          title="When enabled, inactive admin sessions are signed out automatically after the selected inactivity time. Students and faculty are exempt."
+                        ></i>
+                      </label>
                       <div class="form-check form-switch m-0">
                         <input
+                          id="sessionTimeoutToggle"
+                          v-model="settings.session_timeout_enabled"
                           class="form-check-input premium-switch"
                           type="checkbox"
                           role="switch"
-                          id="evalStatusToggle"
-                          :checked="settings.evaluation_status === 'open'"
-                          @change="settings.evaluation_status = $event.target.checked ? 'open' : 'closed'"
                         />
                       </div>
                     </div>
 
-                    <p class="small mb-0 opacity-75">
-                      {{
-                        settings.evaluation_status === "open"
-                          ? "Evaluation window is currently open. Students can now submit their ratings."
-                          : "Evaluation window is closed. Students cannot access evaluation forms at this time."
-                      }}
-                    </p>
-                  </div>
-
-                  <div v-if="settings.evaluation_status === 'open'" class="mt-3 animate__animated animate__fadeInUp">
-                    <div
-                      class="alert alert-success border-0 bg-success bg-opacity-10 text-success small d-flex align-items-start gap-2 rounded-4 mb-0"
-                    >
-                      <i class="fas fa-paper-plane mt-1"></i>
-                      <span>
-                        Email notifications will be dispatched to all registered students once you save these changes.
-                      </span>
+                    <div class="mt-3" :class="{ 'opacity-50': !settings.session_timeout_enabled }">
+                      <label class="form-label text-muted small mb-2" for="inactivitySelect">
+                        Inactivity time
+                      </label>
+                      <div class="inactivity-select">
+                        <CustomSelect
+                          v-model="settings.session_timeout_minutes"
+                          :options="inactivityOptions"
+                          placeholder="Select inactivity time"
+                          :disabled="!settings.session_timeout_enabled"
+                        />
+                      </div>
                     </div>
                   </div>
+
+                  <p class="text-muted small mb-0 mt-3">
+                    <i class="fas fa-circle-info me-1"></i>
+                    Applies the next time users sign in or refresh the page. A 30-second warning is shown before
+                    signing out.
+                  </p>
                 </div>
               </section>
 
@@ -278,65 +275,10 @@
             </div>
           </div>
 
-          <!-- Session Timeout -->
+          <!-- Evaluation Scheduling (full width) -->
           <div class="row g-4 mt-1">
             <div class="col-12">
-              <section class="card settings-card">
-                <header class="settings-card-head">
-                  <div class="icon-box bg-danger-soft rounded-3">
-                    <i class="fas fa-shield-halved text-danger"></i>
-                  </div>
-                  <div>
-                    <h5 class="mb-0 fw-bold">Session Timeout</h5>
-                    <p class="text-muted small mb-0">
-                      After a period of inactivity, admins will be automatically signed out and need to log in
-                      again. Student and faculty accounts are never affected.
-                    </p>
-                  </div>
-                </header>
-                <div class="card-body">
-                  <div class="timeout-box">
-                    <div class="d-flex align-items-center justify-content-between gap-3">
-                      <label class="fw-600 mb-0" for="sessionTimeoutToggle">
-                        Enable session timeout for admins
-                        <i
-                          class="fas fa-info-circle text-muted ms-1"
-                          title="When enabled, inactive admin sessions are signed out automatically after the selected inactivity time. Students and faculty are exempt."
-                        ></i>
-                      </label>
-                      <div class="form-check form-switch m-0">
-                        <input
-                          id="sessionTimeoutToggle"
-                          v-model="settings.session_timeout_enabled"
-                          class="form-check-input premium-switch"
-                          type="checkbox"
-                          role="switch"
-                        />
-                      </div>
-                    </div>
-
-                    <div class="mt-3" :class="{ 'opacity-50': !settings.session_timeout_enabled }">
-                      <label class="form-label text-muted small mb-2" for="inactivitySelect">
-                        Inactivity time
-                      </label>
-                      <div class="inactivity-select">
-                        <CustomSelect
-                          v-model="settings.session_timeout_minutes"
-                          :options="inactivityOptions"
-                          placeholder="Select inactivity time"
-                          :disabled="!settings.session_timeout_enabled"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <p class="text-muted small mb-0 mt-3">
-                    <i class="fas fa-circle-info me-1"></i>
-                    Applies the next time users sign in or refresh the page. A 30-second warning is shown before
-                    signing out.
-                  </p>
-                </div>
-              </section>
+              <EvaluationSchedulingPanel />
             </div>
           </div>
 
@@ -374,6 +316,7 @@ import { ref, computed, onMounted } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
+import EvaluationSchedulingPanel from "../components/EvaluationSchedulingPanel.vue";
 import api from "../services/api.js";
 import { confirmAction } from "../composables/useConfirm.js";
 import {
@@ -387,7 +330,6 @@ import {
 const settings = ref({
   active_semester: "",
   active_academic_year: "",
-  evaluation_status: "closed",
   course_curricula: [],
   semester_options: [...DEFAULT_SEMESTERS],
   academic_year_options: defaultAcademicYears(),
@@ -444,7 +386,6 @@ function normalizeSettings(data) {
   );
   normalized.session_timeout_enabled = toBool(normalized.session_timeout_enabled);
   normalized.session_timeout_minutes = Number(normalized.session_timeout_minutes) || 60;
-  if (!normalized.evaluation_status) normalized.evaluation_status = "closed";
   return normalized;
 }
 
@@ -606,7 +547,7 @@ async function saveSettings() {
 
 <style scoped>
 .settings-container {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -662,28 +603,8 @@ async function saveSettings() {
 .bg-primary-soft {
   background-color: rgba(25, 25, 112, 0.08);
 }
-.bg-warning-soft {
-  background-color: rgba(255, 193, 7, 0.12);
-}
 .bg-danger-soft {
   background-color: rgba(240, 82, 82, 0.1);
-}
-
-/* Evaluation status */
-.status-banner {
-  background: var(--bg-light);
-  border: 1px solid var(--border-color);
-  border-radius: var(--card-radius);
-  padding: 1.25rem;
-}
-
-.status-open {
-  background: rgba(14, 159, 110, 0.06);
-  border-color: rgba(14, 159, 110, 0.25) !important;
-}
-
-.status-closed {
-  background: var(--bg-light);
 }
 
 .premium-switch {
@@ -696,30 +617,6 @@ async function saveSettings() {
 .premium-switch:checked {
   background-color: var(--success);
   border-color: var(--success);
-}
-
-.pulse-indicator {
-  width: 10px;
-  height: 10px;
-  background: var(--success);
-  border-radius: 50%;
-  box-shadow: 0 0 0 rgba(14, 159, 110, 0.4);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(14, 159, 110, 0.7);
-  }
-  70% {
-    transform: scale(1);
-    box-shadow: 0 0 0 10px rgba(14, 159, 110, 0);
-  }
-  100% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(14, 159, 110, 0);
-  }
 }
 
 /* Editable option lists */
@@ -740,7 +637,7 @@ async function saveSettings() {
 
 .option-manager-title {
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-main);
@@ -766,7 +663,7 @@ async function saveSettings() {
   border: 1px solid var(--border-color);
   border-radius: 999px;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -880,9 +777,5 @@ async function saveSettings() {
 .premium-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(25, 25, 112, 0.3);
-}
-
-.transition-all {
-  transition: all 0.3s ease;
 }
 </style>

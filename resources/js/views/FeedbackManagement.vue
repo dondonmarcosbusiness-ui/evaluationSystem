@@ -824,7 +824,7 @@ function formatDate(dateStr) {
   width: auto;
   padding: 0;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -844,7 +844,7 @@ function formatDate(dateStr) {
 
 .eval-detail-modal .eval-field-label {
   font-size: 0.66rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -863,7 +863,7 @@ function formatDate(dateStr) {
   background-color: var(--bg-light) !important;
   color: var(--text-muted) !important;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 0.65rem 0.75rem;
@@ -874,7 +874,7 @@ function formatDate(dateStr) {
 
 .eval-detail-modal .badge.rounded-pill {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   padding: 0.4em 0.8em;
 }
 

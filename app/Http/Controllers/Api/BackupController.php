@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
 use App\Models\Setting;
 use App\Services\BackupRetentionService;
 use Carbon\Carbon;
@@ -34,7 +35,7 @@ class BackupController extends Controller
                     'filename' => basename($file),
                     'size' => $this->formatBytes(Storage::size($file)),
                     'raw_size' => Storage::size($file),
-                    'created_at' => Carbon::createFromTimestamp(Storage::lastModified($file))->toDateTimeString(),
+                    'created_at' => Carbon::createFromTimestamp(Storage::lastModified($file))->toIso8601String(),
                     'timestamp' => Storage::lastModified($file)
                 ];
             }
@@ -83,12 +84,9 @@ class BackupController extends Controller
 
                 $rows = $pdo->query("SELECT * FROM `{$table}`")->fetchAll(\PDO::FETCH_NUM);
                 if (!empty($rows)) {
-                    $columnCount = count($rows[0]);
-                    $placeholders = implode(', ', array_fill(0, $columnCount, '?'));
-                    $sql .= "INSERT INTO `{$table}` VALUES\n";
-
                     $chunks = array_chunk($rows, 100);
                     foreach ($chunks as $chunk) {
+                        $sql .= "INSERT INTO `{$table}` VALUES\n";
                         $valueStrings = [];
                         foreach ($chunk as $row) {
                             $escaped = array_map(function ($val) use ($pdo) {
@@ -150,8 +148,7 @@ class BackupController extends Controller
             'password' => 'required|string'
         ]);
 
-        $user = $request->user();
-        if (!$user || !\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+        if (!$this->passwordMatches($request)) {
             return response()->json(['message' => 'Invalid password verification'], 422);
         }
 
@@ -163,27 +160,63 @@ class BackupController extends Controller
         }
 
         try {
-            $sqlContent = Storage::get($path);
-            $pdo = DB::connection()->getPdo();
-
-            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
-
-            $statements = $this->splitSqlStatements($sqlContent);
-
-            foreach ($statements as $statement) {
-                $statement = trim($statement);
-                if (!empty($statement) && !str_starts_with($statement, '--') && $statement !== 'SET FOREIGN_KEY_CHECKS = 0' && $statement !== 'SET FOREIGN_KEY_CHECKS = 1') {
-                    $pdo->exec($statement);
-                }
-            }
-
-            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+            $this->executeSql(Storage::get($path));
 
             return response()->json(['message' => 'Database restored successfully']);
         } catch (\Exception $e) {
             Log::error('Restore failed: ' . $e->getMessage());
             return response()->json(['message' => 'Restore failed: ' . $e->getMessage()], 500);
         }
+    }
+
+    public function upload(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:sql,txt|max:10240',
+            'password' => 'required|string',
+        ]);
+
+        if (!$this->passwordMatches($request)) {
+            return response()->json(['message' => 'Invalid password verification'], 422);
+        }
+
+        $sqlContent = file_get_contents($request->file('file'));
+
+        if ($sqlContent === false || !preg_match('/\b(CREATE\s+TABLE|DROP\s+TABLE|INSERT\s+INTO)\b/i', $sqlContent)) {
+            return response()->json(['message' => 'The uploaded file is not a valid backup'], 422);
+        }
+
+        if (!Storage::exists($this->backupPath)) {
+            Storage::makeDirectory($this->backupPath);
+        }
+
+        $filename = $this->uniqueFilename();
+        $path = $this->backupPath . '/' . $filename;
+
+        try {
+            Storage::put($path, $sqlContent);
+            $this->executeSql($sqlContent);
+        } catch (\Exception $e) {
+            if (Storage::exists($path)) {
+                Storage::delete($path);
+            }
+
+            Log::error('Backup upload failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Restore failed: ' . $e->getMessage()], 500);
+        }
+
+        $deletedBackups = $this->backupRetention->enforce($this->backupPath);
+
+        Log::info('Backup uploaded and restored', [
+            'filename' => $filename,
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return response()->json([
+            'message' => 'Backup uploaded and restored successfully',
+            'filename' => $filename,
+            'deleted_backups' => $deletedBackups,
+        ]);
     }
 
     public function toggleAutoBackup(Request $request)
@@ -198,6 +231,73 @@ class BackupController extends Controller
         Setting::forgetCache();
 
         return response()->json(['message' => 'Auto-backup setting updated']);
+    }
+
+    private function passwordMatches(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user && Hash::check($request->password, $user->password);
+    }
+
+    private function uniqueFilename(): string
+    {
+        $base = 'backup_uploaded_' . date('Y-m-d_H-i-s');
+        $filename = $base . '.sql';
+        $i = 1;
+
+        while (Storage::exists($this->backupPath . '/' . $filename)) {
+            $filename = $base . '_' . $i++ . '.sql';
+        }
+
+        return $filename;
+    }
+
+    private function executeSql(string $sqlContent): void
+    {
+        $pdo = DB::connection()->getPdo();
+        $isMysql = DB::getDriverName() === 'mysql';
+
+        if ($isMysql) {
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+        }
+
+        $insertPrefix = null;
+
+        foreach ($this->splitSqlStatements($sqlContent) as $statement) {
+            $statement = trim($statement);
+
+            if ($statement === '' || str_starts_with($statement, '--') || str_starts_with($statement, '#')) {
+                continue;
+            }
+
+            if (in_array($statement, ['SET FOREIGN_KEY_CHECKS = 0', 'SET FOREIGN_KEY_CHECKS = 1'], true)) {
+                continue;
+            }
+
+            // Backups generated before this fix only prefixed the first 100-row
+            // chunk with INSERT INTO ... VALUES, leaving later chunks as bare
+            // value lists. Re-attach the header so those files still restore.
+            if (str_starts_with($statement, '(') && $insertPrefix !== null) {
+                $statement = $insertPrefix . $statement;
+            }
+
+            if (preg_match('/^(INSERT\s+INTO\s+.+?\bVALUES\b)/is', $statement, $match)) {
+                $insertPrefix = $match[1] . "\n";
+            } else {
+                $insertPrefix = null;
+            }
+
+            if (!$isMysql && preg_match('/^(SET|USE|LOCK\s+TABLES|UNLOCK\s+TABLES)\b/i', $statement)) {
+                continue;
+            }
+
+            $pdo->exec($statement);
+        }
+
+        if ($isMysql) {
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        }
     }
 
     private function splitSqlStatements(string $sql): array
@@ -222,6 +322,43 @@ class BackupController extends Controller
                 $escaped = true;
                 $current .= $char;
                 continue;
+            }
+
+            if (!$inSingleQuote && !$inDoubleQuote) {
+                $isDashComment = $char === '-'
+                    && $i + 1 < $len
+                    && $sql[$i + 1] === '-'
+                    && ($i + 2 >= $len || ctype_space($sql[$i + 2]));
+
+                if ($char === '#' || $isDashComment) {
+                    while ($i < $len && $sql[$i] !== "\n") {
+                        $i++;
+                    }
+                    continue;
+                }
+
+                if ($char === '/' && $i + 1 < $len && $sql[$i + 1] === '*') {
+                    // MySQL executable comments (/*!...*/) keep their inner SQL.
+                    if ($i + 2 < $len && $sql[$i + 2] === '!') {
+                        $i += 3;
+                        while ($i < $len && ctype_digit($sql[$i])) {
+                            $i++;
+                        }
+                        continue;
+                    }
+
+                    $i += 2;
+                    while ($i < $len && !($sql[$i] === '*' && $i + 1 < $len && $sql[$i + 1] === '/')) {
+                        $i++;
+                    }
+                    $i++;
+                    continue;
+                }
+
+                if ($char === '*' && $i + 1 < $len && $sql[$i + 1] === '/') {
+                    $i++;
+                    continue;
+                }
             }
 
             if ($char === "'" && !$inDoubleQuote) {

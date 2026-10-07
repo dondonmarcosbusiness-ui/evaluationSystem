@@ -14,6 +14,7 @@ class Question extends Model
         'category_id',
         'question_text',
         'question_text_tl',
+        'reference',
     ];
 
     public function category()

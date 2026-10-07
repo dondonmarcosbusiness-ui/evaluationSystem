@@ -526,13 +526,13 @@ async function deleteQuestion(catId, qId) {
   letter-spacing: 0.05em;
 }
 .fw-800 {
-  font-weight: 800;
+  font-weight: 500;
 }
 .fw-700 {
-  font-weight: 700;
+  font-weight: 500;
 }
 .fw-600 {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .bg-card {
@@ -542,7 +542,7 @@ async function deleteQuestion(catId, qId) {
 /* Slim Stats Bar */
 .stat-item-inline .label {
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -615,7 +615,7 @@ async function deleteQuestion(catId, qId) {
   background: var(--bg-light);
   color: var(--text-muted);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   line-height: 1;
@@ -714,7 +714,7 @@ async function deleteQuestion(catId, qId) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
+  font-weight: 500;
   font-size: 0.85rem;
   flex-shrink: 0;
 }
@@ -744,7 +744,7 @@ async function deleteQuestion(catId, qId) {
 .form-label-premium {
   display: block;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -758,7 +758,7 @@ async function deleteQuestion(catId, qId) {
   background: var(--bg-light);
   border: 1px solid var(--border-light);
   color: var(--text-dark);
-  font-weight: 600;
+  font-weight: 500;
   transition: all 0.3s;
 }
 
@@ -775,7 +775,7 @@ async function deleteQuestion(catId, qId) {
   background: var(--primary);
   border: none;
   color: #fff;
-  font-weight: 800;
+  font-weight: 500;
   transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease;
 }
 
@@ -810,7 +810,7 @@ async function deleteQuestion(catId, qId) {
   background: var(--bg-light);
   border: 1px solid var(--border-light);
   color: var(--text-muted);
-  font-weight: 700;
+  font-weight: 500;
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 

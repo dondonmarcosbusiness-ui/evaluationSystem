@@ -29,6 +29,10 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
         $schedule->command('db:backup')->daily();
+        // Keep today's "students online" peak accurate without a dashboard open.
+        $schedule->command('online-peak:sample')->everyMinute();
+        // Notify students when an evaluation window opens or closes on schedule.
+        $schedule->command('evaluation-schedules:tick')->everyMinute();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

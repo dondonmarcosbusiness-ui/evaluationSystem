@@ -104,7 +104,7 @@ function iconFor(type) {
 
 .snackbar__title {
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-dark);
   margin-bottom: 2px;
 }

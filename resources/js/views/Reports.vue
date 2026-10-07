@@ -1203,7 +1203,7 @@ function badgeClass(interpretation) {
   background: var(--bg-card);
   color: var(--text-main);
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease;
 }
@@ -1307,7 +1307,7 @@ function badgeClass(interpretation) {
   background: var(--primary);
   color: white;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.45rem 0.85rem;
   border-radius: 10px;
   box-shadow: 0 6px 16px -4px rgba(25, 25, 112, 0.5);
@@ -1352,11 +1352,11 @@ function badgeClass(interpretation) {
 }
 
 .fw-600 {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .fw-800 {
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .metric-icon {
@@ -1398,7 +1398,7 @@ function badgeClass(interpretation) {
   background: transparent;
   padding: 10px 24px;
   border-radius: 50px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 0.95rem;
@@ -1482,13 +1482,13 @@ function badgeClass(interpretation) {
 }
 
 .reports-freq-val {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.95rem;
 }
 
 .reports-freq-lbl {
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
 }
@@ -1596,7 +1596,7 @@ thead th:last-child { border-right: none; }
 
 .subject-rating-code {
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-main);
@@ -1632,7 +1632,7 @@ thead th:last-child { border-right: none; }
   min-width: 40px;
   text-align: right;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .subject-rating-count {

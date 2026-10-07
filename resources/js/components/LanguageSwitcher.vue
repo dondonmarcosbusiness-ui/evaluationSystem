@@ -48,7 +48,7 @@ const { currentLang, setLanguage } = useLanguage();
   padding: 0.5rem 1rem;
   border-radius: 50px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   transition: all 0.2s ease;
 }
 

@@ -287,7 +287,7 @@ onUnmounted(() => {
 .custom-select-options li.selected {
   background: var(--primary);
   color: #ffffff;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .check-icon {

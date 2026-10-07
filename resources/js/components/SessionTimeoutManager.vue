@@ -215,7 +215,7 @@ watch(() => route.path, () => {
 
 .timeout-title {
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-dark);
   margin: 0 0 0.35rem;
 }
@@ -230,7 +230,7 @@ watch(() => route.path, () => {
 
 .timeout-number {
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1;
   color: var(--danger);
   font-variant-numeric: tabular-nums;
@@ -238,7 +238,7 @@ watch(() => route.path, () => {
 
 .timeout-label {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
@@ -275,7 +275,7 @@ watch(() => route.path, () => {
 .timeout-logout {
   background: transparent;
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 500;
   border-right: 1px solid var(--border-light);
 }
 
@@ -287,7 +287,7 @@ watch(() => route.path, () => {
 .timeout-stay {
   background: var(--primary);
   color: #fff;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .timeout-stay:hover {

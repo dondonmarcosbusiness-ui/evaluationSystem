@@ -8,9 +8,28 @@ use Illuminate\Http\Request;
 
 class SettingController extends Controller
 {
+    /**
+     * Settings keys owned by the scheduling system. They are returned read-only
+     * (evaluation_status is computed from the schedules) and never writable
+     * through this endpoint, so a Settings save can't clobber them.
+     */
+    private const INTERNAL_KEYS = ['evaluation_status', 'evaluation_schedule_snapshot'];
+
+    public function __construct(protected \App\Services\EvaluationScheduleService $schedules)
+    {
+    }
+
     public function index()
     {
-        return response()->json(Setting::cachedAll());
+        // Copy before overlaying: cachedAll() may hand back the cached
+        // instance itself (array cache driver), which other code reads raw.
+        $settings = collect(Setting::cachedAll()->all());
+
+        // Effective evaluation window state (schedule-aware) — consumers such as
+        // the dashboard CTA read this key without knowing about schedules.
+        $settings->put('evaluation_status', $this->schedules->globalEffectiveStatus());
+
+        return response()->json($settings);
     }
 
     public function update(Request $request)
@@ -24,9 +43,6 @@ class SettingController extends Controller
         ]);
 
         $settings = $request->settings;
-
-        $prevStatus = \App\Models\Setting::where('key', 'evaluation_status')->value('value');
-        $newStatus = $settings['evaluation_status'] ?? null;
 
         $clean = fn($v) => is_string($v) ? trim($v) : $v;
         $asList = function ($v) use ($clean) {
@@ -78,20 +94,16 @@ class SettingController extends Controller
         $settings['archived_academic_year_options'] = $archivedYears;
 
         foreach ($settings as $key => $value) {
+            // Scheduling owns these keys: evaluation_status is computed from
+            // the schedules (returned by index(), never writable here) and the
+            // notification snapshot must not be clobbered by a Settings save.
+            if (in_array($key, self::INTERNAL_KEYS, true)) {
+                continue;
+            }
             Setting::updateOrCreate(['key' => $key], ['value' => $value]);
         }
 
         Setting::forgetCache();
-
-        // Trigger notification if status changed to 'open'. A queue failure
-        // must never mask the successful save, so dispatch defensively.
-        if ($newStatus === 'open' && $prevStatus !== 'open') {
-            try {
-                \App\Jobs\NotifyStudentsJob::dispatch();
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('NotifyStudentsJob dispatch failed: ' . $e->getMessage());
-            }
-        }
 
         return response()->json(['message' => 'Settings updated successfully']);
     }

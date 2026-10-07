@@ -801,7 +801,7 @@ async function deleteCourse(id) {
   letter-spacing: 0.05em;
 }
 .fw-800 {
-  font-weight: 800;
+  font-weight: 500;
 }
 .fw-900 {
   font-weight: 900;
@@ -814,7 +814,7 @@ async function deleteCourse(id) {
 /* Slim Stats Bar */
 .stat-item-inline .label {
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -919,7 +919,7 @@ async function deleteCourse(id) {
 
 .course-dept-v3 {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -927,7 +927,7 @@ async function deleteCourse(id) {
 
 .tiny-label {
   font-size: 0.6rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
   letter-spacing: 0.05em;
   margin-top: 2px;
@@ -994,7 +994,7 @@ async function deleteCourse(id) {
 
 .detail-dept {
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1016,7 +1016,7 @@ async function deleteCourse(id) {
   border: 1px solid var(--border-light);
   border-radius: 2rem;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -1032,7 +1032,7 @@ async function deleteCourse(id) {
 
 .detail-section-heading {
   font-size: 0.6rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-muted);
@@ -1051,7 +1051,7 @@ async function deleteCourse(id) {
   background: transparent;
   color: var(--primary);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: none;
   letter-spacing: 0;
   border-radius: 8px;
@@ -1100,7 +1100,7 @@ async function deleteCourse(id) {
   padding: 0 16px;
   border-radius: 8px;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
@@ -1147,7 +1147,7 @@ async function deleteCourse(id) {
 
 .upload-status {
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .upload-status-error {
@@ -1167,7 +1167,7 @@ async function deleteCourse(id) {
 
 .subject-code-chip {
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.03em;
   padding: 2px 8px;
   border-radius: 4px;
@@ -1272,7 +1272,7 @@ async function deleteCourse(id) {
   background: transparent;
   color: var(--text-muted);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   padding: 7px 16px;
   border-radius: 8px;
   cursor: pointer;
@@ -1338,7 +1338,7 @@ async function deleteCourse(id) {
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   flex-shrink: 0;
 }
 
@@ -1354,7 +1354,7 @@ async function deleteCourse(id) {
   border-radius: 2rem;
   border: 1px solid var(--border-light);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -1382,7 +1382,7 @@ async function deleteCourse(id) {
 .form-label-premium {
   display: block;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -1395,7 +1395,7 @@ async function deleteCourse(id) {
   border-radius: 1rem;
   background: var(--bg-light);
   border: 1px solid var(--border-light);
-  font-weight: 600;
+  font-weight: 500;
   transition: all 0.3s;
 }
 
@@ -1418,7 +1418,7 @@ async function deleteCourse(id) {
   color: var(--primary);
   border-radius: 8px;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .premium-tag.secondary {
@@ -1440,7 +1440,7 @@ async function deleteCourse(id) {
   background: var(--primary);
   border: none;
   color: #fff;
-  font-weight: 800;
+  font-weight: 500;
   transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease;
 }
 
@@ -1475,7 +1475,7 @@ async function deleteCourse(id) {
   background: var(--bg-light);
   border: 1px solid var(--border-light);
   color: var(--text-muted);
-  font-weight: 700;
+  font-weight: 500;
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 

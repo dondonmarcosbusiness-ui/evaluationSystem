@@ -118,7 +118,7 @@ onBeforeUnmount(() => {
 }
 .confirm-title {
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-dark);
   margin: 0 0 0.5rem;
 }
@@ -131,7 +131,7 @@ onBeforeUnmount(() => {
 }
 .confirm-danger-word {
   color: #dc2626;
-  font-weight: 700;
+  font-weight: 500;
 }
 [data-theme="dark"] .confirm-danger-word {
   color: #ff7b72;
@@ -161,7 +161,7 @@ onBeforeUnmount(() => {
   background: var(--bg-light);
 }
 .confirm-yes {
-  font-weight: 800;
+  font-weight: 500;
   border-right: 1px solid var(--border-light);
 }
 .confirm-no {

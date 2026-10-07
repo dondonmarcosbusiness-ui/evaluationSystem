@@ -52,11 +52,9 @@ class DatabaseBackup extends Command
 
                 $rows = $pdo->query("SELECT * FROM `{$table}`")->fetchAll(\PDO::FETCH_NUM);
                 if (!empty($rows)) {
-                    $columnCount = count($rows[0]);
-                    $sql .= "INSERT INTO `{$table}` VALUES\n";
-
                     $chunks = array_chunk($rows, 100);
                     foreach ($chunks as $chunk) {
+                        $sql .= "INSERT INTO `{$table}` VALUES\n";
                         $valueStrings = [];
                         foreach ($chunk as $row) {
                             $escaped = array_map(function ($val) use ($pdo) {

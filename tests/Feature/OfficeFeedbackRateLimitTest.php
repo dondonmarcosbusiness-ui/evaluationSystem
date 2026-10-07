@@ -48,7 +48,7 @@ class OfficeFeedbackRateLimitTest extends TestCase
         ], $overrides);
     }
 
-    public function test_logged_in_student_cannot_submit_twice_for_same_office_in_one_day()
+    public function test_logged_in_student_can_submit_three_times_then_is_rate_limited_for_same_office_in_one_day()
     {
         $user = User::create([
             'email' => 'student@test.com',
@@ -61,12 +61,14 @@ class OfficeFeedbackRateLimitTest extends TestCase
         $question = $this->makeQuestion();
         $payload = $this->payload($office, $question);
 
-        $this->actingAs($user, 'sanctum')->postJson('/api/office-feedback', $payload)->assertStatus(201);
+        for ($i = 0; $i < 3; $i++) {
+            $this->actingAs($user, 'sanctum')->postJson('/api/office-feedback', $payload)->assertStatus(201);
+        }
 
         $this->actingAs($user, 'sanctum')
             ->postJson('/api/office-feedback', $payload)
             ->assertStatus(422)
-            ->assertJson(['message' => 'You have already submitted feedback for this office today']);
+            ->assertJson(['message' => 'You have reached the limit of 3 feedback submissions for this office today']);
     }
 
     public function test_logged_in_student_can_submit_for_different_office_same_day()
@@ -91,16 +93,18 @@ class OfficeFeedbackRateLimitTest extends TestCase
             ->assertStatus(201);
     }
 
-    public function test_anonymous_visitor_cannot_submit_twice_from_same_device_in_one_day()
+    public function test_anonymous_visitor_can_submit_three_times_then_is_rate_limited_from_same_device_in_one_day()
     {
         $office = $this->makeOffice();
         $question = $this->makeQuestion();
 
-        $this->postJson('/api/office-feedback', $this->payload($office, $question))->assertStatus(201);
+        for ($i = 0; $i < 3; $i++) {
+            $this->postJson('/api/office-feedback', $this->payload($office, $question))->assertStatus(201);
+        }
 
         $this->postJson('/api/office-feedback', $this->payload($office, $question))
             ->assertStatus(422)
-            ->assertJson(['message' => 'You have already submitted feedback for this office today']);
+            ->assertJson(['message' => 'You have reached the limit of 3 feedback submissions for this office today']);
     }
 
     public function test_anonymous_visitor_can_submit_again_on_a_new_day()
@@ -108,7 +112,9 @@ class OfficeFeedbackRateLimitTest extends TestCase
         $office = $this->makeOffice();
         $question = $this->makeQuestion();
 
-        $this->postJson('/api/office-feedback', $this->payload($office, $question))->assertStatus(201);
+        for ($i = 0; $i < 3; $i++) {
+            $this->postJson('/api/office-feedback', $this->payload($office, $question))->assertStatus(201);
+        }
 
         \Carbon\Carbon::setTestNow(now()->addDay());
 
@@ -133,10 +139,12 @@ class OfficeFeedbackRateLimitTest extends TestCase
         $question = $this->makeQuestion();
         $payload = $this->payload($office, $question, ['student_number' => '2020-0001']);
 
-        $this->postJson('/api/office-feedback', $payload)->assertStatus(201);
+        for ($i = 0; $i < 3; $i++) {
+            $this->postJson('/api/office-feedback', $payload)->assertStatus(201);
+        }
 
         $this->postJson('/api/office-feedback', $payload)
             ->assertStatus(422)
-            ->assertJson(['message' => 'You have already submitted feedback for this office today']);
+            ->assertJson(['message' => 'You have reached the limit of 3 feedback submissions for this office today']);
     }
 }
