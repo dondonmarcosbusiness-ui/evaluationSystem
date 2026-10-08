@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\EvaluationSchedule;
+use App\Models\Setting;
 use App\Services\EvaluationScheduleService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -91,12 +92,28 @@ class EvaluationScheduleController extends Controller
         $department = $schedule->department;
         $schedule->delete();
 
+        $message = $department === null
+            ? 'Default schedule deleted. Departments without their own schedule are now closed.'
+            : 'Schedule deleted. This department now follows the default schedule.';
+
+        if (!EvaluationSchedule::query()->exists()) {
+            // An empty table falls back to the legacy `evaluation_status` key,
+            // which no longer has any UI to change it. Pin it closed *before*
+            // the notification sync so deleting the last schedule closes the
+            // window instead of silently re-opening it.
+            Setting::updateOrCreate(
+                ['key' => 'evaluation_status'],
+                ['value' => EvaluationScheduleService::CLOSED]
+            );
+            Setting::forgetCache();
+
+            $message = 'Schedule deleted. No schedules remain — the evaluation window is now closed.';
+        }
+
         $this->schedules->syncNotifications();
 
         return response()->json([
-            'message' => $department === null
-                ? 'Default schedule deleted. Departments without their own schedule are now closed.'
-                : 'Schedule deleted. This department now follows the default schedule.',
+            'message' => $message,
             'global_status' => $this->schedules->globalEffectiveStatus(),
         ]);
     }

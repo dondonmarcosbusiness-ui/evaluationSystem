@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Course;
 use App\Models\Setting;
+use App\Models\User;
+use App\Services\EvaluateeService;
+use App\Services\EvaluationScheduleService;
 use Illuminate\Http\Request;
 
 class SettingController extends Controller
@@ -15,11 +19,13 @@ class SettingController extends Controller
      */
     private const INTERNAL_KEYS = ['evaluation_status', 'evaluation_schedule_snapshot'];
 
-    public function __construct(protected \App\Services\EvaluationScheduleService $schedules)
-    {
+    public function __construct(
+        protected EvaluationScheduleService $schedules,
+        protected EvaluateeService $evaluatees,
+    ) {
     }
 
-    public function index()
+    public function index(Request $request)
     {
         // Copy before overlaying: cachedAll() may hand back the cached
         // instance itself (array cache driver), which other code reads raw.
@@ -27,9 +33,111 @@ class SettingController extends Controller
 
         // Effective evaluation window state (schedule-aware) — consumers such as
         // the dashboard CTA read this key without knowing about schedules.
-        $settings->put('evaluation_status', $this->schedules->globalEffectiveStatus());
+        $settings->put('evaluation_status', $this->effectiveStatusFor($request->user()));
 
         return response()->json($settings);
+    }
+
+    /**
+     * Window the viewer can act on.
+     *
+     * Students get the status of the departments their evaluatees belong to —
+     * the exact set /evaluate lists — so closing their department disables the
+     * dashboard CTA even while another department's override stays open (and an
+     * unrelated open department never re-enables it). With no evaluatees built
+     * yet the student's own course department decides, then the default row.
+     * Everyone else sees the institution-wide status.
+     */
+    private function effectiveStatusFor(?User $user): string
+    {
+        if ($user === null || $user->role !== 'student') {
+            return $this->schedules->globalEffectiveStatus();
+        }
+
+        $departments = $this->studentEvaluateeDepartments($user);
+        if ($departments === []) {
+            $departments = $this->studentHomeDepartments($user);
+        }
+
+        $resolve = $this->schedules->resolver();
+
+        if ($departments === []) {
+            // No department context at all: the default row decides (or the
+            // legacy switch while no schedules exist).
+            return $resolve(null);
+        }
+
+        foreach ($departments as $department) {
+            if ($resolve($department) === EvaluationScheduleService::OPEN) {
+                return EvaluationScheduleService::OPEN;
+            }
+        }
+
+        return EvaluationScheduleService::CLOSED;
+    }
+
+    /**
+     * Departments of the student's own course — the window that decides the
+     * CTA when no evaluatees are built yet (no assignments, period not
+     * configured), so a BEED student follows Education instead of whatever
+     * other department happens to be open.
+     *
+     * @return array<int, string>
+     */
+    private function studentHomeDepartments(User $user): array
+    {
+        $student = $user->student;
+        if ($student === null) {
+            return [];
+        }
+
+        $courseNames = array_values(array_unique(array_filter(
+            [$student->course, $student->section_relationship?->course?->name],
+            fn ($name) => is_string($name) && trim($name) !== ''
+        )));
+
+        $departments = Course::query()
+            ->whereIn('name', $courseNames)
+            ->pluck('department')
+            ->filter(fn ($department) => is_string($department) && trim($department) !== '')
+            ->map(fn ($department) => trim($department))
+            ->all();
+
+        $sectionDepartment = $student->section_relationship?->course?->department;
+        if (is_string($sectionDepartment) && trim($sectionDepartment) !== '') {
+            $departments[] = trim($sectionDepartment);
+        }
+
+        return array_values(array_unique($departments));
+    }
+
+    /**
+     * Unique departments feeding this student's evaluatee list.
+     *
+     * @return array<int, string>
+     */
+    private function studentEvaluateeDepartments(User $user): array
+    {
+        try {
+            $config = Setting::cachedAll();
+            $evaluatees = $this->evaluatees->build(
+                $user,
+                $config->get('active_semester'),
+                $config->get('active_academic_year')
+            );
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $departments = [];
+        foreach ($evaluatees as $evaluatee) {
+            $department = $evaluatee['department'] ?? null;
+            if (is_string($department) && trim($department) !== '') {
+                $departments[trim($department)] = true;
+            }
+        }
+
+        return array_keys($departments);
     }
 
     public function update(Request $request)

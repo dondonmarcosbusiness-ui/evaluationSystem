@@ -1196,6 +1196,23 @@ const fetchStatus = async () => {
 // 60s poll for the live "Students Online" panel (cleared on unmount).
 let statusTimer = null;
 
+// Students: keep the Start Evaluation CTA in sync with the window so a
+// schedule opened/closed in Settings by someone else applies without a reload.
+let evalStatusTimer = null;
+
+const refreshEvaluationStatus = async () => {
+  try {
+    const res = await api.get("/settings");
+    evaluationStatus.value = res.data.evaluation_status || "closed";
+  } catch (e) {
+    console.error("Error refreshing evaluation status:", e);
+  }
+};
+
+const handleEvalStatusVisibility = () => {
+  if (!document.hidden) refreshEvaluationStatus();
+};
+
 const fetchLoginLogs = async () => {
   if (!can("permission.manage")) return;
   try {
@@ -1378,6 +1395,10 @@ onMounted(async () => {
 
   // Fetch offices for students
   if (dashboardMode.value === "student") {
+    evalStatusTimer = setInterval(refreshEvaluationStatus, 60000);
+    window.addEventListener("focus", refreshEvaluationStatus);
+    document.addEventListener("visibilitychange", handleEvalStatusVisibility);
+
     officesLoading.value = true;
     try {
       const res = await api.get("/offices/all");
@@ -1430,6 +1451,9 @@ onUnmounted(() => {
   destroyCharts();
   clearTimeout(accessSearchTimer);
   clearInterval(statusTimer);
+  clearInterval(evalStatusTimer);
+  window.removeEventListener("focus", refreshEvaluationStatus);
+  document.removeEventListener("visibilitychange", handleEvalStatusVisibility);
 });
 
 function initCharts() {

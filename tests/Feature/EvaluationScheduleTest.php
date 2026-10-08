@@ -545,4 +545,92 @@ class EvaluationScheduleTest extends TestCase
                 && in_array('General Education', $job->departments, true)
         );
     }
+
+    public function test_student_settings_status_follows_their_evaluatee_departments(): void
+    {
+        [, $section, $subject] = $this->makeAcademicFixture();
+        $student = $this->makeUser('student', 'window-student@test.com');
+        $faculty = $this->makeFaculty('window-faculty@test.com', 'CIT');
+        $this->makeEvaluatingStudent($student, $section, $subject, [$faculty]);
+        $this->activePeriod();
+
+        // Default open + the student's own department closed: the student's
+        // dashboard CTA must be closed while the admin still sees the
+        // institution-wide "open".
+        EvaluationSchedule::create(['department' => null, 'status' => 'open']);
+        EvaluationSchedule::create(['department' => 'CIT', 'status' => 'closed']);
+
+        $this->actingAs($student, 'sanctum')
+            ->getJson('/api/settings')
+            ->assertStatus(200)
+            ->assertJsonPath('evaluation_status', 'closed');
+
+        $this->actingAs($this->makeAdmin(), 'sanctum')
+            ->getJson('/api/settings')
+            ->assertJsonPath('evaluation_status', 'open');
+
+        // Re-opening the student's department turns their CTA back on even
+        // though nothing else changed.
+        EvaluationSchedule::query()->where('department', 'CIT')->update(['status' => 'open']);
+
+        $this->actingAs($student, 'sanctum')
+            ->getJson('/api/settings')
+            ->assertJsonPath('evaluation_status', 'open');
+    }
+
+    public function test_student_settings_status_follows_their_course_window_without_evaluatees(): void
+    {
+        [, $section] = $this->makeAcademicFixture(); // BSIT → department "CIT"
+        $student = $this->makeUser('student', 'no-assignments@test.com');
+        $this->makeStudentRecord($student, $section);
+        $this->activePeriod();
+
+        // Open default + closed course window: a student with no evaluatees
+        // built yet must follow their own course, not the open default.
+        EvaluationSchedule::create(['department' => null, 'status' => 'open']);
+        EvaluationSchedule::create(['department' => 'CIT', 'status' => 'closed']);
+
+        $this->actingAs($student, 'sanctum')
+            ->getJson('/api/settings')
+            ->assertStatus(200)
+            ->assertJsonPath('evaluation_status', 'closed');
+
+        // A course with no schedule row of its own follows the default (none
+        // here) — another department's open override never leaks in.
+        Course::create(['name' => 'BEED', 'department' => 'Education']);
+        $beedStudent = $this->makeUser('student', 'beed-student@test.com');
+        Student::create([
+            'user_id' => $beedStudent->id,
+            'course' => 'BEED',
+            'section' => '1B',
+            'student_type' => 'regular',
+            'year_level' => '1st',
+        ]);
+        EvaluationSchedule::query()->whereNull('department')->delete();
+        EvaluationSchedule::create(['department' => 'HR', 'status' => 'open']);
+
+        $this->actingAs($beedStudent, 'sanctum')
+            ->getJson('/api/settings')
+            ->assertJsonPath('evaluation_status', 'closed');
+    }
+
+    public function test_deleting_the_last_schedule_closes_the_window(): void
+    {
+        Setting::create(['key' => 'evaluation_status', 'value' => 'open']);
+        Cache::flush();
+        $admin = $this->makeAdmin();
+        $schedule = EvaluationSchedule::create(['department' => null, 'status' => 'open']);
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/evaluation-schedules/{$schedule->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('global_status', 'closed');
+
+        // The empty-table legacy fallback must not silently re-open the window.
+        $this->assertSame('closed', Setting::where('key', 'evaluation_status')->first()->value);
+        $this->assertSame(
+            EvaluationScheduleService::CLOSED,
+            app(EvaluationScheduleService::class)->globalEffectiveStatus()
+        );
+    }
 }
