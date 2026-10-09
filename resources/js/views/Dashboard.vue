@@ -1435,6 +1435,26 @@ function getRatingLabel(rating) {
   return "Poor";
 }
 
+function wrapChartLabel(label, maxChars = 16) {
+  const words = String(label).split(" ");
+  const lines = [];
+  let current = "";
+
+  words.forEach((word) => {
+    if (!current) {
+      current = word;
+    } else if (current.length + word.length + 1 <= maxChars) {
+      current = `${current} ${word}`;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  });
+
+  if (current) lines.push(current);
+  return lines;
+}
+
 function destroyCharts() {
   [facultyChart, ratingsChart, officeTrendChart].forEach((chart) => {
     if (chart) {
@@ -1518,7 +1538,16 @@ function initCharts() {
               grid: { color: gridColor },
             },
             x: {
-              ticks: { color: textPrimary },
+              ticks: {
+                color: textPrimary,
+                maxRotation: 0,
+                minRotation: 0,
+                autoSkip: false,
+                padding: 8,
+                callback: function (value) {
+                  return wrapChartLabel(this.getLabelForValue(value));
+                },
+              },
             },
           },
           responsive: true,

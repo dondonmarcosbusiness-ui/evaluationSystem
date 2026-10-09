@@ -189,6 +189,11 @@ function iconFor(type) {
 
 @media (max-width: 576px) {
   .snackbar-queue {
+    bottom: 1.5rem;
+  }
+
+  /* Only lift on pages that have a floating bottom-corner FAB (e.g. evaluation form) */
+  body.has-bottom-fab .snackbar-queue {
     bottom: 5.5rem;
   }
 }

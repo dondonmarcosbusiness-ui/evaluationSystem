@@ -295,7 +295,7 @@
               title="View AI Insights"
             >
               <i v-if="loadingAi" class="fas fa-spinner fa-spin"></i>
-              <AiSparkleIcon v-else :size="28" variant="white" />
+              <AiSparkleIcon v-else :size="30" variant="gradient" custom-class="fab-sparkle" />
               <span v-if="!aiInsights && !loadingAi" class="ai-badge">Get AI Insights</span>
             </button>
           </div>
@@ -1277,23 +1277,42 @@ function badgeClass(interpretation) {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: var(--primary);
-  color: white;
-  border: none;
+  background: #ffffff;
+  color: #4285f4;
+  border: 1px solid rgba(60, 64, 67, 0.14);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.75rem;
-  box-shadow: 0 12px 28px -8px rgba(25, 25, 112, 0.55);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  box-shadow:
+    0 1px 3px rgba(60, 64, 67, 0.16),
+    0 8px 20px -6px rgba(66, 133, 244, 0.4),
+    0 18px 36px -12px rgba(155, 114, 204, 0.45);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
   cursor: pointer;
   position: relative;
 }
 
+.ai-fab .ai-sparkle-icon {
+  transition: transform 0.25s ease;
+}
+
 .ai-fab:hover {
   transform: translateY(-3px);
-  background: #232380;
-  box-shadow: 0 16px 32px -8px rgba(25, 25, 112, 0.6);
+  background: #ffffff;
+  border-color: rgba(66, 133, 244, 0.45);
+  box-shadow:
+    0 2px 6px rgba(60, 64, 67, 0.18),
+    0 12px 28px -6px rgba(66, 133, 244, 0.5),
+    0 22px 44px -12px rgba(217, 101, 112, 0.4);
+}
+
+.ai-fab:hover .ai-sparkle-icon {
+  transform: scale(1.12) rotate(15deg);
 }
 
 .ai-fab:active {
@@ -1302,15 +1321,18 @@ function badgeClass(interpretation) {
 
 .ai-badge {
   position: absolute;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 12px);
   right: 0;
-  background: var(--primary);
-  color: white;
-  font-size: 0.72rem;
+  background: #1f1f1f;
+  color: #ffffff;
+  font-size: 0.75rem;
   font-weight: 500;
-  padding: 0.45rem 0.85rem;
-  border-radius: 10px;
-  box-shadow: 0 6px 16px -4px rgba(25, 25, 112, 0.5);
+  letter-spacing: 0.01em;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  box-shadow:
+    0 2px 8px rgba(60, 64, 67, 0.28),
+    0 10px 24px -10px rgba(60, 64, 67, 0.5);
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -1320,11 +1342,11 @@ function badgeClass(interpretation) {
 .ai-badge::after {
   content: "";
   position: absolute;
-  bottom: -5px;
+  top: 100%;
   right: 22px;
-  border-width: 5px 5px 0;
+  border-width: 6px 6px 0;
   border-style: solid;
-  border-color: var(--primary) transparent transparent;
+  border-color: #1f1f1f transparent transparent;
 }
 
 /* AI modal body keeps the soft tinted backdrop */

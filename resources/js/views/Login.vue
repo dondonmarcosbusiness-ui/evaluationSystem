@@ -1,5 +1,13 @@
 <template>
-  <div class="login-shell">
+  <div
+    class="login-shell"
+    :style="{
+      backgroundImage: `linear-gradient(180deg, rgba(12, 17, 76, 0.55) 0%, rgba(10, 14, 62, 0.82) 45%, rgba(6, 9, 40, 0.94) 100%), url(${basePath}/assets/img/modern_login_hero.png)`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+    }"
+  >
     <!-- ── Brand / Hero panel ──────────────────────────────── -->
     <div class="login-brand">
       <div
@@ -472,6 +480,7 @@ function loginWithGoogle() {
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
+  position: relative;
   overflow-x: hidden;
   background-color: #ffffff;
 }
@@ -528,10 +537,11 @@ function loginWithGoogle() {
   max-width: 520px;
   /* app.css forces h1 colour / size with !important — override explicitly. */
   color: #ffffff !important;
+  font-family: "Chakra Petch", var(--font-sans);
   font-size: var(--fs-title) !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   line-height: var(--lh-title);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .login-brand__tagline {
@@ -584,8 +594,9 @@ function loginWithGoogle() {
   margin: 0 0 var(--gap-heading-desc);
   /* app.css forces h2 colour / size with !important — override explicitly. */
   color: var(--login-ink) !important;
+  font-family: "Chakra Petch", var(--font-sans);
   font-size: var(--fs-heading) !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   line-height: 1.2;
   letter-spacing: -0.015em;
 }
@@ -1028,6 +1039,178 @@ function loginWithGoogle() {
     --form-pad-bottom: 32px;
     --panel-overlap: 16px;
     --panel-radius: 16px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Small screens — full-screen photo background with a
+   full-height frosted-glass form card floating over it.
+   Type/spacing are compacted so the sign-in form fits the
+   viewport; the shell scrolls only for taller content.
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 1023px) {
+  .login-shell {
+    --logo-size: 48px;
+    --fs-title: 17px;
+    --fs-tagline: 13px;
+    --fs-heading: 21px;
+    --fs-sub: 13px;
+    --fs-label: 13px;
+    --fs-control: 15px;
+    --h-control: 46px;
+    --gap-logo-title: 10px;
+    --gap-title-tagline: 8px;
+    --gap-heading-desc: 6px;
+    --gap-google: 16px;
+    --gap-hint: 8px;
+    --gap-divider: 14px;
+    --gap-group: 14px;
+    --gap-submit: 18px;
+    --form-pad-top: 20px;
+    --form-pad-x: 20px;
+    --form-pad-bottom: 22px;
+
+    /* Light-on-dark palette for form controls on the photo */
+    --login-ink: #ffffff;
+    --login-muted: rgba(255, 255, 255, 0.78);
+    --login-muted-soft: rgba(255, 255, 255, 0.65);
+    --login-border: rgba(255, 255, 255, 0.35);
+    --login-border-soft: rgba(255, 255, 255, 0.28);
+    --login-surface: rgba(255, 255, 255, 0.1);
+
+    height: 100dvh;
+    overflow-y: auto;
+    padding: 0 0 16px;
+    background-color: #0c114c;
+  }
+
+  /* Photo comes from the shell background now — drop the local copy */
+  .login-brand__image,
+  .login-brand__overlay {
+    display: none;
+  }
+
+  .login-brand {
+    min-height: 0;
+    padding: 24px 20px 16px;
+  }
+
+  .login-brand__title,
+  .login-brand__tagline,
+  .login-brand__description {
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
+  }
+
+  /* Panel is layout only — the photo is the form's background */
+  .login-panel {
+    flex: 1 0 auto;
+    margin-top: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .login-field:focus-within {
+    background-color: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
+  }
+
+  .login-field:focus-within .login-field__icon {
+    color: #ffffff;
+  }
+
+  .login-field__toggle:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .login-google__domain {
+    color: #ffffff;
+  }
+
+  .login-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  }
+
+  .login-select option {
+    color: #1f2328;
+    background-color: #ffffff;
+  }
+
+  /* White CTA reads better on the dark photo than navy */
+  .login-submit {
+    background-color: #ffffff;
+    border-color: #ffffff;
+    color: var(--login-navy);
+  }
+
+  .login-submit:hover:not(:disabled) {
+    background-color: #eef1f8;
+    border-color: #eef1f8;
+  }
+
+  .login-submit:active:not(:disabled) {
+    background-color: #dfe4f0;
+    border-color: #dfe4f0;
+  }
+
+  .login-back:hover {
+    color: #ffffff;
+  }
+
+  .login-alert {
+    background-color: rgba(248, 81, 73, 0.16);
+    border-color: rgba(248, 81, 73, 0.55);
+    color: #ffd7d3;
+  }
+
+  .login-google:focus-visible,
+  .login-submit:focus-visible,
+  .login-field__toggle:focus-visible,
+  .login-back:focus-visible {
+    outline-color: #ffffff;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .login-shell {
+    --form-pad-x: 32px;
+    padding: 0 0 24px;
+  }
+}
+
+/* Height-constrained phones — trim the hero so nothing scrolls */
+@media (max-width: 1023px) and (max-height: 900px) {
+  .login-brand__description {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) and (max-height: 700px) {
+  .login-shell {
+    --logo-size: 40px;
+    --fs-title: 16px;
+    --fs-heading: 19px;
+    --h-control: 44px;
+    --gap-google: 12px;
+    --gap-divider: 10px;
+    --gap-group: 12px;
+    --gap-submit: 14px;
+    --form-pad-top: 16px;
+    --form-pad-bottom: 18px;
+  }
+
+  .login-brand {
+    padding-top: 16px;
+    padding-bottom: 12px;
+  }
+
+  .login-brand__tagline {
+    display: none;
   }
 }
 

@@ -219,7 +219,7 @@ import api from "../services/api.js";
 import Swal from "sweetalert2";
 import { useLanguage } from "../helpers/language.js";
 import { translations } from "../helpers/translations.js";
-import { notifyInfo } from "../composables/useSnackbar.js";
+import { notifyInfo, notifySuccess } from "../composables/useSnackbar.js";
 
 const { currentLang } = useLanguage();
 const t = computed(() => translations[currentLang.value]);
@@ -456,6 +456,8 @@ const ringCircumference = 2 * Math.PI * ringRadius;
 const ringDashOffset = computed(() => ringCircumference * (1 - progressPercent.value / 100));
 
 onMounted(async () => {
+  // Lifts the snackbar queue clear of the progress FAB on small screens
+  document.body.classList.add("has-bottom-fab");
   try {
     const setRes = await api.get("/settings");
     semester.value = setRes.data.active_semester || "";
@@ -479,6 +481,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  document.body.classList.remove("has-bottom-fab");
   if (cooldownInterval) clearInterval(cooldownInterval);
 });
 
@@ -519,10 +522,9 @@ async function submitEvaluation() {
   };
   try {
     await api.post("/evaluations", payload);
-    showAlert({
-      icon: "success",
+    notifySuccess("Thank you! Your evaluation has been submitted anonymously.", {
       title: "Submitted!",
-      text: "Thank you! Your evaluation has been submitted anonymously.",
+      duration: 5000,
     });
     step.value = 1;
     selectedFacultyId.value = "";
