@@ -1059,10 +1059,9 @@ function loginWithGoogle() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   Small screens — full-screen photo background with a
-   full-height frosted-glass form card floating over it.
-   Type/spacing are compacted so the sign-in form fits the
-   viewport; the shell scrolls only for taller content.
+   Small screens — blurred photo backdrop with the form in a
+   frosted-glass card. Card hugs its content and scrolls with
+   the page; short viewports compact the scale so it fits.
    ══════════════════════════════════════════════════════════ */
 @media (max-width: 1023px) {
   .login-shell {
@@ -1073,34 +1072,34 @@ function loginWithGoogle() {
     --fs-sub: 13px;
     --fs-label: 13px;
     --fs-control: 15px;
-    --h-control: 46px;
-    --gap-logo-title: 10px;
+    --h-control: 48px;
+    --gap-logo-title: 12px;
     --gap-title-tagline: 8px;
-    --gap-heading-desc: 6px;
-    --gap-google: 16px;
-    --gap-hint: 8px;
-    --gap-divider: 14px;
-    --gap-group: 14px;
+    --gap-heading-desc: 8px;
+    --gap-google: 24px;
+    --gap-hint: 12px;
+    --gap-divider: 16px;
+    --gap-group: 20px;
     --gap-submit: 24px;
-    --form-pad-top: 20px;
+    --form-pad-top: 24px;
     --form-pad-x: 20px;
-    --form-pad-bottom: 22px;
+    --form-pad-bottom: 24px;
 
-    /* Light-on-dark palette for form controls on the photo */
+    /* Light-on-dark palette for form controls on the glass */
     --login-ink: #ffffff;
     --login-muted: rgba(255, 255, 255, 0.78);
     --login-muted-soft: rgba(255, 255, 255, 0.65);
-    --login-border: rgba(255, 255, 255, 0.35);
+    --login-border: rgba(255, 255, 255, 0.4);
     --login-border-soft: rgba(255, 255, 255, 0.28);
-    --login-surface: rgba(255, 255, 255, 0.1);
+    --login-surface: rgba(255, 255, 255, 0.12);
 
     height: 100dvh;
     overflow-y: auto;
-    padding: 0 0 16px;
+    padding: 0 0 28px;
     background-color: #0c114c;
   }
 
-  /* Photo comes from the shell background now — drop the local copy */
+  /* Photo comes from the shell ::before — drop the local copy */
   .login-brand__image,
   .login-brand__overlay {
     display: none;
@@ -1108,7 +1107,7 @@ function loginWithGoogle() {
 
   .login-brand {
     min-height: 0;
-    padding: 40px 20px 16px;
+    padding: 40px 24px 20px;
   }
 
   .login-brand__title,
@@ -1117,20 +1116,27 @@ function loginWithGoogle() {
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
   }
 
-  /* Panel is layout only — the photo is the form's background */
+  /* Frosted-glass card floating over the blurred photo */
   .login-panel {
-    flex: 1 0 auto;
-    margin-top: 0;
+    flex: 0 0 auto;
+    width: auto;
+    margin: 4px 16px 0;
     padding: 0;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: var(--panel-radius);
+    background-color: rgba(12, 17, 40, 0.5);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: 0 16px 48px rgba(4, 6, 24, 0.45);
     overflow: visible;
   }
 
+  .login-panel__header {
+    text-align: center;
+  }
+
   .login-field:focus-within {
-    background-color: rgba(255, 255, 255, 0.16);
+    background-color: rgba(255, 255, 255, 0.18);
     border-color: rgba(255, 255, 255, 0.9);
     box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
   }
@@ -1157,7 +1163,7 @@ function loginWithGoogle() {
     background-color: #ffffff;
   }
 
-  /* White CTA reads better on the dark photo than navy */
+  /* White CTA reads better on the dark glass than navy */
   .login-submit {
     background-color: #ffffff;
     border-color: #ffffff;
@@ -1196,6 +1202,11 @@ function loginWithGoogle() {
   .login-shell {
     --form-pad-x: 32px;
     padding: 0 0 24px;
+  }
+
+  .login-panel {
+    max-width: 560px;
+    margin-inline: auto;
   }
 }
 
