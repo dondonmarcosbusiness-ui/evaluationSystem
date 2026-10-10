@@ -32,7 +32,12 @@ return [
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app/private'),
+            // Default disk root — used for database backups (backups/).
+            // Hosts with an ephemeral filesystem (Railway, Heroku, containers
+            // that get replaced on every deploy) must point this at a mounted
+            // volume, e.g. LOCAL_DISK_ROOT=/data, otherwise everything written
+            // here disappears on the next redeploy/restart. Must be absolute.
+            'root' => env('LOCAL_DISK_ROOT', storage_path('app/private')),
             'serve' => true,
             'throw' => false,
             'report' => false,

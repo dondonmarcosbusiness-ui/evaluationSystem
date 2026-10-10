@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\EvaluationSchedule;
 use App\Models\Faculty;
 use App\Models\FacultyAssignment;
 use App\Models\Section;
@@ -92,7 +93,9 @@ class YearLevelTest extends TestCase
 
     private function openEvaluationPeriod(): void
     {
-        Setting::create(['key' => 'evaluation_status', 'value' => 'open']);
+        // Gating is fail-closed while no schedule exists, so open a real
+        // institution-wide window instead of the retired legacy switch.
+        EvaluationSchedule::create(['department' => null, 'status' => 'open']);
         Setting::create(['key' => 'active_semester', 'value' => '1st Semester']);
         Setting::create(['key' => 'active_academic_year', 'value' => '2024-2025']);
         Cache::flush();

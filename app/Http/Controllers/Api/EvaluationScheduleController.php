@@ -30,6 +30,8 @@ class EvaluationScheduleController extends Controller
             'schedules' => $rows->map(fn (EvaluationSchedule $row) => $this->present($row))->values(),
             'departments' => $this->allowedDepartments($rows),
             'global_status' => $this->schedules->globalEffectiveStatus(),
+            // True while no rows exist — the UI uses it to show the "nothing
+            // scheduled yet, everything closed" notice and the create button.
             'legacy_mode' => $rows->isEmpty(),
         ]);
     }
@@ -97,10 +99,9 @@ class EvaluationScheduleController extends Controller
             : 'Schedule deleted. This department now follows the default schedule.';
 
         if (!EvaluationSchedule::query()->exists()) {
-            // An empty table falls back to the legacy `evaluation_status` key,
-            // which no longer has any UI to change it. Pin it closed *before*
-            // the notification sync so deleting the last schedule closes the
-            // window instead of silently re-opening it.
+            // An empty table is fail-closed. Keep the legacy `evaluation_status`
+            // key pinned to the same value so any leftover reader (and the
+            // notification sync below) agrees the window is shut.
             Setting::updateOrCreate(
                 ['key' => 'evaluation_status'],
                 ['value' => EvaluationScheduleService::CLOSED]

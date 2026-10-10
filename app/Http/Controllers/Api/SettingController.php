@@ -62,8 +62,8 @@ class SettingController extends Controller
         $resolve = $this->schedules->resolver();
 
         if ($departments === []) {
-            // No department context at all: the default row decides (or the
-            // legacy switch while no schedules exist).
+            // No department context at all: the default row decides (and while
+            // no schedules exist the resolver is fail-closed).
             return $resolve(null);
         }
 

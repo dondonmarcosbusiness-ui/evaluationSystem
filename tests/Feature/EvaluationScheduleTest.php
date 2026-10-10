@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Jobs\NotifyEvaluationWindowJob;
 use App\Models\Course;
-use App\Models\Evaluation;
 use App\Models\EvaluationSchedule;
 use App\Models\Faculty;
 use App\Models\FacultyAssignment;
@@ -27,8 +26,9 @@ use Tests\TestCase;
  * Business rules:
  *  - the admin controls the evaluation window per department (or for all
  *    departments with one default row), with date windows + a manual override;
- *  - while no schedule rows exist the legacy `evaluation_status` switch keeps
- *    working exactly as before;
+ *  - while no schedule rows exist the window is fail-closed: the legacy
+ *    `evaluation_status` switch is ignored, so a stale `open` value can never
+ *    keep an install evaluating with no UI left to close it;
  *  - once schedules exist, a department without its own row follows the
  *    default row (and is closed when there is no default row);
  *  - opening/closing a window notifies only students affected by that change.
@@ -239,7 +239,7 @@ class EvaluationScheduleTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_legacy_switch_still_gates_everything_while_no_schedules_exist(): void
+    public function test_no_schedules_fail_closed_even_when_the_legacy_switch_says_open(): void
     {
         [, $section, $subject] = $this->makeAcademicFixture();
         $faculty = $this->makeFaculty('legacy-faculty@test.com', 'CIT');
@@ -250,23 +250,21 @@ class EvaluationScheduleTest extends TestCase
         );
         $this->makeEvaluatingStudent($student, $section, $subject, [$faculty]);
 
-        // Open — exactly the pre-scheduling behaviour.
+        // A stale legacy `open` (left behind by the old Settings toggle, which
+        // no longer exists) must not reopen anything: with no schedule rows the
+        // dashboard CTA, the list and the submit endpoint are all closed.
         Setting::create(['key' => 'evaluation_status', 'value' => 'open']);
         $this->activePeriod();
 
         $this->actingAs($student, 'sanctum')
-            ->getJson('/api/evaluations/evaluatees')
+            ->getJson('/api/settings')
             ->assertStatus(200)
-            ->assertJsonCount(1);
+            ->assertJsonPath('evaluation_status', 'closed');
 
         $this->actingAs($student, 'sanctum')
-            ->postJson('/api/evaluations', $this->evaluationPayload($faculty))
-            ->assertStatus(200);
-
-        // Closed — list empties and submission is refused.
-        Evaluation::query()->delete();
-        Setting::where('key', 'evaluation_status')->first()->update(['value' => 'closed']);
-        Setting::forgetCache();
+            ->getJson('/api/evaluation-schedules/status')
+            ->assertStatus(200)
+            ->assertJson(['status' => 'closed']);
 
         $this->actingAs($student, 'sanctum')
             ->getJson('/api/evaluations/evaluatees')
@@ -276,6 +274,18 @@ class EvaluationScheduleTest extends TestCase
         $this->actingAs($student, 'sanctum')
             ->postJson('/api/evaluations', $this->evaluationPayload($faculty))
             ->assertStatus(403);
+
+        // Creating a schedule is the only way to open the window.
+        EvaluationSchedule::create(['department' => null, 'status' => 'open']);
+
+        $this->actingAs($student, 'sanctum')
+            ->getJson('/api/evaluations/evaluatees')
+            ->assertStatus(200)
+            ->assertJsonCount(1);
+
+        $this->actingAs($student, 'sanctum')
+            ->postJson('/api/evaluations', $this->evaluationPayload($faculty))
+            ->assertStatus(200);
     }
 
     public function test_per_department_window_filters_evaluatees_and_blocks_submission(): void
@@ -407,19 +417,19 @@ class EvaluationScheduleTest extends TestCase
     {
         $student = $this->makeUser('student', 'status-student@test.com');
 
-        // Legacy mode: reflects the stored switch.
+        // Legacy mode: the stale switch is ignored — an empty table is closed.
         Setting::create(['key' => 'evaluation_status', 'value' => 'open']);
         Cache::flush();
 
         $this->actingAs($student, 'sanctum')
             ->getJson('/api/evaluation-schedules/status')
             ->assertStatus(200)
-            ->assertJson(['status' => 'open']);
+            ->assertJson(['status' => 'closed']);
 
         $this->actingAs($student, 'sanctum')
             ->getJson('/api/settings')
             ->assertStatus(200)
-            ->assertJsonPath('evaluation_status', 'open');
+            ->assertJsonPath('evaluation_status', 'closed');
 
         // Schedule mode: closed default reported everywhere.
         Setting::updateOrCreate(['key' => 'evaluation_status'], ['value' => 'closed']);
@@ -626,7 +636,7 @@ class EvaluationScheduleTest extends TestCase
             ->assertStatus(200)
             ->assertJsonPath('global_status', 'closed');
 
-        // The empty-table legacy fallback must not silently re-open the window.
+        // The empty table must stay closed — nothing may re-open it silently.
         $this->assertSame('closed', Setting::where('key', 'evaluation_status')->first()->value);
         $this->assertSame(
             EvaluationScheduleService::CLOSED,

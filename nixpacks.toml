@@ -8,4 +8,7 @@ cmds = ["composer install --no-dev --no-interaction --optimize-autoloader", "npm
 cmds = ["npm run build"]
 
 [start]
-cmd = "php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
+# schedule:work runs the daily db:backup / online-peak:sample / evaluation-schedules:tick
+# tasks (Railway has no cron); queue:work sends the queued notifications. Both are
+# backgrounded *after* migrate so the shell's foreground process stays `artisan serve`.
+cmd = "php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan migrate --force && (php artisan schedule:work &) && (php artisan queue:work --tries=1 --timeout=0 &) && php artisan serve --host=0.0.0.0 --port=$PORT"

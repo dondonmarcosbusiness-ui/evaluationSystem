@@ -13,7 +13,7 @@
             {{ globalStatus === "open" ? "Live" : "Offline" }}
           </span>
           <span class="mini-pill count">{{ openCount }}/{{ schedules.length }} open</span>
-          <span v-if="legacyMode" class="mini-pill legacy"><i class="fas fa-bolt"></i> Legacy switch</span>
+          <span v-if="legacyMode" class="mini-pill legacy"><i class="fas fa-bolt"></i> No schedule</span>
         </div>
         <p class="text-muted small mb-0 sched-sub">
           Institution-wide default plus per-department overrides — changes apply immediately.
@@ -30,8 +30,8 @@
       <div v-if="legacyMode" class="sched-legacy">
         <i class="fas fa-triangle-exclamation"></i>
         <span>
-          <strong>No schedules yet — following the legacy global switch.</strong>
-          Create the All departments default to take control of evaluation windows.
+          <strong>No schedules yet — evaluation is closed for every department.</strong>
+          Create the All departments default to open a window.
         </span>
         <button class="btn btn-sm btn-primary-glass rounded-pill px-3 text-nowrap" @click="openAddModal">
           <i class="fas fa-plus me-1"></i> Create default

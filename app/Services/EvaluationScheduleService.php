@@ -16,9 +16,10 @@ use Illuminate\Support\Facades\Log;
  *   1. the department's own schedule row
  *   2. the institution-wide default row (department = NULL)
  *   3. 'closed'
- * While the evaluation_schedules table is empty the legacy `evaluation_status`
- * setting is used instead, so installs (and tests) that still rely on the old
- * global switch behave exactly as before.
+ * With no schedule rows at all the window is closed (fail-closed). The legacy
+ * `evaluation_status` switch is deliberately NOT consulted: it used to have a
+ * Settings toggle, that toggle is gone, and honouring a stale `open` value left
+ * installs evaluating forever with no UI left to shut them.
  *
  * Gating is evaluated at request time — no scheduler is required for
  * correctness. The scheduler (evaluation-schedules:tick) only exists to fire
@@ -42,10 +43,9 @@ class EvaluationScheduleService
     {
         $rows = EvaluationSchedule::query()->get();
 
+        // Fail-closed: nothing scheduled means nothing open.
         if ($rows->isEmpty()) {
-            $legacy = $this->legacyStatus();
-
-            return static fn (?string $department): string => $legacy;
+            return static fn (?string $department): string => self::CLOSED;
         }
 
         $map = [];
@@ -80,13 +80,14 @@ class EvaluationScheduleService
     /**
      * Institution-wide effective status: open as soon as any department (or
      * the default row) is open. Feeds the dashboard CTA via /settings.
+     * Fail-closed while no schedule rows exist.
      */
     public function globalEffectiveStatus(): string
     {
         $rows = EvaluationSchedule::query()->get();
 
         if ($rows->isEmpty()) {
-            return $this->legacyStatus();
+            return self::CLOSED;
         }
 
         foreach ($rows as $row) {
@@ -197,17 +198,6 @@ class EvaluationScheduleService
         }
 
         return self::OPEN;
-    }
-
-    /**
-     * Legacy global switch — only consulted while no schedule rows exist.
-     * Fail-closed: anything other than an explicit 'open' counts as closed.
-     */
-    private function legacyStatus(): string
-    {
-        $value = Setting::cachedAll()->get('evaluation_status');
-
-        return is_string($value) && $value === self::OPEN ? self::OPEN : self::CLOSED;
     }
 
     /** @return array<string, mixed>|null */
