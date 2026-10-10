@@ -55,7 +55,7 @@
             </div>
             <button
               class="btn btn-primary w-100 mt-2"
-              :disabled="!selectedFacultyId || !semester || !academicYear || (!subjectCode || !yearSection)"
+              :disabled="!selectedFacultyId || !semester || !academicYear || (!subjectCode || !yearSection) || !evaluationWindowOpen"
               @click="loadQuestions"
             >
               <i class="fas fa-arrow-right me-2"></i>
@@ -211,6 +211,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
@@ -219,12 +220,18 @@ import api from "../services/api.js";
 import Swal from "sweetalert2";
 import { useLanguage } from "../helpers/language.js";
 import { translations } from "../helpers/translations.js";
+import { evaluationStatus, applyEvaluationStatus } from "../helpers/evaluationWindow.js";
 import { notifyInfo, notifySuccess } from "../composables/useSnackbar.js";
 
 const { currentLang } = useLanguage();
 const t = computed(() => translations[currentLang.value]);
 
+const router = useRouter();
 const user = ref(JSON.parse(localStorage.getItem("user") || "{}") || {});
+
+// The form only exists while the evaluation window is open; the router guard
+// already blocks entry, this covers a window that closes while the page is open.
+const evaluationWindowOpen = computed(() => evaluationStatus.value === "open");
 
 // Small screens get non-blocking toasts instead of centered modals.
 const isSmallScreen = () =>
@@ -462,6 +469,15 @@ onMounted(async () => {
     const setRes = await api.get("/settings");
     semester.value = setRes.data.active_semester || "";
     academicYear.value = setRes.data.active_academic_year || "";
+    applyEvaluationStatus(setRes.data.evaluation_status);
+
+    // The router guard already blocks entry; this covers a window that closed
+    // while the student was sitting on the page.
+    if (!evaluationWindowOpen.value) {
+      notifyInfo("Evaluations are currently closed. Please wait for the next evaluation window.");
+      router.replace("/dashboard");
+      return;
+    }
 
     await fetchEvaluatees();
 

@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { syncThemeForUser } from "../helpers/theme.js";
+import { isEvaluationOpen } from "../helpers/evaluationWindow.js";
+import { notifyInfo } from "../composables/useSnackbar.js";
 
 const Login = () => import("../views/Login.vue");
 const Dashboard = () => import("../views/Dashboard.vue");
@@ -122,7 +124,7 @@ const routes = [
     path: "/evaluate",
     name: "EvaluationForm",
     component: EvaluationForm,
-    meta: { requiresAuth: true, permission: "evaluation.create" },
+    meta: { requiresAuth: true, permission: "evaluation.create", openEvaluation: true },
   },
   {
     path: "/reports",
@@ -165,7 +167,7 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const isAuthenticated = !!localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const userPermissions = JSON.parse(localStorage.getItem("permissions") || "[]");
@@ -189,17 +191,33 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !isAuthenticated) {
     applyTheme();
     next("/login");
-  } else if (to.meta.role && user.role !== to.meta.role) {
-    applyTheme();
-    next("/dashboard");
-  } else if (to.meta.permission && !can(to.meta.permission)) {
-    applyTheme();
-    next("/dashboard");
-
-  } else {
-    applyTheme();
-    next();
+    return;
   }
+
+  if (to.meta.role && user.role !== to.meta.role) {
+    applyTheme();
+    next("/dashboard");
+    return;
+  }
+
+  if (to.meta.permission && !can(to.meta.permission)) {
+    applyTheme();
+    next("/dashboard");
+    return;
+  }
+
+  // Without an open evaluation window the form must stay unreachable, otherwise
+  // a typed URL (or a stale sidebar link) lands students on a screen whose data
+  // the API refuses anyway. Server-side checks remain the real enforcement.
+  if (to.meta.openEvaluation && !(await isEvaluationOpen())) {
+    applyTheme();
+    notifyInfo("Evaluations are currently closed. Please wait for the next evaluation window.");
+    next("/dashboard");
+    return;
+  }
+
+  applyTheme();
+  next();
 });
 
 export default router;

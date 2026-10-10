@@ -72,7 +72,7 @@
       </li>
 
       <!-- ── EVALUATION ── -->
-      <template v-if="$can('evaluation.create')">
+      <template v-if="$can('evaluation.create') && evaluationWindowOpen">
         <li class="sidebar-nav-section">
           <span class="sidebar-section-label">Evaluation</span>
         </li>
@@ -361,12 +361,16 @@
 import { ref, computed, onMounted, onUnmounted, watch, getCurrentInstance, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { syncThemeForUser } from "../helpers/theme.js";
+import { evaluationStatus, refreshEvaluationWindow } from "../helpers/evaluationWindow.js";
 
 const route = useRoute();
 const instance = getCurrentInstance();
 const user = ref(JSON.parse(localStorage.getItem("user") || "{}") || {});
 const isCollapsed = ref(localStorage.getItem("sidebarCollapsed") === "true");
 const basePath = window.location.pathname.startsWith("/evaluation_system/public") ? "/evaluation_system/public" : "";
+
+// Hide the "Evaluate Faculty" entry whenever the evaluation window is closed.
+const evaluationWindowOpen = computed(() => evaluationStatus.value === "open");
 
 const activeFlyout = ref(null);
 const flyoutStyle = ref({ top: "0px", left: "0px", visibility: "visible" });
@@ -492,6 +496,7 @@ function handleOutsideClick(event) {
 onMounted(() => {
   updateLayout();
   syncThemeForUser(user.value);
+  refreshEvaluationWindow();
   document.addEventListener("click", handleOutsideClick);
   window.addEventListener("scroll", handleScroll, true);
 });
@@ -510,6 +515,8 @@ watch(
   () => route.fullPath,
   () => {
     activeFlyout.value = null;
+    // Keep the Evaluate Faculty link in sync with the window (TTL-throttled).
+    refreshEvaluationWindow();
   },
 );
 

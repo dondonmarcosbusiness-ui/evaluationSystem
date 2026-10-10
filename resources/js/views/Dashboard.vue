@@ -853,6 +853,7 @@ import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 import { useLanguage } from "../helpers/language.js";
 import { translations } from "../helpers/translations.js";
 import { DEFAULT_SEMESTERS, defaultAcademicYears, asStringArray, fetchAcademicConfig } from "../helpers/academic.js";
+import { evaluationStatus, refreshEvaluationWindow, applyEvaluationStatus } from "../helpers/evaluationWindow.js";
 
 const { currentLang } = useLanguage();
 const t = computed(() => translations[currentLang.value]);
@@ -992,7 +993,6 @@ const visitorTypesOrder = ["student", "parent", "faculty", "alumni", "visitor", 
 const offices = ref([]);
 const officesLoading = ref(false);
 
-const evaluationStatus = ref("closed");
 const myFeedbacks = ref([]);
 const myFeedbackLoading = ref(false);
 const feedbackFilters = ref({
@@ -1202,8 +1202,7 @@ let evalStatusTimer = null;
 
 const refreshEvaluationStatus = async () => {
   try {
-    const res = await api.get("/settings");
-    evaluationStatus.value = res.data.evaluation_status || "closed";
+    await refreshEvaluationWindow(true);
   } catch (e) {
     console.error("Error refreshing evaluation status:", e);
   }
@@ -1383,7 +1382,7 @@ onMounted(async () => {
 
   try {
     const resSettings = await api.get("/settings");
-    evaluationStatus.value = resSettings.data.evaluation_status || "closed";
+    applyEvaluationStatus(resSettings.data.evaluation_status);
 
     if (dashboardMode.value === "faculty") {
       setupFeedbackFilterOptions(resSettings.data);
