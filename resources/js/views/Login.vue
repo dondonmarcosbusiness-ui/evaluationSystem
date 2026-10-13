@@ -687,7 +687,7 @@ function loginWithGoogle() {
 
 .login-google__hint {
   margin: var(--gap-hint) 0 0;
-  text-align: center;
+  text-align: center !important;
   color: var(--login-muted);
   font-size: 12px;
   line-height: 1.5;
@@ -1048,7 +1048,6 @@ function loginWithGoogle() {
 /* ── Short viewports (e.g. 360×800) ───────────────────────── */
 @media (max-width: 767px) and (max-height: 820px) {
   .login-shell {
-    --logo-size: 56px;
     --hero-min: 200px;
     --hero-pad-y: 12px;
     --form-pad-top: 24px;
@@ -1059,13 +1058,13 @@ function loginWithGoogle() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   Small screens — blurred photo backdrop with the form in a
-   frosted-glass card. Card hugs its content and scrolls with
-   the page; short viewports compact the scale so it fits.
+   Small screens — white, fullscreen layout. No photo backdrop
+   or glass card: the page itself is the surface and the panel
+   fills every remaining pixel of the viewport.
    ══════════════════════════════════════════════════════════ */
 @media (max-width: 1023px) {
   .login-shell {
-    --logo-size: 48px;
+    --logo-size: 88px;
     --fs-title: 17px;
     --fs-tagline: 13px;
     --fs-heading: 21px;
@@ -1084,22 +1083,23 @@ function loginWithGoogle() {
     --form-pad-top: 24px;
     --form-pad-x: 20px;
     --form-pad-bottom: 24px;
-
-    /* Light-on-dark palette for form controls on the glass */
-    --login-ink: #ffffff;
-    --login-muted: rgba(255, 255, 255, 0.78);
-    --login-muted-soft: rgba(255, 255, 255, 0.65);
-    --login-border: rgba(255, 255, 255, 0.4);
-    --login-border-soft: rgba(255, 255, 255, 0.28);
-    --login-surface: rgba(255, 255, 255, 0.12);
+    --form-max: 420px;
 
     height: 100dvh;
     overflow-y: auto;
-    padding: 0 0 28px;
-    background-color: #0c114c;
+    padding: 0;
+    background-color: #ffffff;
+    scrollbar-width: none;
   }
 
-  /* Photo comes from the shell ::before — drop the local copy */
+  /* Overlay scrollbars would otherwise steal width and off-centre the logo */
+  .login-shell::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  /* White background — drop the photo backdrop entirely */
+  .login-shell::before,
   .login-brand__image,
   .login-brand__overlay {
     display: none;
@@ -1107,101 +1107,56 @@ function loginWithGoogle() {
 
   .login-brand {
     min-height: 0;
-    padding: 40px 24px 20px;
-  }
-
-  .login-brand__title,
-  .login-brand__tagline,
-  .login-brand__description {
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
-  }
-
-  /* Frosted-glass card floating over the blurred photo */
-  .login-panel {
-    flex: 0 0 auto;
-    width: auto;
-    margin: 4px 16px 0;
-    padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: var(--panel-radius);
-    background-color: rgba(12, 17, 40, 0.5);
-    backdrop-filter: blur(18px) saturate(140%);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
-    box-shadow: 0 16px 48px rgba(4, 6, 24, 0.45);
-    overflow: visible;
-  }
-
-  .login-panel__header {
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px 24px;
+    border-bottom: 0;
     text-align: center;
   }
 
-  .login-field:focus-within {
-    background-color: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
+  .login-brand__logo {
+    display: block;
+    margin-inline: auto;
   }
 
-  .login-field:focus-within .login-field__icon {
-    color: #ffffff;
+  /* Logo only — drop the brand copy on small screens */
+  .login-brand__title,
+  .login-brand__tagline,
+  .login-brand__description {
+    display: none;
   }
 
-  .login-field__toggle:hover {
-    color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.12);
-  }
-
-  .login-google__domain {
-    color: #ffffff;
-  }
-
-  .login-select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-  }
-
-  .login-select option {
-    color: #1f2328;
+  /* Fullscreen panel — edge to edge, no card, no glass */
+  .login-panel {
+    flex: 1 1 auto;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
     background-color: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    overflow: visible;
   }
 
-  /* White CTA reads better on the dark glass than navy */
-  .login-submit {
-    background-color: #ffffff;
-    border-color: #ffffff;
-    color: var(--login-navy);
+  /* Standard form layout — left-aligned copy in a centred column.
+     No vertical auto-centre: it would push "Welcome!" down and unbalance
+     the space around the logo. */
+  .login-panel__inner {
+    margin: 0 auto;
   }
 
-  .login-submit:hover:not(:disabled) {
-    background-color: #eef1f8;
-    border-color: #eef1f8;
-  }
-
-  .login-submit:active:not(:disabled) {
-    background-color: #dfe4f0;
-    border-color: #dfe4f0;
-  }
-
-  .login-back:hover {
-    color: #ffffff;
-  }
-
-  .login-alert {
-    background-color: rgba(248, 81, 73, 0.16);
-    border-color: rgba(248, 81, 73, 0.55);
-    color: #ffd7d3;
-  }
-
-  .login-google:focus-visible,
-  .login-submit:focus-visible,
-  .login-field__toggle:focus-visible,
-  .login-back:focus-visible {
-    outline-color: #ffffff;
+  .login-google__hint {
+    text-align: left;
   }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .login-shell {
     --form-pad-x: 32px;
-    padding: 0 0 24px;
+    padding: 0;
   }
 
   .login-panel {
@@ -1219,7 +1174,7 @@ function loginWithGoogle() {
 
 @media (max-width: 1023px) and (max-height: 700px) {
   .login-shell {
-    --logo-size: 40px;
+    --logo-size: 64px;
     --fs-title: 16px;
     --fs-heading: 19px;
     --h-control: 44px;
