@@ -988,6 +988,10 @@ function loginWithGoogle() {
   .login-shell {
     flex-direction: row;
     height: 100dvh;
+    /* Base overflow-x:hidden would make this a scroll container whose
+       transparent track reveals the navy shell at the right edge.
+       Both panels are 100dvh here, so the shell never needs to scroll. */
+    overflow: hidden;
 
     --logo-size: 96px;
     --fs-title: 32px;

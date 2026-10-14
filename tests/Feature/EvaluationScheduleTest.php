@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\NotifyEvaluationWindowJob;
+use App\Mail\EvaluationWindowNotice;
 use App\Models\Course;
 use App\Models\EvaluationSchedule;
 use App\Models\Faculty;
@@ -19,6 +20,7 @@ use App\Services\EvaluationScheduleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -514,6 +516,31 @@ class EvaluationScheduleTest extends TestCase
             fn (NotifyEvaluationWindowJob $job) => $job->event === 'closed'
                 && in_array('CIT', $job->departments, true)
         );
+    }
+
+    public function test_changing_a_window_delivers_mails_without_a_queue_worker(): void
+    {
+        // No Queue::fake and no worker: window notices go out on the sync
+        // connection, so delivery must not depend on queue:work running.
+        Mail::fake();
+        [, $section, $subject] = $this->makeAcademicFixture();
+        $faculty = $this->makeFaculty('deliver-faculty@test.com', 'CIT');
+
+        $student = $this->grant(
+            $this->makeUser('student', 'deliver-student@test.com'),
+            ['evaluation.create', 'evaluation.submit']
+        );
+        $this->makeEvaluatingStudent($student, $section, $subject, [$faculty]);
+        $this->activePeriod();
+        $this->seedSnapshot(); // steady state: everything closed
+
+        $this->actingAs($this->makeAdmin(), 'sanctum')
+            ->postJson('/api/evaluation-schedules', ['status' => 'open'])
+            ->assertStatus(201);
+
+        Mail::assertSent(EvaluationWindowNotice::class, function (EvaluationWindowNotice $mail) use ($student) {
+            return $mail->event === 'open' && $mail->studentName === $student->name;
+        });
     }
 
     public function test_deleting_a_department_override_notifies_the_revert(): void

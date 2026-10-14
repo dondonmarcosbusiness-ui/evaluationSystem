@@ -165,11 +165,16 @@ class EvaluationScheduleService
                 $this->saveSnapshot($after);
             }
 
+            // Sent on the sync connection: window notices are small, filtered to
+            // the affected students, and time-sensitive. Queuing them on the
+            // database driver silently dropped every notice whenever no worker
+            // was running (Laragon/php artisan serve setups), so delivery must
+            // not depend on one.
             if ($opened !== []) {
-                NotifyEvaluationWindowJob::dispatch($opened, self::OPEN);
+                NotifyEvaluationWindowJob::dispatch($opened, self::OPEN)->onConnection('sync');
             }
             if ($closed !== []) {
-                NotifyEvaluationWindowJob::dispatch($closed, self::CLOSED);
+                NotifyEvaluationWindowJob::dispatch($closed, self::CLOSED)->onConnection('sync');
             }
         } catch (\Throwable $e) {
             Log::warning('Evaluation schedule notification sync failed: ' . $e->getMessage());
