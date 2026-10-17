@@ -1161,6 +1161,15 @@ class ReportController extends Controller
             $query->where(DB::raw('ROUND(ea.avg_rating, 0)'), (int)$request->rating);
         }
 
+        $feedbackSortable = [
+            'faculty_name' => 'users.name',
+            'department' => 'faculty.department',
+            'rating' => 'rating',
+            'created_at' => 'created_at',
+        ];
+        $sortBy = $feedbackSortable[$request->input('sort_by')] ?? null;
+        $sortDir = strtolower((string) $request->input('sort_dir')) === 'asc' ? 'asc' : 'desc';
+
         $feedbacks = $query->select(
                 'faculty.id as id',
                 'users.name as faculty_name',
@@ -1169,7 +1178,8 @@ class ReportController extends Controller
                 DB::raw('ROUND(AVG(ea.avg_rating), 2) as rating')
             )
             ->groupBy('faculty.id', 'users.name', 'faculty.department')
-            ->orderBy('created_at', 'desc')
+            ->orderBy($sortBy ?? 'created_at', $sortBy ? $sortDir : 'desc')
+            ->orderBy('faculty.id', 'asc')
             ->paginate(min(max((int) ($request->per_page ?? 10), 1), 100));
 
         $facultyIds = $feedbacks->pluck('id')->all();

@@ -543,6 +543,44 @@ class EvaluationScheduleTest extends TestCase
         });
     }
 
+    public function test_students_without_assignments_are_notified_by_their_course_department(): void
+    {
+        // The old evaluation_status toggle emailed every active student; after
+        // the scheduling replacement, students with no built evaluatees were
+        // skipped entirely. Their own course department must decide instead —
+        // the same fallback the dashboard CTA uses.
+        Mail::fake();
+        [, $section] = $this->makeAcademicFixture(); // BSIT → department "CIT"
+
+        $citStudent = $this->makeUser('student', 'noassign-cit@test.com');
+        $citStudent->update(['firstname' => 'CIT', 'lastname' => 'Scholar']);
+        $this->makeStudentRecord($citStudent, $section);
+
+        $otherCourse = Course::create(['name' => 'BEED', 'department' => 'Education']);
+        $otherSection = Section::create(['course_id' => $otherCourse->id, 'name' => '1B', 'year_level' => '1st']);
+        $eduStudent = $this->makeUser('student', 'noassign-edu@test.com');
+        $eduStudent->update(['firstname' => 'EDU', 'lastname' => 'Scholar']);
+        $this->makeStudentRecord($eduStudent, $otherSection);
+
+        $this->activePeriod();
+        $this->seedSnapshot(); // steady state: everything closed
+
+        $this->actingAs($this->makeAdmin(), 'sanctum')
+            ->postJson('/api/evaluation-schedules', ['department' => 'CIT', 'status' => 'open'])
+            ->assertStatus(201);
+
+        // Neither student has any assignments — both have zero evaluatees.
+        Mail::assertSent(
+            EvaluationWindowNotice::class,
+            fn (EvaluationWindowNotice $mail) => $mail->studentName === $citStudent->name
+                && $mail->event === 'open'
+        );
+        Mail::assertNotSent(
+            EvaluationWindowNotice::class,
+            fn (EvaluationWindowNotice $mail) => $mail->studentName === $eduStudent->name
+        );
+    }
+
     public function test_deleting_a_department_override_notifies_the_revert(): void
     {
         Queue::fake();

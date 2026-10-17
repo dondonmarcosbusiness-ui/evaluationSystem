@@ -15,6 +15,21 @@ use Illuminate\Support\Facades\Log;
 
 class OfficeController extends Controller
 {
+    /**
+     * Columns the office list may be ordered by, mapped to real query columns.
+     * feedbacks_count is the alias produced by withCount('feedbacks').
+     */
+    private function officeSortable(): array
+    {
+        return [
+            'name' => 'offices.name',
+            'office_head' => 'offices.office_head',
+            'location' => 'offices.location',
+            'feedbacks_count' => 'feedbacks_count',
+            'status' => 'offices.is_active',
+        ];
+    }
+
     public function index(Request $request)
     {
         try {
@@ -25,9 +40,17 @@ class OfficeController extends Controller
                       ->orWhere('office_head', 'like', "%{$search}%")
                       ->orWhere('location', 'like', "%{$search}%");
                 })
-                ->when($request->has('active_only'), function ($q) {
-                    $q->where('is_active', true);
+                ->when($request->filled('status'), function ($q) use ($request) {
+                    $q->where('is_active', filter_var($request->query('status'), FILTER_VALIDATE_BOOLEAN));
                 });
+
+            $sortBy = $request->query('sort_by');
+            $sortable = $this->officeSortable();
+
+            if ($sortBy && isset($sortable[$sortBy])) {
+                $direction = strtolower((string) $request->query('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+                $query->orderBy($sortable[$sortBy], $direction)->orderBy('offices.id', $direction);
+            }
 
             if ($request->query('paginate') === 'false') {
                 return response()->json($query->get());

@@ -11,6 +11,33 @@ use Illuminate\Support\Facades\Log;
 
 class QuestionnaireController extends Controller
 {
+    /**
+     * Columns the sector list may be ordered by (sort_by/sort_dir query params).
+     */
+    private function categorySortable(): array
+    {
+        return [
+            'category_name' => 'evaluation_categories.category_name',
+            'category_name_tl' => 'evaluation_categories.category_name_tl',
+            'weight' => 'evaluation_categories.weight',
+            'created_at' => 'evaluation_categories.created_at',
+        ];
+    }
+
+    /**
+     * Columns the metric list may be ordered by, including a correlated
+     * sub-query for the parent sector name.
+     */
+    private function questionSortable(): array
+    {
+        return [
+            'question_text' => 'evaluation_questions.question_text',
+            'question_text_tl' => 'evaluation_questions.question_text_tl',
+            'category' => Category::select('category_name')->whereColumn('evaluation_questions.category_id', 'evaluation_categories.id'),
+            'created_at' => 'evaluation_questions.created_at',
+        ];
+    }
+
     public function index(Request $request)
     {
         $settings = \App\Models\Setting::cachedAll();
@@ -28,6 +55,22 @@ class QuestionnaireController extends Controller
         }
         if ($activeAcademicYear) {
             $query->where('academic_year', $activeAcademicYear);
+        }
+
+        $query->when($request->query('query'), function ($q, $search) {
+            $q->where(function ($sq) use ($search) {
+                $sq->where('category_name', 'like', "%{$search}%")
+                    ->orWhere('category_name_tl', 'like', "%{$search}%")
+                    ->orWhere('reference', 'like', "%{$search}%");
+            });
+        });
+
+        $sortBy = $request->query('sort_by');
+        $sortable = $this->categorySortable();
+
+        if ($sortBy && isset($sortable[$sortBy])) {
+            $direction = strtolower((string) $request->query('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            $query->orderBy($sortable[$sortBy], $direction)->orderBy('evaluation_categories.id', $direction);
         }
 
         if ($request->has('paginate') && $request->paginate != 'false') {
@@ -105,6 +148,14 @@ class QuestionnaireController extends Controller
     public function questions(Request $request, $categoryId)
     {
         $query = Question::where('category_id', $categoryId);
+
+        $sortBy = $request->query('sort_by');
+        $sortable = $this->questionSortable();
+
+        if ($sortBy && isset($sortable[$sortBy])) {
+            $direction = strtolower((string) $request->query('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            $query->orderBy($sortable[$sortBy], $direction)->orderBy('evaluation_questions.id', $direction);
+        }
 
         if ($request->has('paginate') && $request->paginate != 'false') {
             $perPage = min(max((int) $request->input('per_page', 4), 1), 100);

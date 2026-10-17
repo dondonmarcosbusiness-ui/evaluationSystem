@@ -5,49 +5,80 @@
       <Navbar><template #title>Course Management</template></Navbar>
 
       <div class="content-area">
-        <!-- Slim Stats Bar -->
-        <div class="stats-bar-premium mb-5 fade-in-up">
-          <div
-            class="d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-3 rounded-4 shadow-sm bg-card border border-light"
-          >
-            <div class="d-flex align-items-center gap-5">
-              <div class="stat-item-inline">
-                <span class="label">Curricula</span>
-                <h5 class="value mb-0 mt-1">{{ totalCoursesCount }}</h5>
+        <div class="card accounts-card">
+          <div class="card-header border-0 py-3 px-4 accounts-head">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 w-100">
+              <div class="d-flex flex-column">
+                <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                  <h5 class="mb-0 fw-800 text-main">Courses</h5>
+                  <span class="head-label">{{ totalCoursesCount || 0 }} Records</span>
+                </div>
+                <p class="head-desc mb-0">
+                  Manage course curricula, subjects and sections across {{ departmentOptions.length }} departments.
+                </p>
               </div>
-              <div class="stat-divider"></div>
-              <div class="stat-item-inline">
-                <span class="label">Departments</span>
-                <h5 class="value mb-0 mt-1">{{ uniqueDepartmentsCount }}</h5>
+
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button
+                  class="btn btn-ghost"
+                  :class="{ 'is-active': showFilters }"
+                  title="Show or hide filters"
+                  @click="showFilters = !showFilters"
+                >
+                  <i class="fas fa-filter"></i>
+                  <span>Filters</span>
+                  <span v-if="activeFilterCount" class="filter-count">{{ activeFilterCount }}</span>
+                </button>
+
+                <button v-if="$can('course.create')" class="btn btn-cta" title="Add Course" @click="openAddModal">
+                  <i class="fas fa-plus"></i>
+                  <span>Add Course</span>
+                </button>
               </div>
             </div>
-            <div class="d-flex align-items-center gap-3">
-              <div class="search-premium-box">
-                <i class="fas fa-search"></i>
-                <input v-model="searchQuery" type="text" placeholder="Search course..." @input="handleSearch" />
+
+            <Transition name="panel">
+              <div v-show="showFilters" class="filters-panel">
+                <div class="filter-toolbar">
+                  <div class="premium-filter-group" style="width: 220px">
+                    <span class="input-group-text">
+                      <i class="fas fa-search"></i>
+                    </span>
+                    <input
+                      v-model="filters.query"
+                      type="text"
+                      class="form-control"
+                      placeholder="Search courses..."
+                      @input="handleSearch"
+                    />
+                  </div>
+
+                  <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
+                    <i class="fas fa-redo-alt small"></i>
+                  </button>
+                </div>
+
+                <FilterTree :groups="courseFilterGroups" @select="onTreeSelect" />
               </div>
-              <button v-if="$can('course.create')" class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openAddModal">
-                <i class="fas fa-plus-circle me-2"></i>
-                New Course
-              </button>
-            </div>
+            </Transition>
           </div>
-        </div>
 
-        <div v-if="loading" class="py-4">
-          <SkeletonLoader variant="table" :rows="8" :cols="6" />
-        </div>
+          <div class="card-body p-0">
+            <div v-if="loading" class="p-4">
+              <SkeletonLoader variant="table" :rows="8" :cols="6" />
+            </div>
 
-        <!-- Courses Table -->
-        <div v-else class="fade-in-up">
-          <div class="card border-0 shadow-sm overflow-hidden">
-            <div class="table-responsive">
+            <div v-else class="table-scroll" @scroll="onTableScroll">
               <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light small">
+                <thead :class="{ 'glass-header': tableScrolled }">
                   <tr>
                     <th style="width: 50px">#</th>
-                    <th>Course</th>
-                    <th>Department</th>
+                    <th class="th-sortable" @click="toggleSort('name')">
+                      Course <i class="fas sort-arrow" :class="sortIcon('name')"></i>
+                    </th>
+                    <th class="th-sortable" @click="toggleSort('department')">
+                      Department <i class="fas sort-arrow" :class="sortIcon('department')"></i>
+                    </th>
                     <th class="text-center">Subjects</th>
                     <th class="text-center">Sections</th>
                     <th class="text-end" style="width: 210px">Actions</th>
@@ -391,6 +422,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
+import FilterTree from "../components/FilterTree.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import Swal from "sweetalert2";
@@ -415,27 +447,61 @@ const { modalEl: detailModalEl } = useBootstrapModal(detailReady);
 const coursePage = ref(1);
 const coursesPerPage = ref(10);
 const totalCoursePages = ref(1);
+const totalCoursesCount = ref(0);
+const tableScrolled = ref(false);
 
 function changePerPage(n) {
   const size = parseInt(n, 10);
   if (!Number.isFinite(size) || size === coursesPerPage.value) return;
   coursesPerPage.value = size;
-  coursePage.value = 1;
-  fetchCourses();
+  refetchFirstPage();
 }
-const totalCoursesCount = ref(0);
-const searchQuery = ref("");
+
+const filters = ref({
+  query: "",
+  department: "",
+});
+
+const sort = ref({ by: "", dir: "" });
+const showFilters = ref(false);
+const availableCourses = ref([]);
 let searchTimeout = null;
 
 const form = ref({ name: "", department: "" });
 
-const uniqueDepartmentsCount = computed(() => {
-  const depts = courses.value.map((c) => c.department);
-  return new Set(depts).size;
-});
+function onTableScroll(e) {
+  tableScrolled.value = e.target.scrollTop > 0;
+}
+
+const departmentOptions = computed(() =>
+  [...new Set(availableCourses.value.map((c) => c.department).filter((d) => !!d))].sort(),
+);
+
+const activeFilterCount = computed(
+  () => Object.values(filters.value).filter((value) => value !== "" && value !== null).length,
+);
+
+const courseFilterGroups = computed(() => [
+  {
+    key: "department",
+    label: "Departments",
+    value: filters.value.department,
+    valueLabel: filters.value.department || "All",
+    options: [
+      { value: "", label: "All Departments" },
+      ...departmentOptions.value.map((d) => ({ value: d, label: d })),
+    ],
+  },
+]);
+
+function onTreeSelect({ key, value }) {
+  filters.value[key] = value;
+  refetchFirstPage();
+}
 
 onMounted(() => {
   fetchCourses();
+  fetchFilterOptions();
   document.addEventListener("keydown", handleEscape);
 });
 
@@ -458,12 +524,20 @@ function splitList(str) {
     .filter((s) => s);
 }
 
-async function fetchCourses() {
+async function fetchCourses(page = null) {
+  if (page !== null) coursePage.value = page;
   loading.value = true;
   try {
-    let url = `/courses?paginate=true&page=${coursePage.value}&per_page=${coursesPerPage.value}`;
-    if (searchQuery.value) url += `&query=${encodeURIComponent(searchQuery.value)}`;
-    const res = await api.get(url);
+    const params = new URLSearchParams({
+      paginate: "true",
+      page: coursePage.value,
+      per_page: coursesPerPage.value,
+      query: filters.value.query,
+      department: filters.value.department,
+      sort_by: sort.value.by,
+      sort_dir: sort.value.dir,
+    });
+    const res = await api.get(`/courses?${params.toString()}`);
     courses.value = res.data.data;
     totalCoursePages.value = res.data.last_page;
     totalCoursesCount.value = res.data.total;
@@ -474,14 +548,50 @@ async function fetchCourses() {
   }
 }
 
-watch(coursePage, fetchCourses);
+async function fetchFilterOptions() {
+  try {
+    const res = await api.get("/courses");
+    availableCourses.value = res.data;
+  } catch (e) {
+    console.error("Failed to fetch course filter options:", e);
+  }
+}
+
+watch(coursePage, (page) => fetchCourses(page));
+
+function refetchFirstPage() {
+  if (coursePage.value !== 1) coursePage.value = 1;
+  else fetchCourses();
+}
 
 function handleSearch() {
   clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    coursePage.value = 1;
-    fetchCourses();
-  }, 500);
+  searchTimeout = setTimeout(() => refetchFirstPage(), 500);
+}
+
+function toggleSort(column) {
+  if (sort.value.by !== column) {
+    sort.value = { by: column, dir: "asc" };
+  } else if (sort.value.dir === "asc") {
+    sort.value = { by: column, dir: "desc" };
+  } else {
+    sort.value = { by: "", dir: "" };
+  }
+  refetchFirstPage();
+}
+
+function sortIcon(column) {
+  if (sort.value.by !== column) return "fa-arrow-down is-idle";
+  return sort.value.dir === "asc" ? "fa-arrow-up is-active" : "fa-arrow-down is-active";
+}
+
+function clearFilters() {
+  filters.value = {
+    query: "",
+    department: "",
+  };
+  sort.value = { by: "", dir: "" };
+  refetchFirstPage();
 }
 
 function openDetail(course) {

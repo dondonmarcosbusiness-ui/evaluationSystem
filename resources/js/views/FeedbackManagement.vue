@@ -5,112 +5,64 @@
       <Navbar><template #title>Feedback Management</template></Navbar>
 
       <div class="content-area">
-        <div class="analytics-card analytics-card-filters mb-4">
-          <!-- Filter Bar -->
-          <div class="filter-bar filter-bar-overflow">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
-              <div class="d-flex align-items-center gap-3">
-                <h5 class="mb-0 fw-800 text-main d-flex align-items-center">
-                  <i class="fas fa-comments me-2 text-primary opacity-75"></i>
-                  Feedback Analytics
-                </h5>
-                <div class="stat-pill">
-                  {{ pagination?.total || 0 }} Total Feedbacks
+        <div class="card accounts-card">
+          <div class="card-header border-0 py-3 px-4 accounts-head">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 w-100">
+              <div class="d-flex flex-column">
+                <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                  <h5 class="mb-0 fw-800 text-main">Feedback Analytics</h5>
+                  <span class="head-label">{{ pagination?.total || 0 }} Records</span>
                 </div>
-              </div>
-            </div>
-
-            <div class="row g-3 mt-3">
-              <!-- Search -->
-              <div class="col-md-3">
-                <div class="input-group-custom">
-                  <span class="input-icon"><i class="fas fa-search"></i></span>
-                  <input
-                    v-model="filters.search"
-                    type="text"
-                    class="input-custom with-icon"
-                    placeholder="Search faculty, subject, feedback..."
-                    @input="handleSearch"
-                  />
-                </div>
+                <p class="head-desc mb-0">Review qualitative feedback and ratings submitted through evaluations.</p>
               </div>
 
-              <!-- Faculty Filter -->
-              <div class="col-md-3">
-                <CustomSelect
-                  v-model="filters.faculty_id"
-                  :options="facultyOptions"
-                  placeholder="All Faculty"
-                  @change="fetchFeedbacks(1)"
-                />
-              </div>
-
-              <!-- Department Filter (faculty only) -->
-              <div v-if="evaluateeType === 'faculty'" class="col-md-2">
-                <CustomSelect
-                  v-model="filters.department"
-                  :options="departmentOptions"
-                  placeholder="All Departments"
-                  @change="fetchFeedbacks(1)"
-                />
-              </div>
-
-              <!-- Rating Filter -->
-              <div class="col-md-2">
-                <CustomSelect
-                  v-model="filters.rating"
-                  :options="ratingOptions"
-                  placeholder="All Ratings"
-                  @change="fetchFeedbacks(1)"
-                />
-              </div>
-
-              <!-- Reset -->
-              <div class="col-md-2 d-flex align-items-center">
-                <button class="refresh-pill-btn" @click="resetFilters" title="Reset Filters">
-                  <i class="fas fa-undo"></i>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button
+                  class="btn btn-ghost"
+                  :class="{ 'is-active': showFilters }"
+                  title="Show or hide filters"
+                  @click="showFilters = !showFilters"
+                >
+                  <i class="fas fa-filter"></i>
+                  <span>Filters</span>
+                  <span v-if="activeFilterCount" class="filter-count">{{ activeFilterCount }}</span>
                 </button>
               </div>
             </div>
 
-            <!-- Advanced Filters Toggle -->
-            <div class="mt-3">
-              <button class="btn btn-link btn-sm p-0 text-decoration-none text-muted" @click="showAdvanced = !showAdvanced">
-                <i class="fas" :class="showAdvanced ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-                {{ showAdvanced ? 'Hide' : 'Show' }} Advanced Filters
-              </button>
-              
-              <div v-if="showAdvanced" class="row g-3 mt-1 animate__animated animate__fadeIn">
-                <div class="col-md-3">
-                  <CustomSelect
-                    v-model="filters.semester"
-                    :options="semesterOptions"
-                    placeholder="All Semesters"
-                    @change="fetchFeedbacks(1)"
-                  />
-                </div>
-                <div class="col-md-3">
-                  <CustomSelect
-                    v-model="filters.academic_year"
-                    :options="yearOptions"
-                    placeholder="All Academic Years"
-                    @change="fetchFeedbacks(1)"
-                  />
-                </div>
-                <div class="col-md-3" v-if="evaluateeType === 'faculty'">
-                  <div class="input-group-custom">
-                    <span class="input-icon"><i class="fas fa-book"></i></span>
+            <Transition name="panel">
+              <div v-show="showFilters" class="filters-panel">
+                <div class="filter-toolbar">
+                  <div class="premium-filter-group" style="width: 220px">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input
+                      v-model="filters.search"
+                      type="text"
+                      class="form-control"
+                      placeholder="Search faculty, subject, feedback..."
+                      @input="handleSearch"
+                    />
+                  </div>
+
+                  <div v-if="evaluateeType === 'faculty'" class="premium-filter-group" style="width: 180px">
+                    <span class="input-group-text"><i class="fas fa-book"></i></span>
                     <input
                       v-model="filters.subject_code"
                       type="text"
-                      class="input-custom with-icon"
+                      class="form-control"
                       placeholder="Subject Code..."
                       @input="handleSearch"
                     />
                   </div>
+
+                  <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
+                    <i class="fas fa-redo-alt small"></i>
+                  </button>
                 </div>
+
+                <FilterTree :groups="feedbackFilterGroups" @select="onTreeSelect" />
               </div>
-            </div>
+            </Transition>
           </div>
 
           <!-- Table Content -->
@@ -118,14 +70,22 @@
             <div class="table-responsive">
               <div class="table-scroll" @scroll="onTableScroll">
               <table class="table table-hover mb-0">
-                <thead :class="{ 'glass-header': tableScrolled }" class="bg-light">
+                <thead :class="{ 'glass-header': tableScrolled }">
                   <tr>
-                    <th class="ps-4">Faculty Member</th>
+                    <th class="ps-4 th-sortable" @click="toggleSort('faculty_name')">
+                      Faculty Member <i class="fas sort-arrow" :class="sortIcon('faculty_name')"></i>
+                    </th>
                     <th v-if="evaluateeType === 'faculty'">Subject</th>
-                    <th v-if="evaluateeType === 'faculty'">Department</th>
-                    <th>Rating</th>
+                    <th v-if="evaluateeType === 'faculty'" class="th-sortable" @click="toggleSort('department')">
+                      Department <i class="fas sort-arrow" :class="sortIcon('department')"></i>
+                    </th>
+                    <th class="th-sortable" @click="toggleSort('rating')">
+                      Rating <i class="fas sort-arrow" :class="sortIcon('rating')"></i>
+                    </th>
                     <th>Feedback Snippet</th>
-                    <th>Date Submitted</th>
+                    <th class="th-sortable" @click="toggleSort('created_at')">
+                      Date Submitted <i class="fas sort-arrow" :class="sortIcon('created_at')"></i>
+                    </th>
                     <th class="text-end pe-4">Action</th>
                   </tr>
                 </thead>
@@ -372,7 +332,7 @@ import { ref, onMounted, computed, inject, watch } from "vue";
 import { useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
-import CustomSelect from "../components/CustomSelect.vue";
+import FilterTree from "../components/FilterTree.vue";
 import Pagination from "../components/Pagination.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
@@ -396,9 +356,10 @@ function changePerPage(n) {
 }
 const loading = ref(false);
 const detailLoading = ref(false);
-const showAdvanced = ref(false);
 const showDetailModal = ref(false);
 const isFullscreen = ref(false);
+const showFilters = ref(false);
+const sort = ref({ by: "", dir: "" });
 const { modalEl: detailModalEl } = useBootstrapModal(showDetailModal);
 const currentDetail = ref(null);
 const facultyList = ref([]);
@@ -423,6 +384,14 @@ const filters = ref({
 });
 
 let searchTimeout = null;
+
+const activeFilterCount = computed(
+  () => Object.values(filters.value).filter((value) => value !== "" && value !== null && value !== "all").length,
+);
+
+function optionLabel(options, value) {
+  return options.find((o) => o.value === value)?.label ?? options[0]?.label ?? "";
+}
 
 // Options
 const facultyOptions = computed(() => {
@@ -464,6 +433,59 @@ const yearOptions = computed(() => [
   ...years.value.map(y => ({ label: y, value: y }))
 ]);
 
+const feedbackFilterGroups = computed(() => {
+  const groups = [
+    {
+      key: "faculty_id",
+      label: "Faculty",
+      value: filters.value.faculty_id,
+      valueLabel: optionLabel(facultyOptions.value, filters.value.faculty_id),
+      options: facultyOptions.value,
+    },
+  ];
+
+  if (evaluateeType.value === "faculty") {
+    groups.push({
+      key: "department",
+      label: "Departments",
+      value: filters.value.department,
+      valueLabel: optionLabel(departmentOptions.value, filters.value.department),
+      options: departmentOptions.value,
+    });
+  }
+
+  groups.push(
+    {
+      key: "rating",
+      label: "Rating",
+      value: filters.value.rating,
+      valueLabel: optionLabel(ratingOptions, filters.value.rating),
+      options: ratingOptions,
+    },
+    {
+      key: "semester",
+      label: "Semester",
+      value: filters.value.semester,
+      valueLabel: optionLabel(semesterOptions.value, filters.value.semester),
+      options: semesterOptions.value,
+    },
+    {
+      key: "academic_year",
+      label: "Academic Year",
+      value: filters.value.academic_year,
+      valueLabel: optionLabel(yearOptions.value, filters.value.academic_year),
+      options: yearOptions.value,
+    },
+  );
+
+  return groups;
+});
+
+function onTreeSelect({ key, value }) {
+  filters.value[key] = value;
+  fetchFeedbacks(1);
+}
+
 function getTypeFromRoute() {
   return "faculty";
 }
@@ -503,7 +525,9 @@ async function fetchFeedbacks(page = 1) {
       page,
       per_page: perPage.value,
       evaluatee_type: evaluateeType.value,
-      ...filters.value
+      ...filters.value,
+      sort_by: sort.value.by,
+      sort_dir: sort.value.dir
     };
     const res = await api.get("/reports/feedbacks", { params });
     feedbacks.value = res.data.data;
@@ -576,7 +600,23 @@ function handleSearch() {
   }, 500);
 }
 
-function resetFilters() {
+function toggleSort(column) {
+  if (sort.value.by !== column) {
+    sort.value = { by: column, dir: "asc" };
+  } else if (sort.value.dir === "asc") {
+    sort.value = { by: column, dir: "desc" };
+  } else {
+    sort.value = { by: "", dir: "" };
+  }
+  fetchFeedbacks(1);
+}
+
+function sortIcon(column) {
+  if (sort.value.by !== column) return "fa-arrow-down is-idle";
+  return sort.value.dir === "asc" ? "fa-arrow-up is-active" : "fa-arrow-down is-active";
+}
+
+function clearFilters() {
   filters.value = {
     search: "",
     faculty_id: "all",
@@ -586,6 +626,7 @@ function resetFilters() {
     academic_year: activePeriod.academic_year,
     subject_code: "",
   };
+  sort.value = { by: "", dir: "" };
   fetchFeedbacks(1);
 }
 
@@ -689,36 +730,6 @@ function formatDate(dateStr) {
 </script>
 
 <style scoped>
-.refresh-pill-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.refresh-pill-btn:hover {
-  background: var(--primary);
-  color: white !important;
-  border-color: var(--primary);
-}
-
-.refresh-pill-btn:hover i {
-  color: white !important;
-}
-
-[data-theme="dark"] .refresh-pill-btn {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.6);
-}
-
 .feedback-row {
   cursor: pointer;
   transition: all 0.2s ease;
@@ -913,18 +924,8 @@ function formatDate(dateStr) {
   overflow: hidden;
 }
 
-.analytics-card-filters {
-  overflow: visible !important;
-}
-
-.filter-bar-overflow {
-  position: relative;
-  z-index: 50;
-  overflow: visible !important;
-}
-
 @media print {
-  .no-print, .sidebar, .navbar, .filter-bar, .pagination, .btn-link, .modal-footer, .modal .btn-close {
+  .no-print, .sidebar, .navbar, .filters-panel, .accounts-head, .pagination, .btn-link, .modal-footer, .modal .btn-close {
     display: none !important;
   }
   .main-wrapper { margin-left: 0 !important; padding: 0 !important; }

@@ -11,6 +11,18 @@ use Illuminate\Support\Facades\DB;
 
 class CourseController extends Controller
 {
+    /**
+     * Columns the course list may be ordered by (sort_by/sort_dir query params).
+     */
+    private function courseSortable(): array
+    {
+        return [
+            'name' => 'courses.name',
+            'department' => 'courses.department',
+            'created_at' => 'courses.created_at',
+        ];
+    }
+
     public function index(Request $request)
     {
         $query = Course::with(['academic_subjects', 'academic_sections']);
@@ -21,6 +33,18 @@ class CourseController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('department', 'like', "%{$search}%");
             });
+        }
+
+        $query->when($request->query('department'), function ($q, $department) {
+            $q->where('department', $department);
+        });
+
+        $sortBy = $request->query('sort_by');
+        $sortable = $this->courseSortable();
+
+        if ($sortBy && isset($sortable[$sortBy])) {
+            $direction = strtolower((string) $request->query('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            $query->orderBy($sortable[$sortBy], $direction)->orderBy('courses.id', $direction);
         }
 
         if ($request->has('paginate')) {

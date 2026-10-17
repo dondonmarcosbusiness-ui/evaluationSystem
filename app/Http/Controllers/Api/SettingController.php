@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Course;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\EvaluateeService;
@@ -56,7 +55,7 @@ class SettingController extends Controller
 
         $departments = $this->studentEvaluateeDepartments($user);
         if ($departments === []) {
-            $departments = $this->studentHomeDepartments($user);
+            $departments = $this->evaluatees->homeDepartments($user);
         }
 
         $resolve = $this->schedules->resolver();
@@ -74,41 +73,6 @@ class SettingController extends Controller
         }
 
         return EvaluationScheduleService::CLOSED;
-    }
-
-    /**
-     * Departments of the student's own course — the window that decides the
-     * CTA when no evaluatees are built yet (no assignments, period not
-     * configured), so a BEED student follows Education instead of whatever
-     * other department happens to be open.
-     *
-     * @return array<int, string>
-     */
-    private function studentHomeDepartments(User $user): array
-    {
-        $student = $user->student;
-        if ($student === null) {
-            return [];
-        }
-
-        $courseNames = array_values(array_unique(array_filter(
-            [$student->course, $student->section_relationship?->course?->name],
-            fn ($name) => is_string($name) && trim($name) !== ''
-        )));
-
-        $departments = Course::query()
-            ->whereIn('name', $courseNames)
-            ->pluck('department')
-            ->filter(fn ($department) => is_string($department) && trim($department) !== '')
-            ->map(fn ($department) => trim($department))
-            ->all();
-
-        $sectionDepartment = $student->section_relationship?->course?->department;
-        if (is_string($sectionDepartment) && trim($sectionDepartment) !== '') {
-            $departments[] = trim($sectionDepartment);
-        }
-
-        return array_values(array_unique($departments));
     }
 
     /**

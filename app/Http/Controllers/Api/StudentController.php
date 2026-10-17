@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Student;
 use App\Models\User;
 use App\Support\Csv;
 use Illuminate\Http\Request;
@@ -13,43 +14,106 @@ use Illuminate\Support\Facades\Validator;
 
 class StudentController extends Controller
 {
+    /**
+     * Columns the student list may be ordered by, mapped to a query column
+     * or a correlated sub-query for columns that live on the students table.
+     */
+    private function studentSortable(): array
+    {
+        return [
+            'id_number' => 'users.id_number',
+            'name' => 'users.name',
+            'email' => 'users.email',
+            'course' => Student::select('course')->whereColumn('students.user_id', 'users.id'),
+            'year_level' => Student::select('year_level')->whereColumn('students.user_id', 'users.id'),
+            'student_type' => Student::select('student_type')->whereColumn('students.user_id', 'users.id'),
+            'section' => Student::select('section')->whereColumn('students.user_id', 'users.id'),
+            'status' => 'users.is_active',
+            'created_at' => 'users.created_at',
+        ];
+    }
+
+    /**
+     * Apply the shared list/export column filters and sorting.
+     * Driven by query params: query, id_number, name, email, course,
+     * section_id, student_type, year_level, status, recent (days),
+     * sort_by, sort_dir.
+     */
+    private function applyFilters($query, Request $request)
+    {
+        $query
+            ->when($request->query('query'), function ($q, $search) {
+                $q->where(function ($sq) use ($search) {
+                    $sq->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->query('id_number'), function ($q, $value) {
+                $q->where('id_number', 'like', "%{$value}%");
+            })
+            ->when($request->query('name'), function ($q, $value) {
+                $q->where('name', 'like', "%{$value}%");
+            })
+            ->when($request->query('email'), function ($q, $value) {
+                $q->where('email', 'like', "%{$value}%");
+            })
+            ->when($request->query('course'), function ($q, $course) {
+                $q->whereHas('student', fn($sq) => $sq->where('course', $course));
+            })
+            ->when($request->query('section_id'), function ($q, $sectionId) {
+                $section = \App\Models\Section::find($sectionId);
+                $q->whereHas('student', function($sq) use ($sectionId, $section) {
+                    $sq->where('section_id', $sectionId);
+                    if ($section) {
+                        $sq->orWhere('section', $section->name)
+                           ->orWhere('section', 'like', "%{$section->name}%");
+                    }
+                });
+            })
+            ->when($request->query('student_type'), function ($q, $type) {
+                $q->whereHas('student', function ($sq) use ($type) {
+                    if ($type === 'regular') {
+                        $sq->where(function ($sub) {
+                            $sub->where('student_type', 'regular')
+                                ->orWhereNull('student_type')
+                                ->orWhere('student_type', '');
+                        });
+                    } else {
+                        $sq->where('student_type', $type);
+                    }
+                });
+            })
+            ->when($request->query('year_level'), function ($q, $year) {
+                $q->whereHas('student', fn($sq) => $sq->where('year_level', $year));
+            })
+            ->when($request->query('status'), function ($q, $status) {
+                $q->where('is_active', $status === 'active');
+            })
+            ->when($request->query('recent'), function ($q, $recent) {
+                $days = (int) $recent;
+                if ($days > 0) {
+                    $q->where('users.created_at', '>=', now()->subDays($days)->startOfDay());
+                }
+            });
+
+        $sortBy = $request->query('sort_by');
+        $sortable = $this->studentSortable();
+
+        if ($sortBy && isset($sortable[$sortBy])) {
+            $direction = strtolower((string) $request->query('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            $query->orderBy($sortable[$sortBy], $direction)->orderBy('users.id', $direction);
+        }
+
+        return $query;
+    }
+
     public function index(Request $request)
     {
         try {
-            $students = User::with('student.section_relationship')
-                ->where('role', 'student')
-                ->when($request->query('query'), function ($q, $search) {
-                    $q->where(function ($sq) use ($search) {
-                        $sq->where('name', 'like', "%{$search}%")
-                          ->orWhere('email', 'like', "%{$search}%");
-                    });
-                })
-                ->when($request->query('course'), function ($q, $course) {
-                    $q->whereHas('student', fn($sq) => $sq->where('course', $course));
-                })
-                ->when($request->query('section_id'), function ($q, $sectionId) {
-                    $section = \App\Models\Section::find($sectionId);
-                    $q->whereHas('student', function($sq) use ($sectionId, $section) {
-                        $sq->where('section_id', $sectionId);
-                        if ($section) {
-                            $sq->orWhere('section', $section->name)
-                               ->orWhere('section', 'like', "%{$section->name}%");
-                        }
-                    });
-                })
-                ->when($request->query('student_type'), function ($q, $type) {
-                    $q->whereHas('student', function ($sq) use ($type) {
-                        if ($type === 'regular') {
-                            $sq->where(function ($sub) {
-                                $sub->where('student_type', 'regular')
-                                    ->orWhereNull('student_type')
-                                    ->orWhere('student_type', '');
-                            });
-                        } else {
-                            $sq->where('student_type', $type);
-                        }
-                    });
-                })
+            $students = $this->applyFilters(
+                User::with('student.section_relationship')->where('role', 'student'),
+                $request
+            )
                 ->orderBy('name')
                 ->paginate(min(max((int) $request->input('per_page', 10), 1), 100));
 
@@ -67,40 +131,10 @@ class StudentController extends Controller
     public function export(Request $request)
     {
         try {
-            $students = User::with('student.section_relationship')
-                ->where('role', 'student')
-                ->when($request->query('query'), function ($q, $search) {
-                    $q->where(function ($sq) use ($search) {
-                        $sq->where('name', 'like', "%{$search}%")
-                          ->orWhere('email', 'like', "%{$search}%");
-                    });
-                })
-                ->when($request->query('course'), function ($q, $course) {
-                    $q->whereHas('student', fn ($sq) => $sq->where('course', $course));
-                })
-                ->when($request->query('section_id'), function ($q, $sectionId) {
-                    $section = \App\Models\Section::find($sectionId);
-                    $q->whereHas('student', function ($sq) use ($sectionId, $section) {
-                        $sq->where('section_id', $sectionId);
-                        if ($section) {
-                            $sq->orWhere('section', $section->name)
-                               ->orWhere('section', 'like', "%{$section->name}%");
-                        }
-                    });
-                })
-                ->when($request->query('student_type'), function ($q, $type) {
-                    $q->whereHas('student', function ($sq) use ($type) {
-                        if ($type === 'regular') {
-                            $sq->where(function ($sub) {
-                                $sub->where('student_type', 'regular')
-                                    ->orWhereNull('student_type')
-                                    ->orWhere('student_type', '');
-                            });
-                        } else {
-                            $sq->where('student_type', $type);
-                        }
-                    });
-                })
+            $students = $this->applyFilters(
+                User::with('student.section_relationship')->where('role', 'student'),
+                $request
+            )
                 ->orderBy('name')
                 ->get();
 

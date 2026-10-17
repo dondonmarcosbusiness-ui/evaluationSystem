@@ -5,33 +5,53 @@
       <Navbar><template #title>Office Management</template></Navbar>
 
       <div class="content-area">
-        <div class="card">
-          <div class="card-header border-0 py-3 px-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
-              <div class="d-flex align-items-center py-1 gap-3">
-                <h5 class="mb-0 fw-800 text-main d-flex align-items-center">
-                  <i class="fas fa-building me-2 text-primary opacity-75"></i>
-                  Office Directory
-                </h5>
-                <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-700" style="font-size: 0.75rem">
-                  {{ pagination.total || 0 }} Records
-                </span>
-              </div>
-              <div class="d-flex align-items-center gap-3 flex-wrap">
-                <div class="premium-filter-group" style="width: 200px">
-                  <span class="input-group-text"><i class="fas fa-search"></i></span>
-                  <input v-model="filters.query" type="text" class="form-control" placeholder="Search offices..." @input="handleSearch" />
+        <div class="card accounts-card">
+          <div class="card-header border-0 py-3 px-4 accounts-head">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 w-100">
+              <div class="d-flex flex-column">
+                <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                  <h5 class="mb-0 fw-800 text-main">Office Directory</h5>
+                  <span class="head-label">{{ pagination.total || 0 }} Records</span>
                 </div>
-                <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
-                  <i class="fas fa-redo-alt small"></i>
+                <p class="head-desc mb-0">Manage campus offices, heads, locations and QR feedback access.</p>
+              </div>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button
+                  class="btn btn-ghost"
+                  :class="{ 'is-active': showFilters }"
+                  title="Show or hide filters"
+                  @click="showFilters = !showFilters"
+                >
+                  <i class="fas fa-filter"></i>
+                  <span>Filters</span>
+                  <span v-if="activeFilterCount" class="filter-count">{{ activeFilterCount }}</span>
                 </button>
-                <div class="vr mx-1 d-none d-md-block" style="height: 24px; opacity: 0.1"></div>
-                <button v-if="$can('office.create')" class="btn btn-primary btn-sm d-flex align-items-center gap-2" @click="openAddModal">
+                <button v-if="$can('office.create')" class="btn btn-cta" title="Add Office" @click="openAddModal">
                   <i class="fas fa-plus"></i>
-                  <span class="d-none d-xl-inline">Add Office</span>
+                  <span>Add Office</span>
                 </button>
               </div>
             </div>
+            <Transition name="panel">
+              <div v-show="showFilters" class="filters-panel">
+                <div class="filter-toolbar">
+                  <div class="premium-filter-group" style="width: 220px">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input
+                      v-model="filters.query"
+                      type="text"
+                      class="form-control"
+                      placeholder="Search offices..."
+                      @input="handleSearch"
+                    />
+                  </div>
+                  <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
+                    <i class="fas fa-redo-alt small"></i>
+                  </button>
+                </div>
+                <FilterTree :groups="officeFilterGroups" @select="onTreeSelect" />
+              </div>
+            </Transition>
           </div>
           <div class="card-body p-0">
             <Transition name="fade" mode="out-in">
@@ -48,16 +68,30 @@
                       </div>
                     </th>
                     <th>#</th>
-                    <th>Office Name</th>
-                    <th>Office Head</th>
-                    <th>Location</th>
-                    <th>Feedback</th>
-                    <th>Status</th>
+                    <th class="th-sortable" @click="toggleSort('name')">
+                      Office Name <i class="fas sort-arrow" :class="sortIcon('name')"></i>
+                    </th>
+                    <th class="th-sortable" @click="toggleSort('office_head')">
+                      Office Head <i class="fas sort-arrow" :class="sortIcon('office_head')"></i>
+                    </th>
+                    <th class="th-sortable" @click="toggleSort('location')">
+                      Location <i class="fas sort-arrow" :class="sortIcon('location')"></i>
+                    </th>
+                    <th class="th-sortable" @click="toggleSort('feedbacks_count')">
+                      Feedback <i class="fas sort-arrow" :class="sortIcon('feedbacks_count')"></i>
+                    </th>
+                    <th class="th-sortable" @click="toggleSort('status')">
+                      Status <i class="fas sort-arrow" :class="sortIcon('status')"></i>
+                    </th>
                     <th class="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(o, i) in officeList" :key="o.id">
+                  <tr
+                    v-for="(o, i) in officeList"
+                    :key="o.id"
+                    :class="{ 'is-selected': selectedIds.includes(o.id) }"
+                  >
                     <td>
                       <div class="form-check m-0">
                         <input class="form-check-input" type="checkbox" :value="o.id" v-model="selectedIds" />
@@ -236,6 +270,7 @@
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
+import FilterTree from "../components/FilterTree.vue";
 import Pagination from "../components/Pagination.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import { useBootstrapModal } from "../composables/useBootstrapModal.js";
@@ -279,8 +314,39 @@ function onTableScroll(e) {
   tableScrolled.value = e.target.scrollTop > 0;
 }
 
-const filters = ref({ query: "" });
+const filters = ref({ query: "", status: "" });
+const sort = ref({ by: "", dir: "" });
+const showFilters = ref(false);
 let searchTimeout = null;
+
+const filterStatusOptions = [
+  { label: "All Offices", value: "" },
+  { label: "Active", value: "1" },
+  { label: "Inactive", value: "0" },
+];
+
+const activeFilterCount = computed(
+  () => Object.values(filters.value).filter((value) => value !== "" && value !== null).length,
+);
+
+function optionLabel(options, value) {
+  return options.find((o) => o.value === value)?.label ?? options[0]?.label ?? "";
+}
+
+const officeFilterGroups = computed(() => [
+  {
+    key: "status",
+    label: "Status",
+    value: filters.value.status,
+    valueLabel: optionLabel(filterStatusOptions, filters.value.status),
+    options: filterStatusOptions,
+  },
+]);
+
+function onTreeSelect({ key, value }) {
+  filters.value[key] = value;
+  fetchOffices(1);
+}
 
 const blankForm = () => ({ name: "", description: "", office_head: "", location: "" });
 const form = ref(blankForm());
@@ -291,7 +357,38 @@ const selectAll = computed({
 });
 
 function handleSearch() { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => fetchOffices(1), 500); }
-function clearFilters() { filters.value = { query: "" }; fetchOffices(1); }
+
+function toggleSort(column) {
+  if (sort.value.by !== column) {
+    sort.value = { by: column, dir: "asc" };
+  } else if (sort.value.dir === "asc") {
+    sort.value = { by: column, dir: "desc" };
+  } else {
+    sort.value = { by: "", dir: "" };
+  }
+  fetchOffices(1);
+}
+
+function sortIcon(column) {
+  if (sort.value.by !== column) return "fa-arrow-down is-idle";
+  return sort.value.dir === "asc" ? "fa-arrow-up is-active" : "fa-arrow-down is-active";
+}
+
+function clearFilters() {
+  filters.value = { query: "", status: "" };
+  sort.value = { by: "", dir: "" };
+  fetchOffices(1);
+}
+
+function listParams() {
+  const params = {
+    query: filters.value.query,
+    sort_by: sort.value.by,
+    sort_dir: sort.value.dir,
+  };
+  if (filters.value.status !== "") params.status = filters.value.status;
+  return params;
+}
 
 onMounted(() => {
   fetchOffices();
@@ -306,7 +403,7 @@ async function fetchOffices(page = 1) {
   loading.value = true;
   closeMenu();
   try {
-    const params = new URLSearchParams({ page, per_page: perPage.value, query: filters.value.query });
+    const params = new URLSearchParams({ page, per_page: perPage.value, ...listParams() });
     const res = await api.get(`/offices?${params.toString()}`);
     officeList.value = res.data.data;
     pagination.value = res.data;
@@ -459,14 +556,6 @@ function openPrintWindow(items) {
 </script>
 
 <style scoped>
-.premium-filter-group { display: flex; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 0 12px; height: 40px; min-height: 40px; transition: all 0.2s; }
-.premium-filter-group:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15); }
-.premium-filter-group .input-group-text { background: transparent; border: none; padding: 0 8px 0 0; color: var(--text-muted); font-size: 0.85rem; }
-.premium-filter-group .form-control { background: transparent; border: none; padding: 0 12px 0 0; font-size: 14px; font-weight: 500; min-height: 0; }
-.premium-filter-group .form-control:focus { box-shadow: none; }
-.btn-premium-reset { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-muted); transition: all 0.2s; }
-.btn-premium-reset:hover { background: var(--primary); color: white !important; border-color: var(--primary); }
-.btn-premium-reset:hover i { color: white !important; }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 .profile-avatar-icon { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
@@ -501,9 +590,53 @@ function openPrintWindow(items) {
 .toast-slide-enter-active, .toast-slide-leave-active { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 .toast-slide-enter-from, .toast-slide-leave-to { opacity: 0; transform: translateX(-50%) translateY(20px); }
 
+/* Full-screen table layout — fill viewport height/width */
+.main-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: calc(100vh - 65px);
+  width: 100%;
+  max-width: 100%;
+}
+.content-area .card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+}
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 /* Sticky Table Header with Glassmorphism */
-.table-scroll { max-height: 60vh; overflow-y: auto; border-radius: 8px; }
-table { border-collapse: separate; border-spacing: 0; }
+.table-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  overflow: auto;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 100%;
+}
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
 thead th {
   position: sticky;
   top: 0;

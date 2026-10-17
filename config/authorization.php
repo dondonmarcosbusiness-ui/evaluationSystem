@@ -148,18 +148,6 @@ return [
         ],
         'report.export' => ['module' => 'report', 'action' => 'export', 'label' => 'Export'],
 
-        // --- User management ----------------------------------------------
-        'user.view' => ['module' => 'user', 'action' => 'view', 'label' => 'View'],
-        'user.create' => ['module' => 'user', 'action' => 'create', 'label' => 'Create'],
-        'user.edit' => ['module' => 'user', 'action' => 'edit', 'label' => 'Edit'],
-        'user.disable' => ['module' => 'user', 'action' => 'disable', 'label' => 'Disable accounts'],
-
-        // --- Role management ----------------------------------------------
-        'role.view' => ['module' => 'role', 'action' => 'view', 'label' => 'View'],
-        'role.create' => ['module' => 'role', 'action' => 'create', 'label' => 'Create'],
-        'role.edit' => ['module' => 'role', 'action' => 'edit', 'label' => 'Edit'],
-        'role.delete' => ['module' => 'role', 'action' => 'delete', 'label' => 'Delete'],
-
         // --- Permission management ----------------------------------------
         'permission.view' => ['module' => 'permission', 'action' => 'view', 'label' => 'View permissions'],
         'permission.manage' => ['module' => 'permission', 'action' => 'manage', 'label' => 'Manage permissions'],
@@ -198,8 +186,6 @@ return [
         'student' => 'Students',
         'course' => 'Courses',
         'questionnaire' => 'Questionnaires',
-        'user' => 'User Management',
-        'role' => 'Role Management',
         'permission' => 'Permission Management',
         'settings' => 'System Settings',
         'backup' => 'Backups',
@@ -218,11 +204,9 @@ return [
     'legacy_map' => [
         'manage_rbac' => [
             'permission.view', 'permission.manage',
-            'role.view', 'role.create', 'role.edit', 'role.delete',
             'settings.manage', 'backup.manage',
         ],
         'manage_users' => [
-            'user.view', 'user.create', 'user.edit', 'user.disable',
             'student.view', 'student.create', 'student.edit', 'student.delete', 'student.import',
         ],
         'manage_faculty' => [

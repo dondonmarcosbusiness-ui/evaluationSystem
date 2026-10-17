@@ -5,83 +5,94 @@
       <Navbar><template #title>Faculty Management</template></Navbar>
 
       <div class="content-area">
-        <div class="card">
-          <div class="card-header border-0 py-3 px-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
-              <div class="d-flex align-items-center py-1 gap-3">
-                <h5 class="mb-0 fw-800 text-main d-flex align-items-center">
-                  <i class="fas fa-chalkboard-teacher me-2 text-primary opacity-75"></i>
-                  Faculty
-                </h5>
-                <span
-                  class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-700"
-                  style="font-size: 0.75rem"
-                >
-                  {{ faculty.length }} Records
-                </span>
+        <div class="card accounts-card">
+          <div class="card-header border-0 py-3 px-4 accounts-head">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 w-100">
+              <div class="d-flex flex-column">
+                <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                  <h5 class="mb-0 fw-800 text-main">Faculty</h5>
+                  <span class="head-label">{{ pagination.total || 0 }} Records</span>
+                </div>
+                <p class="head-desc mb-0">Manage faculty accounts, teaching assignments and access rights.</p>
               </div>
 
               <div class="d-flex align-items-center gap-2 flex-wrap">
-                <!-- Filters -->
-                <div class="premium-filter-group" style="width: 220px">
-                  <span class="input-group-text">
-                    <i class="fas fa-search"></i>
-                  </span>
-                  <input
-                    v-model="filters.query"
-                    type="text"
-                    class="form-control"
-                    placeholder="Search faculty..."
-                    @input="handleSearch"
-                  />
-                </div>
-
-                <div class="premium-filter-group" style="width: 190px">
-                  <CustomSelect
-                    v-model="filters.department"
-                    :options="filterDeptOptions"
-                    placeholder="All Departments"
-                    @change="fetchFaculty(1)"
-                  />
-                </div>
-
-                <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
-                  <i class="fas fa-redo-alt small"></i>
-                </button>
-
-                <div class="vr mx-1 d-none d-md-block" style="height: 24px; opacity: 0.1"></div>
-
-                <!-- Action Buttons -->
                 <button
-                  class="btn btn-expand"
-                  :class="{ 'is-open': exporting }"
-                  :disabled="exporting"
-                  title="Export the current list (with filters) as CSV"
-                  @click="exportCsv"
+                  class="btn btn-ghost"
+                  :class="{ 'is-active': showFilters }"
+                  title="Show or hide filters"
+                  @click="showFilters = !showFilters"
                 >
-                  <i class="fas" :class="exporting ? 'fa-spinner fa-spin' : 'fa-file-arrow-down'"></i>
-                  <span class="btn-expand-label">{{ exporting ? "Exporting…" : "Export CSV" }}</span>
+                  <i class="fas fa-filter"></i>
+                  <span>Filters</span>
+                  <span v-if="activeFilterCount" class="filter-count">{{ activeFilterCount }}</span>
                 </button>
+
                 <button
                   v-if="$can('faculty.import')"
-                  class="btn btn-expand is-upload"
+                  class="btn btn-ghost"
                   title="Upload CSV"
                   @click="openUploadModal"
                 >
                   <i class="fas fa-file-csv"></i>
-                  <span class="btn-expand-label">Upload CSV</span>
+                  <span>Upload</span>
                 </button>
+
                 <button
-                  v-if="$can('faculty.create')"
-                  class="btn btn-expand is-solid"
-                  title="Add Faculty"
-                  @click="openAddModal"
+                  class="btn btn-ghost"
+                  :disabled="exporting"
+                  title="Export the current list (with filters) as CSV"
+                  @click="exportCsv"
                 >
+                  <i class="fas" :class="exporting ? 'fa-spinner fa-spin' : 'fa-file-export'"></i>
+                  <span>Export</span>
+                </button>
+
+                <button v-if="$can('faculty.create')" class="btn btn-cta" title="Add Faculty" @click="openAddModal">
                   <i class="fas fa-plus"></i>
-                  <span class="btn-expand-label">Add Faculty</span>
+                  <span>Add Faculty</span>
                 </button>
               </div>
             </div>
+
+            <!-- Collapsible filters: floating panel over the table -->
+            <Transition name="panel">
+              <div v-show="showFilters" class="filters-panel">
+                <div class="filter-toolbar">
+                  <div class="premium-filter-group" style="width: 220px">
+                    <span class="input-group-text">
+                      <i class="fas fa-search"></i>
+                    </span>
+                    <input
+                      v-model="filters.query"
+                      type="text"
+                      class="form-control"
+                      placeholder="Search faculty..."
+                      @input="handleSearch"
+                    />
+                  </div>
+
+                  <div class="premium-filter-group" style="width: 160px">
+                    <span class="input-group-text">
+                      <i class="fas fa-id-card"></i>
+                    </span>
+                    <input
+                      v-model="filters.id_number"
+                      type="text"
+                      class="form-control"
+                      placeholder="ID Number..."
+                      @input="handleSearch"
+                    />
+                  </div>
+
+                  <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
+                    <i class="fas fa-redo-alt small"></i>
+                  </button>
+                </div>
+
+                <FilterTree :groups="facultyFilterGroups" @select="onTreeSelect" />
+              </div>
+            </Transition>
           </div>
           <div class="card-body p-0">
             <Transition name="fade" mode="out-in">
@@ -98,18 +109,32 @@
                         </div>
                       </th>
                       <th>#</th>
-                      <th>ID Number</th>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Department</th>
-                      <th>Course</th>
-                      <th>Position</th>
-                      <th>Status</th>
+                      <th class="th-sortable" @click="toggleSort('id_number')">
+                        ID Number <i class="fas sort-arrow" :class="sortIcon('id_number')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('name')">
+                        Name <i class="fas sort-arrow" :class="sortIcon('name')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('email')">
+                        Email <i class="fas sort-arrow" :class="sortIcon('email')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('department')">
+                        Department <i class="fas sort-arrow" :class="sortIcon('department')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('course')">
+                        Course <i class="fas sort-arrow" :class="sortIcon('course')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('position')">
+                        Position <i class="fas sort-arrow" :class="sortIcon('position')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('status')">
+                        Status <i class="fas sort-arrow" :class="sortIcon('status')"></i>
+                      </th>
                       <th class="text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(f, i) in faculty" :key="f.id">
+                    <tr v-for="(f, i) in faculty" :key="f.id" :class="{ 'is-selected': selectedIds.includes(f.id) }">
                       <td>
                         <div class="form-check m-0">
                           <input class="form-check-input" type="checkbox" :value="f.id" v-model="selectedIds" />
@@ -491,6 +516,7 @@ import { ref, onMounted, onUnmounted, computed } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
+import FilterTree from "../components/FilterTree.vue";
 import UserRBACDrawer from "../components/UserRBACDrawer.vue";
 import PasswordInput from "../components/PasswordInput.vue";
 import Pagination from "../components/Pagination.vue";
@@ -533,7 +559,24 @@ function onTableScroll(e) {
 const filters = ref({
   query: "",
   department: "",
+  id_number: "",
+  course: "",
+  position: "",
+  status: "",
+  recent: "",
 });
+
+// Sort State
+const sort = ref({ by: "", dir: "" });
+const showFilters = ref(false);
+
+const recentOptions = [
+  { label: "Any time", value: "" },
+  { label: "Added today", value: "1" },
+  { label: "Last 7 days", value: "7" },
+  { label: "Last 30 days", value: "30" },
+  { label: "Last 90 days", value: "90" },
+];
 
 let searchTimeout = null;
 
@@ -571,11 +614,6 @@ const availableDepartments = computed(() => {
   return uniqueDepts.sort();
 });
 
-const filterDeptOptions = computed(() => [
-  { label: "All Departments", value: "" },
-  ...availableDepartments.value.map((d) => ({ label: d, value: d })),
-]);
-
 const modalDeptOptions = computed(() => [
   { label: "-- Select department --", value: "" },
   ...availableDepartments.value.map((d) => ({ label: d, value: d })),
@@ -598,6 +636,97 @@ const modalPositionOptions = [
   { label: "Professor I", value: "Professor I" },
   { label: "Part-time Instructor", value: "Part-time Instructor" },
 ];
+
+const filterPositionOptions = computed(() => [
+  { label: "All Positions", value: "" },
+  ...modalPositionOptions.filter((o) => o.value),
+]);
+
+const filterStatusOptions = [
+  { label: "All Status", value: "" },
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+];
+
+const activeFilterCount = computed(
+  () => Object.values(filters.value).filter((value) => value !== "" && value !== null).length,
+);
+
+function optionLabel(options, value) {
+  return options.find((o) => o.value === value)?.label ?? options[0]?.label ?? "";
+}
+
+// Hierarchical filter groups: Department → Courses, then flat option groups.
+const departmentTree = computed(() => {
+  const map = new Map();
+  for (const c of availableCourses.value) {
+    const dept = c.department || "General Education";
+    if (!map.has(dept)) map.set(dept, new Set());
+    if (c.name && c.name !== "All Course") map.get(dept).add(c.name);
+  }
+  return [...map.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([name, courses]) => ({ name, courses: [...courses].sort() }));
+});
+
+const facultyFilterGroups = computed(() => [
+  {
+    key: "department",
+    label: "Departments",
+    value: filters.value.department,
+    valueLabel: filters.value.department || "All",
+    options: [
+      { value: "", label: "All Departments" },
+      ...departmentTree.value.map((d) => ({
+        value: d.name,
+        label: d.name,
+        children: d.courses.map((c) => ({ value: c, label: c, payload: { department: d.name } })),
+      })),
+    ],
+  },
+  {
+    key: "position",
+    label: "Positions",
+    value: filters.value.position,
+    valueLabel: filters.value.position || "All",
+    options: filterPositionOptions.value,
+  },
+  {
+    key: "status",
+    label: "Status",
+    value: filters.value.status,
+    valueLabel: optionLabel(filterStatusOptions, filters.value.status),
+    options: filterStatusOptions,
+  },
+  {
+    key: "recent",
+    label: "Date Added",
+    value: filters.value.recent,
+    valueLabel: optionLabel(recentOptions, filters.value.recent),
+    options: recentOptions,
+  },
+]);
+
+function onTreeSelect({ key, value, payload }) {
+  if (key === "department") {
+    filters.value.department = value;
+    if (value && filters.value.course) {
+      const course = availableCourses.value.find((c) => c.name === filters.value.course);
+      const courseDept = course?.department || "General Education";
+      if (courseDept !== value) filters.value.course = "";
+    }
+  } else if (key === "course") {
+    filters.value.course = value;
+    if (payload?.department) filters.value.department = payload.department;
+  } else if (key === "position") {
+    filters.value.position = value;
+  } else if (key === "status") {
+    filters.value.status = value;
+  } else if (key === "recent") {
+    filters.value.recent = value;
+  }
+  fetchFaculty(1);
+}
 
 const filteredCourses = computed(() => {
   if (!form.value.department) return [];
@@ -661,11 +790,33 @@ function handleSearch() {
   }, 500);
 }
 
+function toggleSort(column) {
+  if (sort.value.by !== column) {
+    sort.value = { by: column, dir: "asc" };
+  } else if (sort.value.dir === "asc") {
+    sort.value = { by: column, dir: "desc" };
+  } else {
+    sort.value = { by: "", dir: "" };
+  }
+  fetchFaculty(1);
+}
+
+function sortIcon(column) {
+  if (sort.value.by !== column) return "fa-arrow-down is-idle";
+  return sort.value.dir === "asc" ? "fa-arrow-up is-active" : "fa-arrow-down is-active";
+}
+
 function clearFilters() {
   filters.value = {
     query: "",
     department: "",
+    id_number: "",
+    course: "",
+    position: "",
+    status: "",
+    recent: "",
   };
+  sort.value = { by: "", dir: "" };
   fetchFaculty(1);
 }
 
@@ -684,6 +835,20 @@ function changePerPage(n) {
   fetchFaculty(1);
 }
 
+function listParams() {
+  return {
+    query: filters.value.query,
+    department: filters.value.department,
+    id_number: filters.value.id_number,
+    course: filters.value.course,
+    position: filters.value.position,
+    status: filters.value.status,
+    recent: filters.value.recent,
+    sort_by: sort.value.by,
+    sort_dir: sort.value.dir,
+  };
+}
+
 async function fetchFaculty(page = 1) {
   loading.value = true;
   closeMenu();
@@ -691,8 +856,7 @@ async function fetchFaculty(page = 1) {
     const params = new URLSearchParams({
       page,
       per_page: perPage.value,
-      query: filters.value.query,
-      department: filters.value.department,
+      ...listParams(),
     });
     const res = await api.get(`/faculty?${params.toString()}`);
     faculty.value = res.data.data;
@@ -717,11 +881,7 @@ async function fetchCourses() {
 async function exportCsv() {
   exporting.value = true;
   try {
-    await downloadCsv(
-      "/faculty/export",
-      { query: filters.value.query, department: filters.value.department },
-      "faculty_accounts.csv",
-    );
+    await downloadCsv("/faculty/export", listParams(), "faculty_accounts.csv");
     notifySuccess("Faculty accounts exported as CSV.");
   } catch (e) {
     notifyError(e?.message || "Export failed. Please try again.");

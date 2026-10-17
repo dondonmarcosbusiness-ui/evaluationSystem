@@ -45,7 +45,7 @@ Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleGoogleC
 Route::post('/auth/google/register', [GoogleAuthController::class, 'registerStudent']);
 Route::post('/auth/google/link', [GoogleAuthController::class, 'linkGoogle'])->middleware('auth:sanctum');
 Route::post('/auth/google/unlink', [GoogleAuthController::class, 'unlinkGoogle'])->middleware('auth:sanctum');
-Route::post('/auth/google/unlink/{id}', [GoogleAuthController::class, 'unlinkGoogle'])->middleware(['auth:sanctum', 'permission:user.edit']);
+Route::post('/auth/google/unlink/{id}', [GoogleAuthController::class, 'unlinkGoogle'])->middleware('auth:sanctum');
 Route::get('/courses', [CourseController::class, 'index']); // Public endpoint for registration form
 
 // Public QR Code endpoint (no auth required for visitors)

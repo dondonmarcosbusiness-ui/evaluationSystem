@@ -7,245 +7,303 @@
       </Navbar>
 
       <div class="content-area">
-        <!-- Stats Bar -->
-        <div class="stats-bar-premium mb-5 fade-in-up">
-          <div
-            class="d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-3 rounded-4 shadow-sm bg-card border border-light"
-          >
-            <div class="d-flex align-items-center gap-5">
-              <div class="stat-item-inline">
-                <span class="label">Balance</span>
-                <div class="d-flex align-items-center gap-2 mt-1">
-                  <h5 class="value mb-0">{{ totalWeight }}%</h5>
-                  <i
-                    :class="
-                      totalWeight === 100
-                        ? 'fas fa-check-circle text-success'
-                        : 'fas fa-exclamation-triangle text-danger'
-                    "
-                    class="small"
-                  ></i>
+        <div class="card accounts-card">
+          <div class="card-header border-0 py-3 px-4 accounts-head">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 w-100">
+              <div class="d-flex flex-column">
+                <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                  <h5 class="mb-0 fw-800 text-main">Questionnaires</h5>
+                  <span class="head-label">{{ categories.length || 0 }} Records</span>
+                </div>
+                <p class="head-desc mb-0">Manage evaluation sectors, criteria and weight balance.</p>
+              </div>
+
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button
+                  class="btn btn-ghost"
+                  :class="{ 'is-active': showFilters }"
+                  title="Show or hide filters"
+                  @click="showFilters = !showFilters"
+                >
+                  <i class="fas fa-filter"></i>
+                  <span>Filters</span>
+                  <span v-if="activeFilterCount" class="filter-count">{{ activeFilterCount }}</span>
+                </button>
+
+                <div class="view-toggle-group" role="group" aria-label="View mode">
+                  <button
+                    type="button"
+                    class="view-toggle-btn"
+                    :class="{ active: viewMode === 'cards' }"
+                    @click="viewMode = 'cards'"
+                    title="Card view"
+                    aria-label="Card view"
+                  >
+                    <i class="fas fa-grip"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="view-toggle-btn"
+                    :class="{ active: viewMode === 'table' }"
+                    @click="viewMode = 'table'"
+                    title="Table view"
+                    aria-label="Table view"
+                  >
+                    <i class="fas fa-table-list"></i>
+                  </button>
+                </div>
+
+                <button v-if="$can('questionnaire.create')" class="btn btn-cta" title="New Sector" @click="openCategoryModal()">
+                  <i class="fas fa-plus"></i>
+                  <span>New Sector</span>
+                </button>
+              </div>
+            </div>
+
+            <Transition name="panel">
+              <div v-show="showFilters" class="filters-panel">
+                <div class="filter-toolbar">
+                  <div class="premium-filter-group" style="width: 220px">
+                    <span class="input-group-text">
+                      <i class="fas fa-search"></i>
+                    </span>
+                    <input
+                      v-model="filters.query"
+                      type="text"
+                      class="form-control"
+                      placeholder="Search sectors..."
+                      @input="handleSearch"
+                    />
+                  </div>
+
+                  <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
+                    <i class="fas fa-redo-alt small"></i>
+                  </button>
                 </div>
               </div>
-              <div class="stat-divider"></div>
-              <div class="stat-item-inline">
-                <span class="label">Sectors</span>
-                <h5 class="value mb-0 mt-1">{{ categories.length }}</h5>
-              </div>
-              <div class="stat-divider"></div>
-              <div class="stat-item-inline">
-                <span class="label">Criteria</span>
-                <h5 class="value mb-0 mt-1">{{ totalQuestionsCount }}</h5>
-              </div>
-            </div>
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-              <div class="view-toggle-group" role="group" aria-label="View mode">
-                <button
-                  type="button"
-                  class="view-toggle-btn"
-                  :class="{ active: viewMode === 'cards' }"
-                  @click="viewMode = 'cards'"
-                  title="Card view"
-                  aria-label="Card view"
-                >
-                  <i class="fas fa-grip"></i>
-                </button>
-                <button
-                  type="button"
-                  class="view-toggle-btn"
-                  :class="{ active: viewMode === 'table' }"
-                  @click="viewMode = 'table'"
-                  title="Table view"
-                  aria-label="Table view"
-                >
-                  <i class="fas fa-table-list"></i>
-                </button>
-              </div>
-              <button v-if="$can('questionnaire.create')" class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openCategoryModal()">
-                <i class="fas fa-plus-circle me-2"></i>
-                New Sector
-              </button>
-            </div>
+            </Transition>
           </div>
-        </div>
 
-        <div v-if="loading" class="py-4">
-          <SkeletonLoader :variant="viewMode === 'table' ? 'table' : 'cards'" :rows="6" :cols="6" />
-        </div>
-
-        <!-- Grid of Sectors (Cards view) -->
-        <div v-else-if="viewMode === 'cards'" class="row g-4 fade-in-up">
-          <TransitionGroup name="grid-stagger">
-            <div v-for="(cat, idx) in categories" :key="cat.id" class="col-md-6 col-lg-4 col-xl-4">
+          <div class="card-body">
+            <!-- Stats Bar -->
+            <div class="stats-bar-premium mb-5 fade-in-up">
               <div
-                class="sector-card-premium"
-                :style="{ '--accent-color': primaryColor }"
-                @click="handleCategoryClick(cat)"
+                class="d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-3 rounded-4 shadow-sm bg-card border border-light"
               >
-                <div class="card-glow"></div>
-                <div class="sector-card-inner p-4 h-100 d-flex flex-column">
-                  <div class="d-flex justify-content-between align-items-start mb-4">
-                    <div class="sector-icon-box" style="background: rgba(25, 25, 112, 0.1); color: #191970">
-                      <i class="fas fa-folder-open"></i>
-                    </div>
-                    <div class="d-flex gap-1">
-                      <button v-if="$can('questionnaire.edit')" class="btn-action-minimal" @click.stop="openCategoryModal(cat)">
-                        <i class="fas fa-edit"></i>
-                      </button>
-                      <button v-if="$can('questionnaire.delete')" class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)">
-                        <i class="fas fa-trash-alt"></i>
-                      </button>
+                <div class="d-flex align-items-center gap-5">
+                  <div class="stat-item-inline">
+                    <span class="label">Balance</span>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                      <h5 class="value mb-0">{{ totalWeight }}%</h5>
+                      <i
+                        :class="
+                          totalWeight === 100
+                            ? 'fas fa-check-circle text-success'
+                            : 'fas fa-exclamation-triangle text-danger'
+                        "
+                        class="small"
+                      ></i>
                     </div>
                   </div>
-
-                  <h4 class="sector-title mb-1 fw-800 text-truncate" :title="cat.category_name">
-                    {{ cat.category_name }}
-                  </h4>
-                  <div class="small text-primary fw-bold text-truncate mb-2" v-if="cat.category_name_tl">
-                    {{ cat.category_name_tl }}
+                  <div class="stat-divider"></div>
+                  <div class="stat-item-inline">
+                    <span class="label">Sectors</span>
+                    <h5 class="value mb-0 mt-1">{{ categories.length }}</h5>
                   </div>
-                  <div class="small text-danger fw-bold mb-2" v-else>
-                    <i class="fas fa-language me-1"></i> No Tagalog translation
-                  </div>
-                  <div class="small text-muted mb-2" v-if="cat.reference">
-                    <i class="fas fa-balance-scale me-1"></i>{{ cat.reference }}
-                  </div>
-
-                  <div class="mt-auto pt-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                      <span class="small fw-700 text-muted ls-1">WEIGHT</span>
-                      <span class="small fw-800 text-primary">{{ Math.round(cat.weight * 100) }}%</span>
-                    </div>
-                    <div class="progress-minimal mb-3">
-                      <div
-                        class="progress-bar"
-                        :style="{ width: Math.round(cat.weight * 100) + '%', background: '#0A278A' }"
-                      ></div>
-                    </div>
-
-                    <div class="d-flex align-items-center justify-content-between">
-                      <div class="d-flex align-items-center gap-2">
-                        <i class="fas fa-list-check small opacity-50"></i>
-                        <span class="small fw-600 text-muted">{{ cat.questions_count || 0 }} Metrics</span>
-                      </div>
-                      <span class="view-details-link small fw-800 text-uppercase ls-1">
-                        Manage
-                        <i class="fas fa-chevron-right ms-1"></i>
-                      </span>
-                    </div>
+                  <div class="stat-divider"></div>
+                  <div class="stat-item-inline">
+                    <span class="label">Criteria</span>
+                    <h5 class="value mb-0 mt-1">{{ totalQuestionsCount }}</h5>
                   </div>
                 </div>
               </div>
             </div>
-          </TransitionGroup>
 
-          <!-- Empty State for Grid -->
-          <div v-if="!categories.length" class="col-12">
-            <div class="empty-grid-state text-center py-5 border border-dashed rounded-5">
-              <div class="mb-4">
-                <i class="fas fa-layer-group fa-4x opacity-10"></i>
-              </div>
-              <h4 class="fw-800">Start Building Your Evaluation</h4>
-              <p class="text-muted mb-4">
-                You haven't added any evaluation sectors yet. Create your first one to begin adding questions.
-              </p>
-              <button v-if="$can('questionnaire.create')" class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
-                Create First Sector
-              </button>
+            <div v-if="loading" class="py-4">
+              <SkeletonLoader :variant="viewMode === 'table' ? 'table' : 'cards'" :rows="6" :cols="6" />
             </div>
-          </div>
-        </div>
 
-        <!-- Table of Sectors (Table view) -->
-        <div v-else-if="viewMode === 'table'" class="fade-in-up">
-          <div class="sector-table-card">
-            <div class="table-responsive">
-              <table class="table sector-table mb-0 align-middle">
-                <thead>
-                  <tr>
-                    <th style="width: 48px">#</th>
-                    <th>Sector</th>
-                    <th>Tagalog Translation</th>
-                    <th style="width: 180px">Weight</th>
-                    <th style="width: 110px" class="text-center">Metrics</th>
-                    <th style="width: 190px" class="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="(cat, idx) in categories"
-                    :key="cat.id"
-                    class="sector-table-row"
+            <!-- Grid of Sectors (Cards view) -->
+            <div v-else-if="viewMode === 'cards'" class="row g-4 fade-in-up">
+              <TransitionGroup name="grid-stagger">
+                <div v-for="(cat, idx) in categories" :key="cat.id" class="col-md-6 col-lg-4 col-xl-4">
+                  <div
+                    class="sector-card-premium"
+                    :style="{ '--accent-color': primaryColor }"
                     @click="handleCategoryClick(cat)"
                   >
-                    <td class="text-muted fw-700">{{ idx + 1 }}</td>
-                    <td>
-                      <div class="d-flex align-items-center gap-3">
-                        <div class="sector-icon-box sector-icon-box-sm" style="background: rgba(25, 25, 112, 0.1); color: #191970">
+                    <div class="card-glow"></div>
+                    <div class="sector-card-inner p-4 h-100 d-flex flex-column">
+                      <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div class="sector-icon-box" style="background: rgba(25, 25, 112, 0.1); color: #191970">
                           <i class="fas fa-folder-open"></i>
                         </div>
-                        <span class="fw-800 text-main">{{ cat.category_name }}</span>
+                        <div class="d-flex gap-1">
+                          <button v-if="$can('questionnaire.edit')" class="btn-action-minimal" @click.stop="openCategoryModal(cat)">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <button v-if="$can('questionnaire.delete')" class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)">
+                            <i class="fas fa-trash-alt"></i>
+                          </button>
+                        </div>
                       </div>
-                      <div class="small text-muted text-truncate mt-1" style="max-width: 260px" v-if="cat.reference" :title="cat.reference">
+
+                      <h4 class="sector-title mb-1 fw-800 text-truncate" :title="cat.category_name">
+                        {{ cat.category_name }}
+                      </h4>
+                      <div class="small text-primary fw-bold text-truncate mb-2" v-if="cat.category_name_tl">
+                        {{ cat.category_name_tl }}
+                      </div>
+                      <div class="small text-danger fw-bold mb-2" v-else>
+                        <i class="fas fa-language me-1"></i> No Tagalog translation
+                      </div>
+                      <div class="small text-muted mb-2" v-if="cat.reference">
                         <i class="fas fa-balance-scale me-1"></i>{{ cat.reference }}
                       </div>
-                    </td>
-                    <td>
-                      <span class="small fw-bold text-primary text-truncate d-inline-block" style="max-width: 240px" v-if="cat.category_name_tl" :title="cat.category_name_tl">
-                        {{ cat.category_name_tl }}
-                      </span>
-                      <span class="small fw-bold text-danger" v-else>
-                        <i class="fas fa-language me-1"></i> No Tagalog translation
-                      </span>
-                    </td>
-                    <td>
-                      <div class="d-flex align-items-center gap-2">
-                        <div class="progress-minimal flex-grow-1">
+
+                      <div class="mt-auto pt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <span class="small fw-700 text-muted ls-1">WEIGHT</span>
+                          <span class="small fw-800 text-primary">{{ Math.round(cat.weight * 100) }}%</span>
+                        </div>
+                        <div class="progress-minimal mb-3">
                           <div
                             class="progress-bar"
                             :style="{ width: Math.round(cat.weight * 100) + '%', background: '#0A278A' }"
                           ></div>
                         </div>
-                        <span class="small fw-800 text-primary" style="min-width: 38px">{{ Math.round(cat.weight * 100) }}%</span>
+
+                        <div class="d-flex align-items-center justify-content-between">
+                          <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-list-check small opacity-50"></i>
+                            <span class="small fw-600 text-muted">{{ cat.questions_count || 0 }} Metrics</span>
+                          </div>
+                          <span class="view-details-link small fw-800 text-uppercase ls-1">
+                            Manage
+                            <i class="fas fa-chevron-right ms-1"></i>
+                          </span>
+                        </div>
                       </div>
-                    </td>
-                    <td class="text-center">
-                      <span class="metric-badge">
-                        <i class="fas fa-list-check me-1"></i>
-                        {{ cat.questions_count || 0 }}
-                      </span>
-                    </td>
-                    <td class="text-end">
-                      <div class="d-inline-flex gap-1 justify-content-end">
-                        <button class="btn-manage-sm" @click.stop="handleCategoryClick(cat)">
-                          Manage
-                          <i class="fas fa-chevron-right ms-1"></i>
-                        </button>
-                        <button v-if="$can('questionnaire.edit')" class="btn-action-minimal" @click.stop="openCategoryModal(cat)" title="Edit sector">
-                          <i class="fas fa-edit"></i>
-                        </button>
-                        <button v-if="$can('questionnaire.delete')" class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)" title="Delete sector">
-                          <i class="fas fa-trash-alt"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                    </div>
+                  </div>
+                </div>
+              </TransitionGroup>
+
+              <!-- Empty State for Grid -->
+              <div v-if="!categories.length" class="col-12">
+                <div class="empty-grid-state text-center py-5 border border-dashed rounded-5">
+                  <div class="mb-4">
+                    <i class="fas fa-layer-group fa-4x opacity-10"></i>
+                  </div>
+                  <h4 class="fw-800">Start Building Your Evaluation</h4>
+                  <p class="text-muted mb-4">
+                    You haven't added any evaluation sectors yet. Create your first one to begin adding questions.
+                  </p>
+                  <button v-if="$can('questionnaire.create')" class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
+                    Create First Sector
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <!-- Empty State for Table -->
-            <div v-if="!categories.length" class="text-center py-5">
-              <div class="mb-4">
-                <i class="fas fa-layer-group fa-4x opacity-10"></i>
+            <!-- Table of Sectors (Table view) -->
+            <div v-else-if="viewMode === 'table'" class="fade-in-up">
+              <div class="sector-table-card">
+                <div class="table-responsive">
+                  <table class="table sector-table mb-0 align-middle">
+                    <thead>
+                      <tr>
+                        <th style="width: 48px">#</th>
+                        <th class="th-sortable" @click="toggleSort('category_name')">
+                          Sector <i class="fas sort-arrow" :class="sortIcon('category_name')"></i>
+                        </th>
+                        <th class="th-sortable" @click="toggleSort('category_name_tl')">
+                          Tagalog Translation <i class="fas sort-arrow" :class="sortIcon('category_name_tl')"></i>
+                        </th>
+                        <th style="width: 180px" class="th-sortable" @click="toggleSort('weight')">
+                          Weight <i class="fas sort-arrow" :class="sortIcon('weight')"></i>
+                        </th>
+                        <th style="width: 110px" class="text-center">Metrics</th>
+                        <th style="width: 190px" class="text-end">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="(cat, idx) in categories"
+                        :key="cat.id"
+                        class="sector-table-row"
+                        @click="handleCategoryClick(cat)"
+                      >
+                        <td class="text-muted fw-700">{{ idx + 1 }}</td>
+                        <td>
+                          <div class="d-flex align-items-center gap-3">
+                            <div class="sector-icon-box sector-icon-box-sm" style="background: rgba(25, 25, 112, 0.1); color: #191970">
+                              <i class="fas fa-folder-open"></i>
+                            </div>
+                            <span class="fw-800 text-main">{{ cat.category_name }}</span>
+                          </div>
+                          <div class="small text-muted text-truncate mt-1" style="max-width: 260px" v-if="cat.reference" :title="cat.reference">
+                            <i class="fas fa-balance-scale me-1"></i>{{ cat.reference }}
+                          </div>
+                        </td>
+                        <td>
+                          <span class="small fw-bold text-primary text-truncate d-inline-block" style="max-width: 240px" v-if="cat.category_name_tl" :title="cat.category_name_tl">
+                            {{ cat.category_name_tl }}
+                          </span>
+                          <span class="small fw-bold text-danger" v-else>
+                            <i class="fas fa-language me-1"></i> No Tagalog translation
+                          </span>
+                        </td>
+                        <td>
+                          <div class="d-flex align-items-center gap-2">
+                            <div class="progress-minimal flex-grow-1">
+                              <div
+                                class="progress-bar"
+                                :style="{ width: Math.round(cat.weight * 100) + '%', background: '#0A278A' }"
+                              ></div>
+                            </div>
+                            <span class="small fw-800 text-primary" style="min-width: 38px">{{ Math.round(cat.weight * 100) }}%</span>
+                          </div>
+                        </td>
+                        <td class="text-center">
+                          <span class="metric-badge">
+                            <i class="fas fa-list-check me-1"></i>
+                            {{ cat.questions_count || 0 }}
+                          </span>
+                        </td>
+                        <td class="text-end">
+                          <div class="d-inline-flex gap-1 justify-content-end">
+                            <button class="btn-manage-sm" @click.stop="handleCategoryClick(cat)">
+                              Manage
+                              <i class="fas fa-chevron-right ms-1"></i>
+                            </button>
+                            <button v-if="$can('questionnaire.edit')" class="btn-action-minimal" @click.stop="openCategoryModal(cat)" title="Edit sector">
+                              <i class="fas fa-edit"></i>
+                            </button>
+                            <button v-if="$can('questionnaire.delete')" class="btn-action-minimal danger" @click.stop="deleteCategory(cat.id)" title="Delete sector">
+                              <i class="fas fa-trash-alt"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Empty State for Table -->
+                <div v-if="!categories.length" class="text-center py-5">
+                  <div class="mb-4">
+                    <i class="fas fa-layer-group fa-4x opacity-10"></i>
+                  </div>
+                  <h4 class="fw-800">Start Building Your Evaluation</h4>
+                  <p class="text-muted mb-4">
+                    You haven't added any evaluation sectors yet. Create your first one to begin adding questions.
+                  </p>
+                  <button v-if="$can('questionnaire.create')" class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
+                    Create First Sector
+                  </button>
+                </div>
               </div>
-              <h4 class="fw-800">Start Building Your Evaluation</h4>
-              <p class="text-muted mb-4">
-                You haven't added any evaluation sectors yet. Create your first one to begin adding questions.
-              </p>
-              <button v-if="$can('questionnaire.create')" class="btn btn-primary px-5 rounded-pill" @click="openCategoryModal()">
-                Create First Sector
-              </button>
             </div>
           </div>
         </div>
@@ -495,6 +553,47 @@ const saving = ref(false);
 const showDrawer = ref(false);
 const viewMode = ref("cards");
 
+const filters = ref({
+  query: "",
+});
+
+const sort = ref({ by: "", dir: "" });
+const showFilters = ref(false);
+let searchTimeout = null;
+
+const activeFilterCount = computed(
+  () => Object.values(filters.value).filter((value) => value !== "" && value !== null).length,
+);
+
+function handleSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => fetchCategories(), 500);
+}
+
+function toggleSort(column) {
+  if (sort.value.by !== column) {
+    sort.value = { by: column, dir: "asc" };
+  } else if (sort.value.dir === "asc") {
+    sort.value = { by: column, dir: "desc" };
+  } else {
+    sort.value = { by: "", dir: "" };
+  }
+  fetchCategories();
+}
+
+function sortIcon(column) {
+  if (sort.value.by !== column) return "fa-arrow-down is-idle";
+  return sort.value.dir === "asc" ? "fa-arrow-up is-active" : "fa-arrow-down is-active";
+}
+
+function clearFilters() {
+  filters.value = {
+    query: "",
+  };
+  sort.value = { by: "", dir: "" };
+  fetchCategories();
+}
+
 const showCatModal = ref(false);
 const editCatId = ref(null);
 const catForm = ref({ category_name: "", category_name_tl: "", reference: "", weight_percent: 20 });
@@ -570,7 +669,14 @@ async function fetchStats() {
 async function fetchCategories() {
   loading.value = true;
   try {
-    const res = await api.get(`/categories?paginate=false&evaluatee_type=${evaluateeType.value}`);
+    const params = new URLSearchParams({
+      paginate: "false",
+      evaluatee_type: evaluateeType.value,
+      query: filters.value.query,
+      sort_by: sort.value.by,
+      sort_dir: sort.value.dir,
+    });
+    const res = await api.get(`/categories?${params.toString()}`);
     categories.value = res.data;
   } catch (e) {
     console.error("Failed to fetch categories:", e);

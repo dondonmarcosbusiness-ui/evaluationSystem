@@ -1,15 +1,10 @@
 <template>
   <div
     class="login-shell"
-    :style="{ '--login-photo': `url(${basePath}/assets/img/modern_login_hero.png)` }"
+    :style="{ '--login-photo': `url(${basePath}/assets/img/modern_login_hero.jpg)` }"
   >
     <!-- ── Brand / Hero panel ──────────────────────────────── -->
     <div class="login-brand">
-      <div
-        class="login-brand__image"
-        :style="{ backgroundImage: `url(${basePath}/assets/img/modern_login_hero.png)` }"
-        aria-hidden="true"
-      ></div>
       <div class="login-brand__overlay" aria-hidden="true"></div>
 
       <div class="login-brand__content">
@@ -481,24 +476,16 @@ function loginWithGoogle() {
   background-color: #0c114c;
 }
 
-/* Blurred photo backdrop (scale hides the soft blur edges) */
+/* Full-screen photo backdrop (sharp; the form panel frosts it) */
 .login-shell::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-image: linear-gradient(
-      180deg,
-      rgba(12, 17, 76, 0.55) 0%,
-      rgba(10, 14, 62, 0.82) 45%,
-      rgba(6, 9, 40, 0.94) 100%
-    ),
-    var(--login-photo);
+  background-image: var(--login-photo);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  filter: blur(8px);
-  transform: scale(1.06);
 }
 
 /* ── Brand / hero panel ────────────────────────────────────── */
@@ -514,20 +501,11 @@ function loginWithGoogle() {
   text-align: center;
 }
 
-.login-brand__image {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
 .login-brand__overlay {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background-color: rgba(12, 17, 76, 0.8);
+  background-color: rgba(12, 17, 76, 0.5);
 }
 
 .login-brand__content {
@@ -1031,7 +1009,11 @@ function loginWithGoogle() {
     height: 100dvh;
     margin-top: 0;
     border-radius: 0;
-    box-shadow: none;
+    /* Frosted glass — blurs the full-screen photo behind the form */
+    background-color: rgba(213, 221, 255, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: -24px 0 64px rgba(6, 9, 40, 0.35);
   }
 
   .login-brand__footer {
@@ -1104,7 +1086,6 @@ function loginWithGoogle() {
 
   /* White background — drop the photo backdrop entirely */
   .login-shell::before,
-  .login-brand__image,
   .login-brand__overlay {
     display: none;
   }

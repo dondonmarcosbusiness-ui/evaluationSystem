@@ -133,7 +133,6 @@
                       @click.stop
                     >
                       {{ formatPerm(perm.name) }}
-                      <code class="ms-1 text-muted fw-normal" style="font-size: 0.7rem">{{ perm.name }}</code>
                     </label>
                     <span
                       v-if="inheritedPermissions.includes(perm.name)"

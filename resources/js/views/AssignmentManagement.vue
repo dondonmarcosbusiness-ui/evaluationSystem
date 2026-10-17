@@ -5,147 +5,142 @@
       <Navbar><template #title>Faculty Assignments</template></Navbar>
 
       <div class="content-area">
-        <!-- Premium Filters & Action Bar + Year Tabs (attached, sticky) -->
-        <div class="assignment-toolbar-sticky fade-in-up">
-          <div class="stats-bar-premium">
-            <div
-              class="d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-3 rounded-top-4 shadow-sm bg-card border border-light border-bottom-0"
-            >
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-              <div class="search-premium-box v2">
-                <i class="fas fa-search"></i>
-                <input v-model="filters.query" type="text" placeholder="Search professor..." @input="handleSearch" />
+        <div class="card accounts-card">
+          <div class="card-header border-0 py-3 px-4 accounts-head">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 w-100">
+              <div class="d-flex flex-column">
+                <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                  <h5 class="mb-0 fw-800 text-main">Faculty Assignments</h5>
+                  <span class="head-label">{{ facultyGroups.length || 0 }} Records</span>
+                </div>
+                <p class="head-desc mb-0">Organize teaching loads, subjects and sections per faculty member.</p>
               </div>
-
-              <div class="filter-dropdown-premium">
-                <CustomSelect
-                  v-model="filters.department"
-                  :options="deptOptions"
-                  placeholder="All Departments"
-                  @change="fetchAssignments(1)"
-                />
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button
+                  class="btn btn-ghost"
+                  :class="{ 'is-active': showFilters }"
+                  title="Show or hide filters"
+                  @click="showFilters = !showFilters"
+                >
+                  <i class="fas fa-filter"></i>
+                  <span>Filters</span>
+                  <span v-if="activeFilterCount" class="filter-count">{{ activeFilterCount }}</span>
+                </button>
+                <button v-if="$can('assignment.create')" class="btn btn-cta" title="New Assignment" @click="openAddModal">
+                  <i class="fas fa-plus"></i>
+                  <span>New Assignment</span>
+                </button>
               </div>
-
-              <div class="filter-dropdown-premium sm">
-                <CustomSelect
-                  v-model="filters.semester"
-                  :options="semesterOptions"
-                  placeholder="All Semesters"
-                  @change="fetchAssignments(1)"
-                />
-              </div>
-
-              <button class="btn-reset-premium" @click="clearFilters" title="Reset Filters">
-                <i class="fas fa-sync-alt"></i>
-              </button>
             </div>
-
-            <button v-if="$can('assignment.create')" class="btn btn-primary-glass px-4 rounded-pill shadow-sm" @click="openAddModal">
-              <i class="fas fa-plus-circle me-2"></i>
-              New Assignment
-            </button>
-          </div>
-          </div>
-
-          <!-- Year Level Tab Menu (stuck directly below filters, no gap) -->
-          <div class="year-tab-menu year-tab-menu-attached underline-tabs">
-            <button
-              v-for="tab in yearTabs"
-              :key="tab.value"
-              type="button"
-              class="year-tab"
-              :class="{ active: filters.year_level === tab.value }"
-              @click="selectYearTab(tab.value)"
-            >
-              <i :class="tab.icon" class="tab-ico"></i>
-              <span>{{ tab.label }}</span>
-            </button>
-          </div>
-        </div>
-
-        <div v-if="loading" class="py-4">
-          <SkeletonLoader variant="table" :rows="8" :cols="5" />
-        </div>
-
-        <!-- Faculty Assignment Table -->
-        <div v-else class="assignment-table-wrap fade-in-up">
-          <table class="assignment-table">
-            <thead>
-              <tr>
-                <th>Faculty Name</th>
-                <th>Department</th>
-                <th>Loads</th>
-                <th>Subjects</th>
-                <th class="text-end">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="group in paginatedFacultyGroups"
-                :key="group.facultyId"
-                class="assignment-row"
-                @click="handleFacultyClick(group)"
-              >
-                <td>
-                  <div class="d-flex align-items-center gap-3">
-                    <div class="faculty-avatar-sm">
-                      <i class="fas fa-user-tie"></i>
-                    </div>
-                    <span class="fw-700">{{ group.facultyName }}</span>
+            <Transition name="panel">
+              <div v-show="showFilters" class="filters-panel">
+                <div class="filter-toolbar">
+                  <div class="premium-filter-group" style="width: 220px">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input
+                      v-model="filters.query"
+                      type="text"
+                      class="form-control"
+                      placeholder="Search professor..."
+                      @input="handleSearch"
+                    />
                   </div>
-                </td>
-                <td class="text-muted">{{ group.department }}</td>
-                <td>
-                  <span class="load-count-badge">{{ group.assignments.length }}</span>
-                </td>
-                <td>
-                  <div class="subjects-cell">
-                    <span v-for="(a, i) in group.assignments.slice(0, 3)" :key="i" class="subject-chip">
-                      {{ a.subject?.code }}
-                    </span>
-                    <span v-if="group.assignments.length > 3" class="subject-more">
-                      +{{ group.assignments.length - 3 }}
-                    </span>
-                    <span v-if="!group.assignments.length" class="text-muted fst-italic">No assignments</span>
-                  </div>
-                </td>
-                <td class="text-end">
-                  <button class="btn-manage-load" @click.stop="handleFacultyClick(group)">
-                    Manage
-                    <i class="fas fa-chevron-right ms-1"></i>
+                  <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
+                    <i class="fas fa-redo-alt small"></i>
                   </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- Pagination -->
-          <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mt-4">
-            <label class="per-page-wrap">
-              <span class="per-page-label">Rows:</span>
-              <select class="per-page-select" :value="facultyPerPage" @change="changePerPage($event.target.value)">
-                <option v-for="n in [10, 20, 50, 100]" :key="n" :value="n">{{ n }}</option>
-              </select>
-            </label>
-            <div
-              v-if="totalFacultyPages > 1"
-              class="pagination-premium d-flex align-items-center gap-3 bg-card p-2 rounded-pill shadow-sm border border-light"
-            >
-              <button class="btn btn-icon-sm" :disabled="facultyPage === 1" @click="facultyPage--">
-                <i class="fas fa-chevron-left"></i>
-              </button>
-              <span class="small fw-800 px-2">Page {{ facultyPage }} of {{ totalFacultyPages }}</span>
-              <button class="btn btn-icon-sm" :disabled="facultyPage === totalFacultyPages" @click="facultyPage++">
-                <i class="fas fa-chevron-right"></i>
-              </button>
-            </div>
+                </div>
+                <FilterTree :groups="assignmentFilterGroups" @select="onTreeSelect" />
+              </div>
+            </Transition>
           </div>
+          <div class="card-body p-0">
+            <Transition name="fade" mode="out-in">
+              <div v-if="loading" key="loading">
+                <SkeletonLoader variant="table" :rows="8" :cols="5" />
+              </div>
+              <div v-else key="table" class="table-scroll" @scroll="onTableScroll">
+                <table class="table table-hover mb-0">
+                  <thead :class="{ 'glass-header': tableScrolled }">
+                    <tr>
+                      <th class="th-sortable" @click="toggleSort('name')">
+                        Faculty Name <i class="fas sort-arrow" :class="sortIcon('name')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('department')">
+                        Department <i class="fas sort-arrow" :class="sortIcon('department')"></i>
+                      </th>
+                      <th>Loads</th>
+                      <th>Subjects</th>
+                      <th class="text-end">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="group in paginatedFacultyGroups"
+                      :key="group.facultyId"
+                      class="assignment-row"
+                      @click="handleFacultyClick(group)"
+                    >
+                      <td>
+                        <div class="d-flex align-items-center gap-3">
+                          <div class="faculty-avatar-sm">
+                            <i class="fas fa-user-tie"></i>
+                          </div>
+                          <span class="fw-700">{{ group.facultyName }}</span>
+                        </div>
+                      </td>
+                      <td class="text-muted">{{ group.department }}</td>
+                      <td>
+                        <span class="load-count-badge">{{ group.assignments.length }}</span>
+                      </td>
+                      <td>
+                        <div class="subjects-cell">
+                          <span v-for="(a, i) in group.assignments.slice(0, 3)" :key="i" class="subject-chip">
+                            {{ a.subject?.code }}
+                          </span>
+                          <span v-if="group.assignments.length > 3" class="subject-more">
+                            +{{ group.assignments.length - 3 }}
+                          </span>
+                          <span v-if="!group.assignments.length" class="text-muted fst-italic">No assignments</span>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button class="btn-manage-load" @click.stop="handleFacultyClick(group)">
+                          Manage
+                          <i class="fas fa-chevron-right ms-1"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
 
-          <!-- Empty State -->
-          <div v-if="!paginatedFacultyGroups.length && !loading" class="text-center py-5">
-            <i class="fas fa-user-slash fa-4x opacity-10 mb-3"></i>
-            <h5 class="fw-800">No Assignments Found</h5>
-            <p class="text-muted small">Try different filters or create a new assignment.</p>
+                <div v-if="!paginatedFacultyGroups.length" class="text-center py-5">
+                  <i class="fas fa-user-slash fa-4x opacity-10 mb-3"></i>
+                  <h5 class="fw-800">No Assignments Found</h5>
+                  <p class="text-muted small mb-0">Try different filters or create a new assignment.</p>
+                </div>
+              </div>
+            </Transition>
+
+            <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap px-4 py-3">
+              <label class="per-page-wrap">
+                <span class="per-page-label">Rows:</span>
+                <select class="per-page-select" :value="facultyPerPage" @change="changePerPage($event.target.value)">
+                  <option v-for="n in [10, 20, 50, 100]" :key="n" :value="n">{{ n }}</option>
+                </select>
+              </label>
+              <div
+                v-if="totalFacultyPages > 1"
+                class="pagination-premium d-flex align-items-center gap-3 bg-card p-2 rounded-pill shadow-sm border border-light"
+              >
+                <button class="btn btn-icon-sm" :disabled="facultyPage === 1" @click="facultyPage--">
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="small fw-800 px-2">Page {{ facultyPage }} of {{ totalFacultyPages }}</span>
+                <button class="btn btn-icon-sm" :disabled="facultyPage === totalFacultyPages" @click="facultyPage++">
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -321,6 +316,7 @@ import { ref, onMounted, computed, watch } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
+import FilterTree from "../components/FilterTree.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 import api from "../services/api.js";
@@ -343,7 +339,14 @@ const activeFacultyId = ref(null);
 const fallbackYearLevels = ["1st", "2nd", "3rd", "4th", "Irregular"];
 
 const filters = ref({ query: "", department: "", academic_year: "", semester: "", year_level: "" });
+const sort = ref({ by: "", dir: "" });
+const showFilters = ref(false);
+const tableScrolled = ref(false);
 let searchTimeout = null;
+
+function onTableScroll(e) {
+  tableScrolled.value = e.target.scrollTop > 0;
+}
 
 const facultyPage = ref(1);
 const facultyPerPage = ref(10);
@@ -543,27 +546,45 @@ const facultyOptions = computed(() => [
 
 const yearList = computed(() => meta.value.year_levels?.length ? meta.value.year_levels : fallbackYearLevels);
 
-const yearTabs = computed(() => [
-  { label: "All Years", value: "", icon: "fas fa-home" },
-  ...yearList.value.map((y) => ({
-    label: y === "Irregular" ? "Irregular" : `${y} Year`,
-    value: y,
-    icon:
-      y === "1st"
-        ? "fas fa-chart-line"
-        : y === "2nd"
-          ? "fas fa-list-ul"
-          : y === "3rd"
-            ? "fas fa-layer-group"
-            : y === "4th"
-              ? "fas fa-graduation-cap"
-              : "fas fa-inbox",
-  })),
+const filterYearOptions = computed(() => [
+  { label: "All Years", value: "" },
+  ...yearList.value.map((y) => ({ label: y === "Irregular" ? "Irregular" : `${y} Year`, value: y })),
 ]);
 
-function selectYearTab(value) {
-  if (filters.value.year_level === value) return;
-  filters.value.year_level = value;
+const assignmentFilterGroups = computed(() => [
+  {
+    key: "department",
+    label: "Department",
+    value: filters.value.department,
+    valueLabel: optionLabel(deptOptions.value, filters.value.department),
+    options: deptOptions.value,
+  },
+  {
+    key: "semester",
+    label: "Semester",
+    value: filters.value.semester,
+    valueLabel: optionLabel(semesterOptions.value, filters.value.semester),
+    options: semesterOptions.value,
+  },
+  {
+    key: "year_level",
+    label: "Year Level",
+    value: filters.value.year_level,
+    valueLabel: optionLabel(filterYearOptions.value, filters.value.year_level),
+    options: filterYearOptions.value,
+  },
+]);
+
+const activeFilterCount = computed(
+  () => Object.values(filters.value).filter((value) => value !== "" && value !== null).length,
+);
+
+function optionLabel(options, value) {
+  return options.find((o) => o.value === value)?.label ?? options[0]?.label ?? "";
+}
+
+function onTreeSelect({ key, value }) {
+  filters.value[key] = value;
   fetchAssignments(1);
 }
 
@@ -600,9 +621,38 @@ function subjectOptionLabel(s) {
   return `${s.code} - ${s.name} (1st, 2nd, 3rd, 4th)`;
 }
 
+function toggleSort(column) {
+  if (sort.value.by !== column) {
+    sort.value = { by: column, dir: "asc" };
+  } else if (sort.value.dir === "asc") {
+    sort.value = { by: column, dir: "desc" };
+  } else {
+    sort.value = { by: "", dir: "" };
+  }
+  fetchAssignments(1);
+}
+
+function sortIcon(column) {
+  if (sort.value.by !== column) return "fa-arrow-down is-idle";
+  return sort.value.dir === "asc" ? "fa-arrow-up is-active" : "fa-arrow-down is-active";
+}
+
 function clearFilters() {
   filters.value = { query: "", department: "", academic_year: "", semester: "", year_level: "" };
+  sort.value = { by: "", dir: "" };
   fetchAssignments(1);
+}
+
+function listParams() {
+  return {
+    query: filters.value.query,
+    department: filters.value.department,
+    academic_year: filters.value.academic_year,
+    semester: filters.value.semester,
+    year_level: filters.value.year_level,
+    sort_by: sort.value.by,
+    sort_dir: sort.value.dir,
+  };
 }
 
 async function fetchAssignments(page = 1) {
@@ -611,11 +661,7 @@ async function fetchAssignments(page = 1) {
     const params = new URLSearchParams({
       page,
       per_page: facultyPerPage.value,
-      query: filters.value.query,
-      department: filters.value.department,
-      academic_year: filters.value.academic_year,
-      semester: filters.value.semester,
-      year_level: filters.value.year_level,
+      ...listParams(),
     });
     const res = await api.get(`/assignments?${params.toString()}`);
     assignments.value = res.data.data;
@@ -700,86 +746,6 @@ async function deleteAssignment(id) {
 </script>
 
 <style scoped>
-/* Sticky toolbar: filters + tabs attached with no gap */
-.assignment-toolbar-sticky {
-  position: sticky;
-  top: 0;
-  z-index: 1020;
-}
-.assignment-toolbar-sticky .stats-bar-premium {
-  margin: 0 !important;
-}
-.assignment-toolbar-sticky .rounded-top-4 {
-  border-top-left-radius: 1rem !important;
-  border-top-right-radius: 1rem !important;
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-
-/* Underline tab menu — like Dashboard / Transactions / Products / Messages */
-.assignment-toolbar-sticky .year-tab-menu-attached.underline-tabs {
-  margin: 0 !important;
-  display: flex !important;
-  align-items: stretch !important;
-  gap: 28px !important;
-  background: var(--bg-card) !important;
-  border: 1px solid var(--border-color) !important;
-  border-top: 0 !important;
-  border-radius: 0 0 1rem 1rem !important;
-  padding: 0 20px !important;
-  overflow-x: auto !important;
-  scrollbar-width: none !important;
-}
-.assignment-toolbar-sticky .year-tab-menu-attached.underline-tabs::-webkit-scrollbar {
-  display: none !important;
-}
-.assignment-toolbar-sticky .underline-tabs .year-tab {
-  flex: 0 0 auto !important;
-  position: relative !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  padding: 14px 4px 13px !important;
-  font-size: 0.92rem !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.01em !important;
-  color: #64748b !important;
-  white-space: nowrap !important;
-  cursor: pointer !important;
-}
-.assignment-toolbar-sticky .underline-tabs .year-tab .tab-ico {
-  font-size: 0.95rem;
-  opacity: 0.85;
-}
-.assignment-toolbar-sticky .underline-tabs .year-tab::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 2px;
-  border-radius: 2px;
-  background: transparent;
-  transition: background-color 0.15s ease;
-}
-.assignment-toolbar-sticky .underline-tabs .year-tab:hover {
-  background: transparent !important;
-  color: var(--text-main) !important;
-}
-.assignment-toolbar-sticky .underline-tabs .year-tab.active {
-  background: transparent !important;
-  color: var(--success) !important;
-}
-.assignment-toolbar-sticky .underline-tabs .year-tab.active::after {
-  background: var(--success);
-}
-.assignment-toolbar-sticky .underline-tabs .year-tab.active .tab-ico {
-  opacity: 1;
-}
-
 .ls-1 {
   letter-spacing: 0.05em;
 }
@@ -789,87 +755,6 @@ async function deleteAssignment(id) {
 .bg-card {
   background: var(--bg-card);
 }
-
-/* Premium Filters Bar */
-.search-premium-box.v2 {
-  width: 220px;
-  position: relative;
-}
-.search-premium-box.v2 i {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-.search-premium-box.v2 input {
-  width: 100%;
-  height: 40px;
-  min-height: 40px;
-  padding: 10px 16px 10px 36px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  color: var(--text-main);
-  font-size: 14px;
-  font-weight: 500;
-}
-.search-premium-box.v2 input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.7;
-}
-.search-premium-box.v2 input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
-}
-
-.filter-dropdown-premium select {
-  padding: 10px 40px 10px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-dark);
-  cursor: pointer;
-  min-width: 160px;
-  min-height: 40px;
-}
-.filter-dropdown-premium select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(25, 25, 112, 0.15);
-}
-.filter-dropdown-premium.sm select {
-  min-width: 120px;
-}
-
-.btn-reset-premium {
-  width: 40px;
-  height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  color: var(--text-muted);
-  transition: all 0.2s;
-}
-.btn-reset-premium:hover {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-.btn-reset-premium:hover i {
-  color: white !important;
-}
-
-
-
-/* Faculty Grid Card */
 .faculty-card-premium {
   background: var(--bg-card);
   border-radius: 2rem;
@@ -1143,18 +1028,84 @@ async function deleteAssignment(id) {
 }
 
 /* Transitions */
-.fade-in-up {
-  animation: fadeInUp 0.6s ease-out;
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
 }
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Full-screen table layout — fill viewport height/width */
+.main-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: calc(100vh - 65px);
+  width: 100%;
+  max-width: 100%;
+}
+.content-area .card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+}
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Sticky Table Header with Glassmorphism */
+.table-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  overflow: auto;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 100%;
+}
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
+  transition: all 0.2s ease;
+  box-shadow: none;
+  border-right: 1px solid var(--border-light);
+}
+thead th:last-child {
+  border-right: none;
+}
+.glass-header th {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+[data-theme="dark"] .glass-header th {
+  background: rgba(30, 41, 59, 0.6);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 .grid-stagger-enter-active {
@@ -1166,39 +1117,6 @@ async function deleteAssignment(id) {
 }
 
 /* ── Table Styles ─────── */
-.assignment-table-wrap {
-  margin-top: 24px;
-}
-.assignment-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  overflow: hidden;
-  font-size: 0.9rem;
-}
-.assignment-table thead th {
-  padding: 14px 16px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
-  white-space: nowrap;
-}
-.assignment-table tbody td {
-  padding: 14px 16px;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-main);
-}
-.assignment-table tbody tr:last-child td {
-  border-bottom: none;
-}
 .assignment-row {
   cursor: pointer;
   transition: background 0.15s ease;

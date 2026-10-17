@@ -5,113 +5,102 @@
       <Navbar><template #title>Student Management</template></Navbar>
 
       <div class="content-area">
-        <div class="card">
-          <div class="card-header border-0 py-3 px-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
-              <div class="d-flex align-items-center py-1 gap-3">
-                <h5 class="mb-0 fw-800 text-main d-flex align-items-center">
-                  <i class="fas fa-user-graduate me-2 text-primary opacity-75"></i>
-                  {{
-                    props.defaultType
-                      ? props.defaultType === "regular"
-                        ? "Regular Students"
-                        : "Irregular Students"
-                      : "Students"
-                  }}
-                </h5>
-                <span
-                  class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-700"
-                  style="font-size: 0.75rem"
-                >
-                  {{ pagination.total || 0 }} Records
-                </span>
+        <div class="card accounts-card">
+          <div class="card-header border-0 py-3 px-4 accounts-head">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 w-100">
+              <div class="d-flex flex-column">
+                <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                  <h5 class="mb-0 fw-800 text-main">
+                    {{
+                      props.defaultType
+                        ? props.defaultType === "regular"
+                          ? "Regular Students"
+                          : "Irregular Students"
+                        : "Students"
+                    }}
+                  </h5>
+                  <span class="head-label">{{ pagination.total || 0 }} Records</span>
+                </div>
+                <p class="head-desc mb-0">Manage student accounts, enrollments and login access.</p>
               </div>
 
-              <div class="d-flex align-items-center gap-3 flex-wrap">
-                <!-- Filters -->
-                <div class="premium-filter-group" style="width: 180px">
-                  <span class="input-group-text">
-                    <i class="fas fa-search"></i>
-                  </span>
-                  <input
-                    v-model="filters.query"
-                    type="text"
-                    class="form-control"
-                    placeholder="Search student..."
-                    @input="handleSearch"
-                  />
-                </div>
-
-                <div class="premium-filter-group" style="width: 180px">
-                  <CustomSelect
-                    v-model="filters.course"
-                    :options="courseOptions"
-                    placeholder="All Courses"
-                    @change="handleFilterChange"
-                  />
-                </div>
-
-                <div v-if="props.defaultType !== 'irregular'" class="premium-filter-group" style="width: 140px">
-                  <CustomSelect
-                    v-model="filters.section_id"
-                    :options="filterSectionOptions"
-                    placeholder="All Sec"
-                    :disabled="!filterSectionOptions.length"
-                    @change="fetchStudents(1)"
-                  />
-                </div>
-
-                <!-- Only show type filter if not locked by route prop -->
-                <div v-if="!props.defaultType" class="premium-filter-group" style="width: 150px">
-                  <CustomSelect
-                    v-model="filters.student_type"
-                    :options="[
-                      { label: 'All Types', value: '' },
-                      { label: 'Regular', value: 'regular' },
-                      { label: 'Irregular', value: 'irregular' },
-                    ]"
-                    placeholder="All Types"
-                    @change="fetchStudents(1)"
-                  />
-                </div>
-
-                <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
-                  <i class="fas fa-undo-alt small"></i>
-                </button>
-
-                <div class="vr mx-1 d-none d-md-block" style="height: 24px; opacity: 0.1"></div>
-
-                <!-- Action Buttons -->
+              <div class="d-flex align-items-center gap-2 flex-wrap">
                 <button
-                  class="btn btn-expand"
-                  :class="{ 'is-open': exporting }"
-                  :disabled="exporting"
-                  title="Export the current list (with filters) as CSV"
-                  @click="exportCsv"
+                  class="btn btn-ghost"
+                  :class="{ 'is-active': showFilters }"
+                  title="Show or hide filters"
+                  @click="showFilters = !showFilters"
                 >
-                  <i class="fas" :class="exporting ? 'fa-spinner fa-spin' : 'fa-file-arrow-down'"></i>
-                  <span class="btn-expand-label">{{ exporting ? "Exporting…" : "Export CSV" }}</span>
+                  <i class="fas fa-filter"></i>
+                  <span>Filters</span>
+                  <span v-if="activeFilterCount" class="filter-count">{{ activeFilterCount }}</span>
                 </button>
+
                 <button
                   v-if="$can('student.import')"
-                  class="btn btn-expand is-upload"
+                  class="btn btn-ghost"
                   title="Upload CSV"
                   @click="openUploadModal"
                 >
                   <i class="fas fa-file-csv"></i>
-                  <span class="btn-expand-label">Upload CSV</span>
+                  <span>Upload</span>
                 </button>
+
                 <button
-                  v-if="$can('student.create')"
-                  class="btn btn-expand is-solid"
-                  title="Add Student"
-                  @click="openAddModal"
+                  class="btn btn-ghost"
+                  :disabled="exporting"
+                  title="Export the current list (with filters) as CSV"
+                  @click="exportCsv"
                 >
+                  <i class="fas" :class="exporting ? 'fa-spinner fa-spin' : 'fa-file-export'"></i>
+                  <span>Export</span>
+                </button>
+
+                <button v-if="$can('student.create')" class="btn btn-cta" title="Add Student" @click="openAddModal">
                   <i class="fas fa-plus"></i>
-                  <span class="btn-expand-label">Add Student</span>
+                  <span>Add Student</span>
                 </button>
               </div>
             </div>
+
+            <!-- Collapsible filters: floating panel over the table -->
+            <Transition name="panel">
+              <div v-show="showFilters" class="filters-panel">
+                <div class="filter-toolbar">
+                  <div class="premium-filter-group" style="width: 220px">
+                    <span class="input-group-text">
+                      <i class="fas fa-search"></i>
+                    </span>
+                    <input
+                      v-model="filters.query"
+                      type="text"
+                      class="form-control"
+                      placeholder="Search student..."
+                      @input="handleSearch"
+                    />
+                  </div>
+
+                  <div class="premium-filter-group" style="width: 160px">
+                    <span class="input-group-text">
+                      <i class="fas fa-id-card"></i>
+                    </span>
+                    <input
+                      v-model="filters.id_number"
+                      type="text"
+                      class="form-control"
+                      placeholder="ID Number..."
+                      @input="handleSearch"
+                    />
+                  </div>
+
+                  <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
+                    <i class="fas fa-undo-alt small"></i>
+                  </button>
+                </div>
+
+                <FilterTree :groups="studentFilterGroups" @select="onTreeSelect" />
+              </div>
+            </Transition>
           </div>
           <div class="card-body p-0">
             <Transition name="fade" mode="out-in">
@@ -128,19 +117,39 @@
                         </div>
                       </th>
                       <th>#</th>
-                      <th>ID Number</th>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Course</th>
-                      <th>Year</th>
-                      <th>Type</th>
-                      <th v-if="props.defaultType !== 'irregular'">Section</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+                      <th class="th-sortable" @click="toggleSort('id_number')">
+                        ID Number <i class="fas sort-arrow" :class="sortIcon('id_number')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('name')">
+                        Name <i class="fas sort-arrow" :class="sortIcon('name')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('email')">
+                        Email <i class="fas sort-arrow" :class="sortIcon('email')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('course')">
+                        Course <i class="fas sort-arrow" :class="sortIcon('course')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('year_level')">
+                        Year <i class="fas sort-arrow" :class="sortIcon('year_level')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('student_type')">
+                        Type <i class="fas sort-arrow" :class="sortIcon('student_type')"></i>
+                      </th>
+                      <th v-if="props.defaultType !== 'irregular'" class="th-sortable" @click="toggleSort('section')">
+                        Section <i class="fas sort-arrow" :class="sortIcon('section')"></i>
+                      </th>
+                      <th class="th-sortable" @click="toggleSort('status')">
+                        Status <i class="fas sort-arrow" :class="sortIcon('status')"></i>
+                      </th>
+                      <th class="text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(student, i) in students" :key="student?.id || i">
+                    <tr
+                      v-for="(student, i) in students"
+                      :key="student?.id || i"
+                      :class="{ 'is-selected': selectedIds.includes(student.id) }"
+                    >
                       <td>
                         <div class="form-check m-0">
                           <input class="form-check-input" type="checkbox" :value="student.id" v-model="selectedIds" />
@@ -506,6 +515,7 @@ import { ref, onMounted, computed, watch } from "vue";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
+import FilterTree from "../components/FilterTree.vue";
 
 import Pagination from "../components/Pagination.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
@@ -557,7 +567,23 @@ const filters = ref({
   course: "",
   section_id: "",
   student_type: props.defaultType || "",
+  id_number: "",
+  year_level: "",
+  status: "",
+  recent: "",
 });
+
+// Sort State
+const sort = ref({ by: "", dir: "" });
+const showFilters = ref(false);
+
+const recentOptions = [
+  { label: "Any time", value: "" },
+  { label: "Added today", value: "1" },
+  { label: "Last 7 days", value: "7" },
+  { label: "Last 30 days", value: "30" },
+  { label: "Last 90 days", value: "90" },
+];
 
 watch(
   () => props.defaultType,
@@ -586,6 +612,28 @@ const yearLevelOptions = [
   { label: "Irregular", value: "Irregular" },
 ];
 
+const filterYearOptions = computed(() => [{ label: "All Years", value: "" }, ...yearLevelOptions]);
+
+const filterTypeOptions = [
+  { label: "All Types", value: "" },
+  { label: "Regular", value: "regular" },
+  { label: "Irregular", value: "irregular" },
+];
+
+const filterStatusOptions = [
+  { label: "All Status", value: "" },
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+];
+
+const activeFilterCount = computed(
+  () =>
+    Object.entries(filters.value).filter(
+      ([key, value]) =>
+        !(key === "student_type" && props.defaultType) && value !== "" && value !== null,
+    ).length,
+);
+
 const blankForm = () => ({
   id_number: "",
   firstname: "",
@@ -607,22 +655,6 @@ const availableSectionsData = computed(() => {
   return course?.academic_sections || [];
 });
 
-const filterSections = computed(() => {
-  if (!filters.value.course) return [];
-  const course = availableCourses.value.find((c) => c.name === filters.value.course);
-  return course?.academic_sections || [];
-});
-
-const courseOptions = computed(() => [
-  { label: "All Courses", value: "" },
-  ...availableCourses.value.map((c) => ({ label: c.name, value: c.name })),
-]);
-
-const filterSectionOptions = computed(() => [
-  { label: "All Sec", value: "" },
-  ...filterSections.value.map((s) => ({ label: s.name, value: s.id })),
-]);
-
 const selectAll = computed({
   get() {
     return students.value.length > 0 && selectedIds.value.length === students.value.length;
@@ -636,8 +668,106 @@ const selectAll = computed({
   },
 });
 
-function handleFilterChange() {
-  filters.value.section_id = "";
+function optionLabel(options, value) {
+  return options.find((o) => o.value === value)?.label ?? options[0]?.label ?? "";
+}
+
+const selectedSectionName = computed(() => {
+  if (!filters.value.section_id) return "";
+  for (const c of availableCourses.value) {
+    const s = (c.academic_sections || []).find((x) => x.id === filters.value.section_id);
+    if (s) return s.name;
+  }
+  return "";
+});
+
+// Hierarchical filter groups: Course → Sections, then flat option groups.
+const studentFilterGroups = computed(() => {
+  const withSections = props.defaultType !== "irregular";
+  const courseValue = filters.value.section_id || filters.value.course;
+
+  const groups = [
+    {
+      key: "course",
+      label: "Courses & Sections",
+      value: courseValue,
+      valueLabel: filters.value.section_id
+        ? selectedSectionName.value
+        : filters.value.course || "All",
+      options: [
+        { value: "", label: "All Courses" },
+        ...availableCourses.value
+          .filter((c) => c.name)
+          .map((c) => ({
+            value: c.name,
+            label: c.name,
+            children: withSections
+              ? (c.academic_sections || []).map((s) => ({
+                  value: s.id,
+                  label: s.name,
+                  selectKey: "section",
+                  payload: { course: c.name },
+                }))
+              : [],
+          })),
+      ],
+    },
+    {
+      key: "year_level",
+      label: "Year Level",
+      value: filters.value.year_level,
+      valueLabel: optionLabel(filterYearOptions.value, filters.value.year_level),
+      options: filterYearOptions.value,
+    },
+  ];
+
+  // Only show type filter if not locked by route prop
+  if (!props.defaultType) {
+    groups.push({
+      key: "student_type",
+      label: "Student Type",
+      value: filters.value.student_type,
+      valueLabel: optionLabel(filterTypeOptions, filters.value.student_type),
+      options: filterTypeOptions,
+    });
+  }
+
+  groups.push(
+    {
+      key: "status",
+      label: "Status",
+      value: filters.value.status,
+      valueLabel: optionLabel(filterStatusOptions, filters.value.status),
+      options: filterStatusOptions,
+    },
+    {
+      key: "recent",
+      label: "Date Added",
+      value: filters.value.recent,
+      valueLabel: optionLabel(recentOptions, filters.value.recent),
+      options: recentOptions,
+    },
+  );
+
+  return groups;
+});
+
+function onTreeSelect({ key, value, payload }) {
+  if (key === "course") {
+    filters.value.course = value;
+    filters.value.section_id = "";
+  } else if (key === "section") {
+    filters.value.section_id = value;
+    if (payload?.course) filters.value.course = payload.course;
+  } else if (key === "year_level") {
+    filters.value.year_level = value;
+  } else if (key === "student_type") {
+    filters.value.student_type = value;
+  } else if (key === "status") {
+    filters.value.status = value;
+  } else if (key === "recent") {
+    filters.value.recent = value;
+  }
   fetchStudents(1);
 }
 
@@ -648,13 +778,34 @@ function handleSearch() {
   }, 500);
 }
 
+function toggleSort(column) {
+  if (sort.value.by !== column) {
+    sort.value = { by: column, dir: "asc" };
+  } else if (sort.value.dir === "asc") {
+    sort.value = { by: column, dir: "desc" };
+  } else {
+    sort.value = { by: "", dir: "" };
+  }
+  fetchStudents(1);
+}
+
+function sortIcon(column) {
+  if (sort.value.by !== column) return "fa-arrow-down is-idle";
+  return sort.value.dir === "asc" ? "fa-arrow-up is-active" : "fa-arrow-down is-active";
+}
+
 function clearFilters() {
   filters.value = {
     query: "",
     course: "",
     section_id: "",
     student_type: props.defaultType || "",
+    id_number: "",
+    year_level: "",
+    status: "",
+    recent: "",
   };
+  sort.value = { by: "", dir: "" };
   fetchStudents(1);
 }
 
@@ -680,16 +831,28 @@ onMounted(() => {
   fetchCourses();
 });
 
+function listParams() {
+  return {
+    query: filters.value.query,
+    course: filters.value.course,
+    section_id: filters.value.section_id,
+    student_type: filters.value.student_type,
+    id_number: filters.value.id_number,
+    year_level: filters.value.year_level,
+    status: filters.value.status,
+    recent: filters.value.recent,
+    sort_by: sort.value.by,
+    sort_dir: sort.value.dir,
+  };
+}
+
 async function fetchStudents(page = 1) {
   loading.value = true;
   try {
     const params = new URLSearchParams({
       page,
       per_page: perPage.value,
-      query: filters.value.query,
-      course: filters.value.course,
-      section_id: filters.value.section_id,
-      student_type: filters.value.student_type,
+      ...listParams(),
     });
     const res = await api.get(`/students?${params.toString()}`);
     students.value = res.data.data;
@@ -714,16 +877,7 @@ async function fetchCourses() {
 async function exportCsv() {
   exporting.value = true;
   try {
-    await downloadCsv(
-      "/students/export",
-      {
-        query: filters.value.query,
-        course: filters.value.course,
-        section_id: filters.value.section_id,
-        student_type: filters.value.student_type,
-      },
-      "student_accounts.csv",
-    );
+    await downloadCsv("/students/export", listParams(), "student_accounts.csv");
     notifySuccess("Student accounts exported as CSV.");
   } catch (e) {
     notifyError(e?.message || "Export failed. Please try again.");
@@ -1004,16 +1158,6 @@ async function uploadCsv() {
 
 .btn-premium-reset:hover i {
   color: white !important;
-}
-
-/* Deep override for CustomSelect when used in filters */
-.premium-filter-group :deep(.custom-select-trigger) {
-  border: none !important;
-  background: transparent !important;
-  padding: 0 12px 0 0 !important;
-  font-size: 14px !important;
-  min-height: 0 !important;
-  box-shadow: none !important;
 }
 
 .fade-enter-active,

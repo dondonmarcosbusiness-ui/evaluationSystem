@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Course;
 use App\Models\Evaluation;
 use App\Models\Faculty;
 use App\Models\FacultyAssignment;
@@ -171,6 +172,42 @@ class EvaluateeService
         }
 
         return array_values($facultyDataMap);
+    }
+
+    /**
+     * Departments of the student's own course — the window that decides the
+     * CTA (and the window notice) when no evaluatees are built yet: no
+     * assignments, or the active period isn't configured. Without this,
+     * students who haven't been assigned instructors were unreachable by
+     * notifications even though their dashboard shows the window as open.
+     *
+     * @return array<int, string>
+     */
+    public function homeDepartments(User $user): array
+    {
+        $student = $user->student;
+        if ($student === null) {
+            return [];
+        }
+
+        $courseNames = array_values(array_unique(array_filter(
+            [$student->course, $student->section_relationship?->course?->name],
+            fn ($name) => is_string($name) && trim($name) !== ''
+        )));
+
+        $departments = Course::query()
+            ->whereIn('name', $courseNames)
+            ->pluck('department')
+            ->filter(fn ($department) => is_string($department) && trim($department) !== '')
+            ->map(fn ($department) => trim($department))
+            ->all();
+
+        $sectionDepartment = $student->section_relationship?->course?->department;
+        if (is_string($sectionDepartment) && trim($sectionDepartment) !== '') {
+            $departments[] = trim($sectionDepartment);
+        }
+
+        return array_values(array_unique($departments));
     }
 
     /**

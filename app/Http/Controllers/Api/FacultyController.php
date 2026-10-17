@@ -14,19 +14,82 @@ use Illuminate\Support\Facades\Validator;
 
 class FacultyController extends Controller
 {
+    /**
+     * Columns the faculty list may be ordered by, mapped to a query column
+     * or a correlated sub-query for columns that live on the users table.
+     */
+    private function facultySortable(): array
+    {
+        return [
+            'id_number' => User::select('id_number')->whereColumn('users.id', 'faculty.user_id'),
+            'name' => User::select('name')->whereColumn('users.id', 'faculty.user_id'),
+            'email' => User::select('email')->whereColumn('users.id', 'faculty.user_id'),
+            'department' => 'faculty.department',
+            'course' => 'faculty.course',
+            'position' => 'faculty.position',
+            'status' => User::select('is_active')->whereColumn('users.id', 'faculty.user_id'),
+            'created_at' => 'faculty.created_at',
+        ];
+    }
+
+    /**
+     * Apply the shared list/export column filters and sorting.
+     * Driven by query params: query, id_number, name, email, department,
+     * course, position, status, recent (days), sort_by, sort_dir.
+     */
+    private function applyFilters($query, Request $request)
+    {
+        $query
+            ->when($request->query('query'), function ($q, $search) {
+                $q->whereHas('user', function ($sq) use ($search) {
+                    $sq->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->query('id_number'), function ($q, $value) {
+                $q->whereHas('user', fn ($sq) => $sq->where('id_number', 'like', "%{$value}%"));
+            })
+            ->when($request->query('name'), function ($q, $value) {
+                $q->whereHas('user', fn ($sq) => $sq->where('name', 'like', "%{$value}%"));
+            })
+            ->when($request->query('email'), function ($q, $value) {
+                $q->whereHas('user', fn ($sq) => $sq->where('email', 'like', "%{$value}%"));
+            })
+            ->when($request->query('department'), function ($q, $dept) {
+                $q->where('department', $dept);
+            })
+            ->when($request->query('course'), function ($q, $course) {
+                // General Education faculty store a comma-separated course list.
+                $q->where('course', 'like', "%{$course}%");
+            })
+            ->when($request->query('position'), function ($q, $position) {
+                $q->where('position', $position);
+            })
+            ->when($request->query('status'), function ($q, $status) {
+                $q->whereHas('user', fn ($sq) => $sq->where('is_active', $status === 'active'));
+            })
+            ->when($request->query('recent'), function ($q, $recent) {
+                $days = (int) $recent;
+                if ($days > 0) {
+                    $q->where('faculty.created_at', '>=', now()->subDays($days)->startOfDay());
+                }
+            });
+
+        $sortBy = $request->query('sort_by');
+        $sortable = $this->facultySortable();
+
+        if ($sortBy && isset($sortable[$sortBy])) {
+            $direction = strtolower((string) $request->query('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            $query->orderBy($sortable[$sortBy], $direction)->orderBy('faculty.id', $direction);
+        }
+
+        return $query;
+    }
+
     public function index(Request $request)
     {
         try {
-            $faculty = Faculty::with('user')
-                ->when($request->query('query'), function ($q, $search) {
-                    $q->whereHas('user', function ($sq) use ($search) {
-                        $sq->where('name', 'like', "%{$search}%")
-                          ->orWhere('email', 'like', "%{$search}%");
-                    });
-                })
-                ->when($request->query('department'), function ($q, $dept) {
-                    $q->where('department', $dept);
-                })
+            $faculty = $this->applyFilters(Faculty::with('user'), $request)
                 ->paginate(min(max((int) $request->input('per_page', 10), 1), 100));
 
             return response()->json($faculty);
@@ -43,16 +106,7 @@ class FacultyController extends Controller
     public function export(Request $request)
     {
         try {
-            $faculty = Faculty::with('user')
-                ->when($request->query('query'), function ($q, $search) {
-                    $q->whereHas('user', function ($sq) use ($search) {
-                        $sq->where('name', 'like', "%{$search}%")
-                          ->orWhere('email', 'like', "%{$search}%");
-                    });
-                })
-                ->when($request->query('department'), function ($q, $dept) {
-                    $q->where('department', $dept);
-                })
+            $faculty = $this->applyFilters(Faculty::with('user'), $request)
                 ->orderBy('id')
                 ->get();
 

@@ -13,10 +13,25 @@ use Illuminate\Support\Facades\Log;
 
 class AssignmentController extends Controller
 {
+    /**
+     * Columns the assignment list may be ordered by, mapped to real query
+     * columns (the index query joins faculty and users).
+     */
+    private function assignmentSortable(): array
+    {
+        return [
+            'name' => 'users.name',
+            'department' => 'faculty.department',
+            'academic_year' => 'faculty_assignments.academic_year',
+            'semester' => 'faculty_assignments.semester',
+            'year_level' => 'faculty_assignments.year_level',
+        ];
+    }
+
     public function index(Request $request)
     {
         try {
-            $assignments = FacultyAssignment::with(['faculty.user', 'subject.course', 'section'])
+            $query = FacultyAssignment::with(['faculty.user', 'subject.course', 'section'])
                 ->join('faculty', 'faculty_assignments.faculty_id', '=', 'faculty.id')
                 ->join('users', 'faculty.user_id', '=', 'users.id')
                 ->select('faculty_assignments.*')
@@ -40,9 +55,19 @@ class AssignmentController extends Controller
                         $qq->where('faculty_assignments.year_level', $year)
                             ->orWhereNull('faculty_assignments.year_level');
                     });
-                })
-                ->orderBy('users.name')
-                ->paginate(min(max((int) $request->input('per_page', 20), 1), 100));
+                });
+
+            $sortBy = $request->query('sort_by');
+            $sortable = $this->assignmentSortable();
+
+            if ($sortBy && isset($sortable[$sortBy])) {
+                $direction = strtolower((string) $request->query('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+                $query->orderBy($sortable[$sortBy], $direction)->orderBy('faculty_assignments.id', $direction);
+            } else {
+                $query->orderBy('users.name');
+            }
+
+            $assignments = $query->paginate(min(max((int) $request->input('per_page', 20), 1), 100));
 
             return response()->json($assignments);
         } catch (\Exception $e) {

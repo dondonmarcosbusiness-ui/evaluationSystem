@@ -7,64 +7,77 @@
       </Navbar>
 
       <div class="content-area">
-        <div class="card">
-          <!-- Topbar already carries the page title — this header only holds context + filters -->
-          <div class="card-header border-0 py-3 px-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-              <div class="d-flex align-items-center py-1 gap-3 flex-wrap">
-                <span
-                  class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-700"
-                  style="font-size: 0.75rem"
-                >
-                  {{ pagination.total || 0 }} Records
-                </span>
-                <p class="mb-0 small text-muted">
+        <div class="card accounts-card">
+          <div class="card-header border-0 py-3 px-4 accounts-head">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 w-100">
+              <div class="d-flex flex-column">
+                <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                  <h5 class="mb-0 fw-800 text-main">Audit Log</h5>
+                  <span class="head-label">{{ pagination.total || 0 }} Records</span>
+                </div>
+                <p class="head-desc mb-0">
                   Security-relevant events: permission changes, privilege assignments, and denied access.
                 </p>
               </div>
 
               <div class="d-flex align-items-center gap-2 flex-wrap">
-                <div class="premium-filter-group" style="width: 240px">
-                  <span class="input-group-text"><i class="fas fa-filter"></i></span>
-                  <CustomSelect
-                    v-model="filters.action"
-                    :options="actionOptions"
-                    placeholder="All actions"
-                    searchable
-                    @change="applyFilters"
-                  />
-                </div>
-
-                <div class="premium-filter-group" style="width: 170px">
-                  <span class="input-group-text"><i class="fas fa-calendar"></i></span>
-                  <input v-model="filters.from" type="date" class="form-control" aria-label="From date" />
-                </div>
-
-                <div class="premium-filter-group" style="width: 170px">
-                  <span class="input-group-text"><i class="fas fa-calendar-check"></i></span>
-                  <input v-model="filters.to" type="date" class="form-control" aria-label="To date" />
-                </div>
-
                 <button
-                  class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-3"
-                  :disabled="loading"
-                  title="Apply filters"
-                  @click="applyFilters"
+                  class="btn btn-ghost"
+                  :class="{ 'is-active': showFilters }"
+                  title="Show or hide filters"
+                  @click="showFilters = !showFilters"
                 >
-                  <i class="fas fa-search"></i>
-                  <span class="d-none d-xl-inline">Apply</span>
-                </button>
-                <button
-                  class="btn btn-light btn-sm d-flex align-items-center gap-2 px-3"
-                  :disabled="loading"
-                  title="Clear filters"
-                  @click="clearFilters"
-                >
-                  <i class="fas fa-times"></i>
-                  <span class="d-none d-xl-inline">Clear</span>
+                  <i class="fas fa-filter"></i>
+                  <span>Filters</span>
+                  <span v-if="activeFilterCount" class="filter-count">{{ activeFilterCount }}</span>
                 </button>
               </div>
             </div>
+
+            <Transition name="panel">
+              <div v-show="showFilters" class="filters-panel">
+                <div class="filter-toolbar">
+                  <div class="premium-filter-group" style="width: 220px">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input
+                      v-model="filters.query"
+                      type="text"
+                      class="form-control"
+                      placeholder="Search audit logs..."
+                      @input="handleSearch"
+                    />
+                  </div>
+
+                  <div class="premium-filter-group" style="width: 170px">
+                    <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                    <input
+                      v-model="filters.from"
+                      type="date"
+                      class="form-control"
+                      aria-label="From date"
+                      @change="applyFilters"
+                    />
+                  </div>
+
+                  <div class="premium-filter-group" style="width: 170px">
+                    <span class="input-group-text"><i class="fas fa-calendar-check"></i></span>
+                    <input
+                      v-model="filters.to"
+                      type="date"
+                      class="form-control"
+                      aria-label="To date"
+                      @change="applyFilters"
+                    />
+                  </div>
+
+                  <button class="btn-premium-reset" @click="clearFilters" title="Reset Filters">
+                    <i class="fas fa-redo-alt small"></i>
+                  </button>
+                </div>
+
+                <FilterTree :groups="auditFilterGroups" @select="onTreeSelect" />
+              </div>
+            </Transition>
           </div>
 
           <div class="card-body p-0">
@@ -76,83 +89,91 @@
             </div>
 
             <div v-else class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th class="audit-th">Timestamp</th>
-                    <th class="audit-th">User</th>
-                    <th class="audit-th">Action</th>
-                    <th class="audit-th">Target</th>
-                    <th class="audit-th">IP</th>
-                    <th class="audit-th text-center">Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <template v-for="log in logs" :key="log.id">
-                    <tr :class="{ 'audit-row-open': expanded === log.id }">
-                      <td>
-                        <div class="audit-time">{{ formatDate(log.created_at) }}</div>
-                        <div class="audit-sub">{{ formatClock(log.created_at) }}</div>
-                      </td>
-                      <td>
-                        <div class="audit-user">{{ log.user?.name || "—" }}</div>
-                        <div class="audit-sub">{{ log.user?.email || "" }}</div>
-                      </td>
-                      <td>
-                        <span class="audit-tone" :class="actionTone(log.action)">{{ log.action }}</span>
-                      </td>
-                      <td>
-                        <template v-if="log.auditable_type">
-                          <span class="audit-target-type">{{ shortType(log.auditable_type) }}</span>
-                          <code v-if="log.auditable_id" class="audit-target-id" :title="log.auditable_id">
-                            {{ shortId(log.auditable_id) }}
-                          </code>
-                        </template>
-                        <span v-else class="audit-sub">—</span>
-                      </td>
-                      <td class="audit-ip">{{ log.ip_address || "—" }}</td>
-                      <td class="text-center">
-                        <button
-                          class="audit-toggle"
-                          :title="expanded === log.id ? 'Hide details' : 'Show details'"
-                          @click="expanded = expanded === log.id ? null : log.id"
-                        >
-                          <i class="fas" :class="expanded === log.id ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-                        </button>
-                      </td>
+              <div class="table-scroll" @scroll="onTableScroll">
+                <table class="table table-hover align-middle mb-0">
+                  <thead :class="{ 'glass-header': tableScrolled }">
+                    <tr>
+                      <th class="audit-th th-sortable" @click="toggleSort('created_at')">
+                        Timestamp <i class="fas sort-arrow" :class="sortIcon('created_at')"></i>
+                      </th>
+                      <th class="audit-th th-sortable" @click="toggleSort('user')">
+                        User <i class="fas sort-arrow" :class="sortIcon('user')"></i>
+                      </th>
+                      <th class="audit-th th-sortable" @click="toggleSort('action')">
+                        Action <i class="fas sort-arrow" :class="sortIcon('action')"></i>
+                      </th>
+                      <th class="audit-th">Target</th>
+                      <th class="audit-th">IP</th>
+                      <th class="audit-th text-center">Details</th>
                     </tr>
-                    <tr v-if="expanded === log.id" class="audit-detail-row">
-                      <td colspan="6">
-                        <div class="row g-3">
-                          <div class="col-md-6">
-                            <div class="audit-detail-label">Previous values</div>
-                            <pre class="audit-json mb-0">{{ pretty(log.old_values) }}</pre>
+                  </thead>
+                  <tbody>
+                    <template v-for="log in logs" :key="log.id">
+                      <tr :class="{ 'audit-row-open': expanded === log.id }">
+                        <td>
+                          <div class="audit-time">{{ formatDate(log.created_at) }}</div>
+                          <div class="audit-sub">{{ formatClock(log.created_at) }}</div>
+                        </td>
+                        <td>
+                          <div class="audit-user">{{ log.user?.name || "—" }}</div>
+                          <div class="audit-sub">{{ log.user?.email || "" }}</div>
+                        </td>
+                        <td>
+                          <span class="audit-tone" :class="actionTone(log.action)">{{ log.action }}</span>
+                        </td>
+                        <td>
+                          <template v-if="log.auditable_type">
+                            <span class="audit-target-type">{{ shortType(log.auditable_type) }}</span>
+                            <code v-if="log.auditable_id" class="audit-target-id" :title="log.auditable_id">
+                              {{ shortId(log.auditable_id) }}
+                            </code>
+                          </template>
+                          <span v-else class="audit-sub">—</span>
+                        </td>
+                        <td class="audit-ip">{{ log.ip_address || "—" }}</td>
+                        <td class="text-center">
+                          <button
+                            class="audit-toggle"
+                            :title="expanded === log.id ? 'Hide details' : 'Show details'"
+                            @click="expanded = expanded === log.id ? null : log.id"
+                          >
+                            <i class="fas" :class="expanded === log.id ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                          </button>
+                        </td>
+                      </tr>
+                      <tr v-if="expanded === log.id" class="audit-detail-row">
+                        <td colspan="6">
+                          <div class="row g-3">
+                            <div class="col-md-6">
+                              <div class="audit-detail-label">Previous values</div>
+                              <pre class="audit-json mb-0">{{ pretty(log.old_values) }}</pre>
+                            </div>
+                            <div class="col-md-6">
+                              <div class="audit-detail-label">New values</div>
+                              <pre class="audit-json mb-0">{{ pretty(log.new_values) }}</pre>
+                            </div>
+                            <div class="col-12" v-if="log.user_agent">
+                              <div class="audit-detail-label">User agent</div>
+                              <div class="audit-sub">{{ log.user_agent }}</div>
+                            </div>
                           </div>
-                          <div class="col-md-6">
-                            <div class="audit-detail-label">New values</div>
-                            <pre class="audit-json mb-0">{{ pretty(log.new_values) }}</pre>
-                          </div>
-                          <div class="col-12" v-if="log.user_agent">
-                            <div class="audit-detail-label">User agent</div>
-                            <div class="audit-sub">{{ log.user_agent }}</div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  </template>
-                </tbody>
-              </table>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          <Pagination
-            v-if="!loading && logs.length"
-            :pagination="pagination"
-            :per-page="perPage"
-            :per-page-options="[25, 50, 100]"
-            @change-page="fetchLogs"
-            @update:per-page="changePerPage"
-          />
+            <Pagination
+              v-if="!loading && logs.length"
+              :pagination="pagination"
+              :per-page="perPage"
+              :per-page-options="[25, 50, 100]"
+              @change-page="fetchLogs"
+              @update:per-page="changePerPage"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -165,7 +186,7 @@ import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import Pagination from "../components/Pagination.vue";
-import CustomSelect from "../components/CustomSelect.vue";
+import FilterTree from "../components/FilterTree.vue";
 import api from "../services/api";
 import { format } from "date-fns";
 
@@ -174,8 +195,12 @@ const pagination = ref({ current_page: 1, last_page: 1, from: 0, to: 0, total: 0
 const loading = ref(true);
 const expanded = ref(null);
 const perPage = ref(25);
+const tableScrolled = ref(false);
+const showFilters = ref(false);
+const sort = ref({ by: "", dir: "" });
 
 const filters = ref({
+  query: "",
   action: "",
   from: "",
   to: "",
@@ -186,6 +211,58 @@ const actionOptions = computed(() => [
   { label: "All actions", value: "" },
   ...actionList.value.map((action) => ({ label: action, value: action })),
 ]);
+
+const activeFilterCount = computed(
+  () => Object.values(filters.value).filter((value) => value !== "" && value !== null).length,
+);
+
+function optionLabel(options, value) {
+  return options.find((o) => o.value === value)?.label ?? options[0]?.label ?? "";
+}
+
+const auditFilterGroups = computed(() => [
+  {
+    key: "action",
+    label: "Action",
+    value: filters.value.action,
+    valueLabel: optionLabel(actionOptions.value, filters.value.action),
+    options: actionOptions.value,
+  },
+]);
+
+function onTreeSelect({ key, value }) {
+  filters.value[key] = value;
+  fetchLogs(1);
+}
+
+function onTableScroll(e) {
+  tableScrolled.value = e.target.scrollTop > 0;
+}
+
+let searchTimeout = null;
+
+function handleSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    fetchLogs(1);
+  }, 500);
+}
+
+function toggleSort(column) {
+  if (sort.value.by !== column) {
+    sort.value = { by: column, dir: "asc" };
+  } else if (sort.value.dir === "asc") {
+    sort.value = { by: column, dir: "desc" };
+  } else {
+    sort.value = { by: "", dir: "" };
+  }
+  fetchLogs(1);
+}
+
+function sortIcon(column) {
+  if (sort.value.by !== column) return "fa-arrow-down is-idle";
+  return sort.value.dir === "asc" ? "fa-arrow-up is-active" : "fa-arrow-down is-active";
+}
 
 async function fetchActions() {
   try {
@@ -252,9 +329,14 @@ async function fetchLogs(page = 1) {
       page,
       per_page: perPage.value,
     };
+    if (filters.value.query) params.query = filters.value.query;
     if (filters.value.action) params.action = filters.value.action;
     if (filters.value.from) params.from = filters.value.from;
     if (filters.value.to) params.to = filters.value.to;
+    if (sort.value.by) {
+      params.sort_by = sort.value.by;
+      params.sort_dir = sort.value.dir;
+    }
 
     const res = await api.get("/audit-logs", { params });
     logs.value = res.data.data || [];
@@ -278,7 +360,8 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filters.value = { action: "", from: "", to: "" };
+  filters.value = { query: "", action: "", from: "", to: "" };
+  sort.value = { by: "", dir: "" };
   fetchLogs(1);
 }
 
@@ -454,15 +537,5 @@ onMounted(() => {
 
 [data-theme="dark"] .audit-row-open {
   background: rgba(88, 166, 255, 0.06);
-}
-
-/* Deep override for CustomSelect when used in the filter group */
-.premium-filter-group :deep(.custom-select-trigger) {
-  border: none !important;
-  background: transparent !important;
-  padding: 0 12px 0 0 !important;
-  font-size: 14px !important;
-  min-height: 0 !important;
-  box-shadow: none !important;
 }
 </style>
