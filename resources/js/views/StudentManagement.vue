@@ -305,7 +305,14 @@
                 <div class="row g-4">
                   <div class="col-md-6">
                     <label class="label-custom">ID Number *</label>
-                    <input v-model="form.id_number" class="input-custom" placeholder="e.g. 2021-0001" />
+                    <input
+                      :value="form.id_number"
+                      class="input-custom"
+                      placeholder="e.g. 2021-0001"
+                      inputmode="numeric"
+                      maxlength="20"
+                      @input="onIdInput"
+                    />
                   </div>
                   <div class="col-md-6">
                     <label class="label-custom">Last Name *</label>
@@ -924,9 +931,26 @@ function closeModal() {
   showModal.value = false;
 }
 
+// ID number: digits + hyphen only while creating (editing keeps legacy values intact).
+function onIdInput(e) {
+  if (editMode.value) {
+    form.value.id_number = e.target.value;
+    return;
+  }
+  const cleaned = e.target.value.replace(/[^0-9-]/g, "");
+  if (cleaned !== e.target.value) e.target.value = cleaned;
+  form.value.id_number = cleaned;
+}
+
 async function saveStudent() {
-  saving.value = true;
   formError.value = "";
+  if (!editMode.value && form.value.email) {
+    if (!/@neustcarranglan\.ph\.education$/i.test(form.value.email.trim())) {
+      formError.value = "Email must be a @neustcarranglan.ph.education address.";
+      return;
+    }
+  }
+  saving.value = true;
   try {
     if (editMode.value) {
       await api.put(`/students/${editId.value}`, form.value);

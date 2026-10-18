@@ -178,14 +178,17 @@ class StudentController extends Controller
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
             'middlename' => 'nullable|string|max:255',
-            'id_number' => 'required|string|unique:users',
-            'email' => 'nullable|email|unique:users',
+            'id_number' => ['required', 'string', 'regex:/^[0-9]+(?:-[0-9]+)*$/', 'unique:users'],
+            'email' => ['nullable', 'email', 'regex:/^[^@\s]+@neustcarranglan\.ph\.education$/i', 'unique:users'],
             'password' => 'nullable|string|min:6',
             'course' => 'required',
             'section' => 'nullable',
             'section_id' => 'required|exists:sections,id',
             'student_type' => 'required|in:regular,irregular',
             'year_level' => \App\Support\YearLevel::rule(true),
+        ], [
+            'id_number.regex' => 'The ID number may only contain digits and hyphens (e.g. 2021-0001).',
+            'email.regex' => 'The email must be a @neustcarranglan.ph.education address.',
         ]);
 
         $idNumber = $request->id_number;
