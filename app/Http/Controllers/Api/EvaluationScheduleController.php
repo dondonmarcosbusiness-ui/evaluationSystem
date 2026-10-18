@@ -18,9 +18,7 @@ use Illuminate\Validation\Rule;
  */
 class EvaluationScheduleController extends Controller
 {
-    public function __construct(protected EvaluationScheduleService $schedules)
-    {
-    }
+    public function __construct(protected EvaluationScheduleService $schedules) {}
 
     public function index()
     {
@@ -91,6 +89,15 @@ class EvaluationScheduleController extends Controller
 
     public function destroy(EvaluationSchedule $schedule)
     {
+        // Deleting an open window would close it implicitly, but admins must
+        // close it explicitly first so the closed notice is a deliberate act
+        // (and the intent is visible in the UI before the row disappears).
+        if ($this->schedules->rowStatus($schedule) === EvaluationScheduleService::OPEN) {
+            return response()->json([
+                'message' => 'This schedule is currently open. Set it to Closed (or wait until its window ends) before deleting it.',
+            ], 422);
+        }
+
         $department = $schedule->department;
         $schedule->delete();
 
@@ -98,7 +105,7 @@ class EvaluationScheduleController extends Controller
             ? 'Default schedule deleted. Departments without their own schedule are now closed.'
             : 'Schedule deleted. This department now follows the default schedule.';
 
-        if (!EvaluationSchedule::query()->exists()) {
+        if (! EvaluationSchedule::query()->exists()) {
             // An empty table is fail-closed. Keep the legacy `evaluation_status`
             // key pinned to the same value so any leftover reader (and the
             // notification sync below) agrees the window is shut.
@@ -120,7 +127,7 @@ class EvaluationScheduleController extends Controller
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int, EvaluationSchedule> $existing
+     * @param  \Illuminate\Support\Collection<int, EvaluationSchedule>  $existing
      * @return array{department: ?string, starts_at: ?string, ends_at: ?string, status: string}
      */
     private function validateSchedule(Request $request, $existing): array
@@ -169,7 +176,7 @@ class EvaluationScheduleController extends Controller
      * Assignment Management), plus any department already on a schedule row so
      * existing rows stay editable even if their courses are removed.
      *
-     * @param \Illuminate\Support\Collection<int, EvaluationSchedule> $existing
+     * @param  \Illuminate\Support\Collection<int, EvaluationSchedule>  $existing
      * @return array<int, string>
      */
     private function allowedDepartments($existing): array
@@ -180,7 +187,7 @@ class EvaluationScheduleController extends Controller
             ->map(fn ($d) => trim($d))
             ->unique();
 
-        if (!$departments->contains('General Education')) {
+        if (! $departments->contains('General Education')) {
             $departments->push('General Education');
         }
 

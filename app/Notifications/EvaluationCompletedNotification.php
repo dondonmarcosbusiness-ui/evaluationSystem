@@ -3,15 +3,23 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class EvaluationCompletedNotification extends Notification implements ShouldQueue
+/**
+ * Confirmation that a student finished every evaluatee for the period.
+ *
+ * Deliberately NOT ShouldQueue: queued mail sat unsent in the jobs table
+ * whenever no queue worker was running (same failure the window notices had
+ * before they moved to the sync connection), so the student never got the
+ * email. Sending inline makes delivery request-local and deterministic.
+ */
+class EvaluationCompletedNotification extends Notification
 {
     use Queueable;
 
     private string $semester;
+
     private string $academicYear;
 
     /**
@@ -39,12 +47,12 @@ class EvaluationCompletedNotification extends Notification implements ShouldQueu
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-                    ->subject('You have finished your evaluations')
-                    ->greeting('Hello ' . $notifiable->name . ',')
-                    ->line('Thank you! You have completed all of your faculty evaluations for ' . $this->semester . ', ' . $this->academicYear . '.')
-                    ->line('Your responses help improve the quality of instruction at NEUST.')
-                    ->action('Go to Dashboard', url('/dashboard'))
-                    ->line('This is a confirmation message — no further action is needed.');
+            ->subject('You have finished your evaluations')
+            ->greeting('Hello '.$notifiable->name.',')
+            ->line('Thank you! You have completed all of your faculty evaluations for '.$this->semester.', '.$this->academicYear.'.')
+            ->line('Your responses help improve the quality of instruction at '.config('app.name').'.')
+            ->action('Go to Dashboard', url('/dashboard'))
+            ->line('This is a confirmation message — no further action is needed.');
     }
 
     /**

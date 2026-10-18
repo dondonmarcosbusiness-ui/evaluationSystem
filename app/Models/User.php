@@ -3,19 +3,17 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-use App\Models\Faculty;
-use App\Models\Evaluation;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, HasUuids;
+    use HasApiTokens, HasFactory, HasRoles, HasUuids, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -43,10 +41,10 @@ class User extends Authenticatable
 
         static::saving(function ($user) {
             if ($user->firstname || $user->lastname) {
-                $fullname = $user->lastname ? $user->lastname . ', ' : '';
+                $fullname = $user->lastname ? $user->lastname.', ' : '';
                 $fullname .= $user->firstname;
                 if ($user->middlename) {
-                    $fullname .= ' ' . $user->middlename;
+                    $fullname .= ' '.$user->middlename;
                 }
                 $user->name = trim($fullname);
             }
@@ -94,10 +92,21 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the email address that should be used for notifications.
+     * The email address that should be used for notifications.
      */
     public function getNotificationEmailAttribute()
     {
         return $this->google_email ?: $this->email;
+    }
+
+    /**
+     * Route notification mail to the linked Google address when present.
+     * Without this override Laravel addresses notifications to the plain
+     * `email` column, which diverges from the window-notice job and can be
+     * empty for Google-registered accounts.
+     */
+    public function routeNotificationForMail($notification): string
+    {
+        return (string) ($this->notification_email ?? '');
     }
 }

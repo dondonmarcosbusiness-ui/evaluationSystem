@@ -105,7 +105,7 @@ class StudentPermissionPolicyTest extends TestCase
     private function evaluationPayload(Faculty $faculty): array
     {
         $category = Category::create([
-            'category_name' => 'Teaching Skill ' . uniqid(),
+            'category_name' => 'Teaching Skill '.uniqid(),
             'weight' => 1,
             'evaluatee_type' => 'faculty',
         ]);
@@ -306,5 +306,49 @@ class StudentPermissionPolicyTest extends TestCase
 
         Notification::assertSentToTimes($student, EvaluationCompletedNotification::class, 1);
         $this->assertNotNull($student->fresh()->evaluations_completed_at);
+    }
+
+    public function test_completion_email_is_sent_immediately_not_queued(): void
+    {
+        // Regression: the notification used to implement ShouldQueue, so on the
+        // database driver it sat in the jobs table forever whenever no queue
+        // worker was running and the student never received the email.
+        $reflection = new \ReflectionClass(EvaluationCompletedNotification::class);
+        $this->assertFalse(
+            $reflection->implementsInterface(\Illuminate\Contracts\Queue\ShouldQueue::class),
+            'Completion mail must send inline — queued mail is dropped without a worker.'
+        );
+    }
+
+    public function test_completion_email_uses_system_name_and_google_address(): void
+    {
+        Notification::fake();
+
+        $student = $this->makeUser('student', 'primary@test.com');
+        $student->forceFill([
+            'google_email' => 'linked@neustcarranglan.ph.education',
+            'is_google_linked' => true,
+        ])->save();
+
+        $this->assertSame(
+            'linked@neustcarranglan.ph.education',
+            $student->routeNotificationForMail(new EvaluationCompletedNotification('1st Semester', '2024-2025'))
+        );
+
+        $unlinked = $this->makeUser('student', 'plain@test.com');
+        $this->assertSame(
+            'plain@test.com',
+            $unlinked->routeNotificationForMail(new EvaluationCompletedNotification('1st Semester', '2024-2025'))
+        );
+
+        $student->notify(new EvaluationCompletedNotification('1st Semester', '2024-2025'));
+
+        Notification::assertSentTo($student, EvaluationCompletedNotification::class, function ($notification, $channels, $notifiable) {
+            $mail = $notification->toMail($notifiable);
+
+            return collect($mail->introLines)->contains(
+                fn (string $line) => str_contains($line, config('app.name'))
+            );
+        });
     }
 }

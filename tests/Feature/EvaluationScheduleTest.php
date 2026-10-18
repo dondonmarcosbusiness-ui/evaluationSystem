@@ -4,13 +4,13 @@ namespace Tests\Feature;
 
 use App\Jobs\NotifyEvaluationWindowJob;
 use App\Mail\EvaluationWindowNotice;
+use App\Models\Category;
 use App\Models\Course;
 use App\Models\EvaluationSchedule;
 use App\Models\Faculty;
 use App\Models\FacultyAssignment;
 use App\Models\Permission;
 use App\Models\Question;
-use App\Models\Category;
 use App\Models\Section;
 use App\Models\Setting;
 use App\Models\Student;
@@ -33,7 +33,9 @@ use Tests\TestCase;
  *    keep an install evaluating with no UI left to close it;
  *  - once schedules exist, a department without its own row follows the
  *    default row (and is closed when there is no default row);
- *  - opening/closing a window notifies only students affected by that change.
+ *  - opening/closing a window notifies only students affected by that change,
+ *    and each email lists only that student's own departments;
+ *  - a schedule that is currently open must be closed before it can be deleted.
  */
 class EvaluationScheduleTest extends TestCase
 {
@@ -137,7 +139,7 @@ class EvaluationScheduleTest extends TestCase
     private function evaluationPayload(Faculty $faculty): array
     {
         $category = Category::create([
-            'category_name' => 'Teaching Skill ' . uniqid(),
+            'category_name' => 'Teaching Skill '.uniqid(),
             'weight' => 1,
             'evaluatee_type' => 'faculty',
         ]);
@@ -592,6 +594,13 @@ class EvaluationScheduleTest extends TestCase
         $cit = EvaluationSchedule::create(['department' => 'CIT', 'status' => 'open']);
         $this->seedSnapshot(); // steady state: CIT open, everything else closed
 
+        // An OPEN schedule can never be deleted — close it first.
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/evaluation-schedules/{$cit->id}")
+            ->assertStatus(422);
+        $this->assertNotNull(EvaluationSchedule::find($cit->id));
+
+        $cit->update(['status' => 'closed']);
         $this->actingAs($admin, 'sanctum')
             ->deleteJson("/api/evaluation-schedules/{$cit->id}")
             ->assertStatus(200)
@@ -603,11 +612,17 @@ class EvaluationScheduleTest extends TestCase
                 && $job->departments === ['CIT']
         );
 
-        // Removing an OPEN default row closes every department that relied on it.
+        // Removing an OPEN default row is likewise blocked until it is closed.
         Queue::fake();
         $default->update(['status' => 'open']);
         $this->seedSnapshot();
 
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/evaluation-schedules/{$default->id}")
+            ->assertStatus(422);
+        $this->assertNotNull(EvaluationSchedule::find($default->id));
+
+        $default->update(['status' => 'closed']);
         $this->actingAs($admin, 'sanctum')
             ->deleteJson("/api/evaluation-schedules/{$default->id}")
             ->assertStatus(200)
@@ -618,6 +633,82 @@ class EvaluationScheduleTest extends TestCase
             fn (NotifyEvaluationWindowJob $job) => $job->event === 'closed'
                 && in_array('CIT', $job->departments, true)
                 && in_array('General Education', $job->departments, true)
+        );
+    }
+
+    public function test_window_emails_list_only_the_students_own_departments(): void
+    {
+        // A batch can span several departments; each student must only see the
+        // ones they actually evaluate — a BSIT student receiving "Business
+        // Admin, Education has closed" while their own window is still open
+        // was the reported bug.
+        Mail::fake();
+        [, $citSection] = $this->makeAcademicFixture(); // BSIT → department "CIT"
+
+        $otherCourse = Course::create(['name' => 'BEED', 'department' => 'Education']);
+        $otherSection = Section::create(['course_id' => $otherCourse->id, 'name' => '1B', 'year_level' => '1st']);
+
+        $citStudent = $this->makeUser('student', 'own-dept-cit@test.com');
+        $citStudent->update(['firstname' => 'CIT', 'lastname' => 'Student']);
+        $this->makeStudentRecord($citStudent, $citSection);
+
+        $eduStudent = $this->makeUser('student', 'own-dept-edu@test.com');
+        $eduStudent->update(['firstname' => 'EDU', 'lastname' => 'Student']);
+        $this->makeStudentRecord($eduStudent, $otherSection);
+
+        $this->activePeriod();
+        $this->seedSnapshot(); // steady state: everything closed
+
+        // One global window opens every department in a single batch.
+        $this->actingAs($this->makeAdmin(), 'sanctum')
+            ->postJson('/api/evaluation-schedules', ['status' => 'open'])
+            ->assertStatus(201);
+
+        Mail::assertSent(
+            EvaluationWindowNotice::class,
+            fn (EvaluationWindowNotice $mail) => $mail->studentName === $citStudent->name
+                && $mail->event === 'open'
+                && $mail->departments === ['CIT']
+        );
+        Mail::assertSent(
+            EvaluationWindowNotice::class,
+            fn (EvaluationWindowNotice $mail) => $mail->studentName === $eduStudent->name
+                && $mail->event === 'open'
+                && $mail->departments === ['Education']
+        );
+    }
+
+    public function test_reopening_a_closed_window_notifies_again(): void
+    {
+        Queue::fake();
+        $this->makeAcademicFixture();
+        $admin = $this->makeAdmin();
+        $this->activePeriod();
+        $this->seedSnapshot(); // steady state: everything closed
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/evaluation-schedules', ['status' => 'open'])
+            ->assertStatus(201);
+        Queue::assertPushed(NotifyEvaluationWindowJob::class, 1);
+
+        $schedule = EvaluationSchedule::query()->whereNull('department')->firstOrFail();
+
+        $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/evaluation-schedules/{$schedule->id}", ['status' => 'closed'])
+            ->assertStatus(200);
+        Queue::assertPushed(NotifyEvaluationWindowJob::class, 2);
+
+        // Closing and re-opening must fire the open notice again — students
+        // who finished (or missed) the first window get a fresh email.
+        $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/evaluation-schedules/{$schedule->id}", ['status' => 'open'])
+            ->assertStatus(200);
+
+        Queue::assertPushed(NotifyEvaluationWindowJob::class, 3);
+        Queue::assertPushed(
+            NotifyEvaluationWindowJob::class,
+            fn (NotifyEvaluationWindowJob $job) => $job->event === 'open'
+                && $job->departments === ['CIT', 'General Education']
         );
     }
 
@@ -696,6 +787,13 @@ class EvaluationScheduleTest extends TestCase
         $admin = $this->makeAdmin();
         $schedule = EvaluationSchedule::create(['department' => null, 'status' => 'open']);
 
+        // An open schedule cannot be deleted — close it first.
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/evaluation-schedules/{$schedule->id}")
+            ->assertStatus(422);
+        $this->assertNotNull(EvaluationSchedule::find($schedule->id));
+
+        $schedule->update(['status' => 'closed']);
         $this->actingAs($admin, 'sanctum')
             ->deleteJson("/api/evaluation-schedules/{$schedule->id}")
             ->assertStatus(200)

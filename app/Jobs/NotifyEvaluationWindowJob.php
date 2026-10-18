@@ -29,14 +29,13 @@ class NotifyEvaluationWindowJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
-     * @param array<int, string> $departments departments whose window changed
-     * @param string $event 'open' or 'closed'
+     * @param  array<int, string>  $departments  departments whose window changed
+     * @param  string  $event  'open' or 'closed'
      */
     public function __construct(
         public array $departments,
         public string $event,
-    ) {
-    }
+    ) {}
 
     public function handle(): void
     {
@@ -51,7 +50,7 @@ class NotifyEvaluationWindowJob implements ShouldQueue
 
         $departments = array_values(array_unique(array_filter($this->departments, fn ($d) => is_string($d) && $d !== '')));
 
-        if ($departments === [] || !in_array($this->event, ['open', 'closed'], true)) {
+        if ($departments === [] || ! in_array($this->event, ['open', 'closed'], true)) {
             return;
         }
 
@@ -70,7 +69,8 @@ class NotifyEvaluationWindowJob implements ShouldQueue
             try {
                 $rows = $evaluatees->build($student, $semester, $academicYear);
             } catch (\Throwable $e) {
-                Log::warning("Skipping student {$student->id} for window notification: " . $e->getMessage());
+                Log::warning("Skipping student {$student->id} for window notification: ".$e->getMessage());
+
                 continue;
             }
 
@@ -91,34 +91,43 @@ class NotifyEvaluationWindowJob implements ShouldQueue
                 }
             }
 
-            if (array_intersect(array_keys($relevant), $departments) !== []) {
-                $targets[$student->id] = $student;
+            // Only the departments that BOTH changed AND belong to this
+            // student make it into their email — the full batch may contain
+            // departments they don't evaluate (a BSIT student must never see
+            // "Business Admin, Education has closed" while their own window
+            // is still open).
+            $studentDepartments = array_values(array_intersect(array_keys($relevant), $departments));
+            if ($studentDepartments !== []) {
+                $targets[$student->id] = [$student, $studentDepartments];
             }
         }
 
-        Log::info("Evaluation window {$this->event} notification for departments [" . implode(', ', $departments) . '] → ' . count($targets) . ' students.');
+        Log::info("Evaluation window {$this->event} notification for departments [".implode(', ', $departments).'] → '.count($targets).' students.');
 
-        foreach ($targets as $student) {
+        foreach ($targets as [$student, $studentDepartments]) {
             try {
-                // Priority: use the linked Google email if available, otherwise the primary email.
-                $targetEmail = $student->is_google_linked ? $student->google_email : $student->email;
+                // Priority: linked Google address first, primary email as fallback
+                // (same routing as User::routeNotificationForMail).
+                $targetEmail = $student->notification_email;
 
                 if ($targetEmail) {
                     Mail::to($targetEmail)->send(new EvaluationWindowNotice(
                         $student->name,
                         $this->event,
-                        $departments,
+                        $studentDepartments,
                         $semester,
                         $academicYear
                     ));
+                } else {
+                    Log::warning("Skipping student {$student->id} for window notification: no email address on file.");
                 }
-            } catch (\Exception $e) {
-                Log::error("Failed to notify student ID {$student->id} of evaluation window {$this->event}: " . $e->getMessage());
+            } catch (\Throwable $e) {
+                Log::error("Failed to notify student ID {$student->id} of evaluation window {$this->event}: ".$e->getMessage());
             }
         }
 
         // A completion line lets us tell a finished batch apart from one that
         // was killed mid-send (no completion line + earlier start line = kill).
-        Log::info("Evaluation window {$this->event} notification finished: " . count($targets) . ' targeted.');
+        Log::info("Evaluation window {$this->event} notification finished: ".count($targets).' targeted.');
     }
 }

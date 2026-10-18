@@ -107,7 +107,12 @@
                 <button class="btn-icon-soft" title="Edit schedule" @click="openEditModal(row)">
                   <i class="fas fa-pen"></i>
                 </button>
-                <button class="btn-icon-soft danger ms-1" title="Delete schedule" @click="removeSchedule(row)">
+                <button
+                  class="btn-icon-soft danger ms-1"
+                  :disabled="row.effective_status === 'open'"
+                  :title="row.effective_status === 'open' ? 'Set this schedule to Closed before deleting it' : 'Delete schedule'"
+                  @click="removeSchedule(row)"
+                >
                   <i class="fas fa-trash"></i>
                 </button>
               </td>
@@ -351,6 +356,11 @@ async function saveSchedule() {
 }
 
 async function removeSchedule(row) {
+  if (row.effective_status === "open") {
+    errorMsg.value = "This schedule is currently open. Set it to Closed before deleting it.";
+    return;
+  }
+
   const scope = row.is_global ? "the All departments default" : row.department;
   const result = await confirmAction({
     title: "Delete schedule?",
@@ -745,14 +755,19 @@ function extractError(e, fallback) {
   transition: all 0.15s ease;
 }
 
-.btn-icon-soft:hover {
+.btn-icon-soft:hover:not(:disabled) {
   color: var(--primary);
   border-color: var(--primary);
 }
 
-.btn-icon-soft.danger:hover {
+.btn-icon-soft.danger:hover:not(:disabled) {
   color: var(--danger);
   border-color: var(--danger);
+}
+
+.btn-icon-soft:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 /* Tip */
