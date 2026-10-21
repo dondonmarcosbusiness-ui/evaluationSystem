@@ -46,8 +46,24 @@ return [
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
             // Cap each SMTP read: the default (default_socket_timeout=60) lets
-            // one hung Gmail response eat a full minute of the request's
+            // one hung SMTP response eat a full minute of the request's
             // execution budget per student.
+            'timeout' => env('MAIL_TIMEOUT', 20),
+            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+        ],
+
+        'brevo' => [
+            'transport' => 'brevo',
+        ],
+
+        // PHPMailer speaking SMTP (relay configured via MAIL_HOST/MAIL_PORT/...).
+        'phpmailer' => [
+            'transport' => 'phpmailer',
+            'host' => env('MAIL_HOST', '127.0.0.1'),
+            'port' => env('MAIL_PORT', 2525),
+            'username' => env('MAIL_USERNAME'),
+            'password' => env('MAIL_PASSWORD'),
+            'encryption' => env('MAIL_ENCRYPTION'),
             'timeout' => env('MAIL_TIMEOUT', 20),
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],

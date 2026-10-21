@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Mail\PhpMailerTransport;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+
+        Mail::extend('phpmailer', fn (array $config) => new PhpMailerTransport($config));
 
         // Force HTTPS for secure Ngrok tunnel asset loading, but keep HTTP for local dev
         if (request()->header('x-forwarded-proto') === 'https') {

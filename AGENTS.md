@@ -43,7 +43,7 @@ npm run dev | npm run build                   # Vite only
 ## Queues, scheduling, deploy
 - Dev defaults: queue/cache/session drivers = `database` (`.env.example`); `composer dev` runs `queue:listen`.
 - Schedule lives in `bootstrap/app.php`: `db:backup` daily; `online-peak:sample` and `evaluation-schedules:tick` every minute.
-- Deployed on Railway via `nixpacks.toml` (no cron): `schedule:work` + `queue:work` are backgrounded after `migrate --force`; foreground is `artisan serve`.
+- Deployed on Railway via `nixpacks.toml` (no cron): a one-off `evaluation-schedules:tick` (seeds/catches up the notification snapshot), then `schedule:work` + `queue:work` are backgrounded after `migrate --force`; foreground is `artisan serve`.
 - Evaluation-window notices are **intentionally** dispatched `onConnection('sync')` in `EvaluationScheduleService::syncNotifications()` so they don't depend on queue workers — don't "fix" this.
 - DB backups go to the local disk; point `LOCAL_DISK_ROOT` at a mounted volume in production.
 - App timezone is `Asia/Manila` — evaluation window date logic depends on it.
