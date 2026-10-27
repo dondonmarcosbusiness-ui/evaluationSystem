@@ -559,50 +559,63 @@
           <div class="faculty-dashboard fade-in-up">
             <!-- Welcome hero -->
             <section class="faculty-hero">
-              <div class="faculty-hero-main">
-                <div class="faculty-hero-avatar" aria-hidden="true">{{ userInitials }}</div>
-                <div class="faculty-hero-text">
-                  <span class="faculty-hero-badge">Faculty</span>
-                  <h2 class="faculty-hero-title">Hello, {{ userFirstName }}</h2>
-                  <p class="faculty-hero-desc mb-0">
-                    Review your teaching effectiveness scores and student comments in one place.
-                  </p>
-                </div>
+              <div class="faculty-hero-text">
+                <h2 class="faculty-hero-title">Welcome back, {{ userFirstName }}</h2>
+                <p class="faculty-hero-desc mb-0">
+                  Your teaching performance and student feedback, together in one place.
+                </p>
               </div>
-              <img
-                src="/assets/img/neust_logo.webp"
-                alt=""
-                class="faculty-hero-logo d-none d-md-block"
-                aria-hidden="true"
-              />
             </section>
 
             <!-- Quick actions -->
-            <section class="faculty-actions" aria-label="Quick actions">
-              <router-link to="/reports" class="faculty-action-card faculty-action-card--primary">
-                <div class="faculty-action-icon">
-                  <i class="fas fa-chart-line"></i>
-                </div>
-                <div class="faculty-action-body">
-                  <h3 class="faculty-action-title">Ratings Overview</h3>
-                  <p class="faculty-action-desc">Charts and performance breakdown</p>
-                </div>
-                <i class="fas fa-chevron-right faculty-action-arrow"></i>
-              </router-link>
-              <router-link to="/set-report" class="faculty-action-card">
-                <div class="faculty-action-icon faculty-action-icon--muted">
-                  <i class="fas fa-file-invoice"></i>
-                </div>
-                <div class="faculty-action-body">
-                  <h3 class="faculty-action-title">Detailed SET Report</h3>
-                  <p class="faculty-action-desc">Full evaluation report document</p>
-                </div>
-                <i class="fas fa-chevron-right faculty-action-arrow"></i>
-              </router-link>
-            </section>
+            <nav class="faculty-tabs" role="tablist" aria-label="Faculty reports">
+              <button
+                type="button"
+                class="faculty-tab"
+                :class="{ active: activeFacultyTab === 'ratings' }"
+                role="tab"
+                :aria-selected="activeFacultyTab === 'ratings'"
+                aria-controls="faculty-ratings-panel"
+                @click="activeFacultyTab = 'ratings'"
+              >
+                <i class="fas fa-chart-line" aria-hidden="true"></i>
+                <span>Ratings Overview</span>
+              </button>
+              <button
+                type="button"
+                class="faculty-tab"
+                :class="{ active: activeFacultyTab === 'feedback' }"
+                role="tab"
+                :aria-selected="activeFacultyTab === 'feedback'"
+                aria-controls="faculty-feedback-panel"
+                @click="activeFacultyTab = 'feedback'"
+              >
+                <i class="fas fa-comment-dots" aria-hidden="true"></i>
+                <span>Student Feedback</span>
+              </button>
+              <button
+                type="button"
+                class="faculty-tab"
+                :class="{ active: activeFacultyTab === 'set-report' }"
+                role="tab"
+                :aria-selected="activeFacultyTab === 'set-report'"
+                aria-controls="faculty-set-report-panel"
+                @click="activeFacultyTab = 'set-report'"
+              >
+                <i class="fas fa-file-invoice" aria-hidden="true"></i>
+                <span>Detailed SET Report</span>
+              </button>
+            </nav>
 
-            <!-- Ratings overview by subject -->
-            <section class="faculty-feedback-section faculty-ratings-section">
+            <div
+              v-show="activeFacultyTab === 'ratings'"
+              id="faculty-ratings-panel"
+              role="tabpanel"
+              tabindex="0"
+              class="faculty-tab-panel"
+            >
+              <!-- Ratings overview by subject -->
+              <section class="faculty-feedback-section faculty-ratings-section">
               <div class="faculty-feedback-toolbar">
                 <div class="faculty-feedback-heading">
                   <i class="fas fa-chart-line"></i>
@@ -664,38 +677,59 @@
                 <i class="fas fa-chart-line fa-2x opacity-25 mb-3"></i>
                 <p class="text-muted small mb-0">No subjects found for your assignments yet.</p>
               </div>
-            </section>
+              </section>
+            </div>
 
-            <!-- Student feedback -->
-            <section class="faculty-feedback-section">
-              <div class="faculty-feedback-toolbar">
-                <div class="faculty-feedback-heading">
-                  <i class="fas fa-comment-dots"></i>
-                  <div>
-                    <h2 class="faculty-feedback-title">Student Feedback</h2>
-                    <p class="faculty-feedback-subtitle mb-0">
-                      {{ myFeedbacks.length }} recent {{ myFeedbacks.length === 1 ? "comment" : "comments" }}
-                      <span v-if="!myFeedbackLoading && myFeedbacks.length > 0">
-                        — click a subject to view all its feedback
-                      </span>
-                    </p>
+            <div
+              v-show="activeFacultyTab === 'feedback'"
+              id="faculty-feedback-panel"
+              role="tabpanel"
+              tabindex="0"
+              class="faculty-tab-panel"
+            >
+              <section class="faculty-feedback-section">
+                <div class="faculty-feedback-toolbar student-feedback-toolbar">
+                  <div class="student-feedback-toolbar-main">
+                    <div class="faculty-feedback-heading">
+                      <i class="fas fa-comment-dots"></i>
+                      <div>
+                        <h2 class="faculty-feedback-title">Student Feedback</h2>
+                        <p class="faculty-feedback-subtitle mb-0">
+                          {{ myFeedbacks.length }} recent {{ myFeedbacks.length === 1 ? "comment" : "comments" }}
+                          <span v-if="!myFeedbackLoading && myFeedbacks.length > 0">
+                            — click a subject to view all its feedback
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      class="faculty-feedback-filter-toggle"
+                      :class="{ active: showFeedbackFilters }"
+                      :aria-expanded="showFeedbackFilters"
+                      aria-controls="faculty-feedback-filters"
+                      aria-label="Toggle feedback filters"
+                      title="Filter feedback"
+                      @click="showFeedbackFilters = !showFeedbackFilters"
+                    >
+                      <i class="fas fa-filter" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                  <div v-show="showFeedbackFilters" id="faculty-feedback-filters" class="faculty-feedback-filters">
+                    <CustomSelect
+                      v-model="feedbackFilters.semester"
+                      :options="semesterOptions"
+                      class="faculty-filter-select"
+                      @change="fetchMyFeedback"
+                    />
+                    <CustomSelect
+                      v-model="feedbackFilters.academic_year"
+                      :options="yearOptions"
+                      class="faculty-filter-select"
+                      @change="fetchMyFeedback"
+                    />
                   </div>
                 </div>
-                <div class="faculty-feedback-filters">
-                  <CustomSelect
-                    v-model="feedbackFilters.semester"
-                    :options="semesterOptions"
-                    class="faculty-filter-select"
-                    @change="fetchMyFeedback"
-                  />
-                  <CustomSelect
-                    v-model="feedbackFilters.academic_year"
-                    :options="yearOptions"
-                    class="faculty-filter-select"
-                    @change="fetchMyFeedback"
-                  />
-                </div>
-              </div>
 
               <div v-if="myFeedbackLoading" class="d-flex flex-column gap-3">
                 <SkeletonLoader variant="list" :rows="3" />
@@ -751,7 +785,17 @@
                 <i class="fas fa-inbox fa-2x opacity-25 mb-3"></i>
                 <p class="text-muted small mb-0">No student feedback for the selected period.</p>
               </div>
-            </section>
+              </section>
+            </div>
+            <div
+              v-show="activeFacultyTab === 'set-report'"
+              id="faculty-set-report-panel"
+              role="tabpanel"
+              tabindex="0"
+              class="faculty-tab-panel"
+            >
+              <DetailedSetReport v-if="activeFacultyTab === 'set-report'" embedded />
+            </div>
           </div>
 
           <!-- All feedback for one subject (across sections / years) -->
@@ -848,6 +892,7 @@ import Navbar from "../components/Navbar.vue";
 import CustomSelect from "../components/CustomSelect.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import Pagination from "../components/Pagination.vue";
+import DetailedSetReport from "./SetReport.vue";
 import api from "../services/api.js";
 import { useBootstrapModal } from "../composables/useBootstrapModal.js";
 import { useLanguage } from "../helpers/language.js";
@@ -861,6 +906,7 @@ const t = computed(() => translations[currentLang.value]);
 const can = inject("can");
 
 const user = ref(JSON.parse(localStorage.getItem("user") || "{}") || {});
+const activeFacultyTab = ref("ratings");
 
 // Role-based landing: students and faculty always get their own dashboard,
 // regardless of any grants. Only other roles see the admin summary, gated
@@ -995,6 +1041,7 @@ const officesLoading = ref(false);
 
 const myFeedbacks = ref([]);
 const myFeedbackLoading = ref(false);
+const showFeedbackFilters = ref(false);
 const feedbackFilters = ref({
   semester: "all",
   academic_year: "all",
@@ -1025,17 +1072,6 @@ const userFirstName = computed(() => {
     return given.split(/\s+/)[0] || name;
   }
   return name.split(/\s+/)[0] || name;
-});
-
-const userInitials = computed(() => {
-  const name = user.value?.name || "";
-  const parts = name.includes(",") ? name.split(",").map((p) => p.trim()) : name.split(/\s+/);
-  if (parts.length >= 2) {
-    const first = parts[0];
-    const last = parts[parts.length - 1];
-    return `${first[0] || ""}${last[0] || ""}`.toUpperCase();
-  }
-  return (parts[0]?.slice(0, 2) || "U").toUpperCase();
 });
 
 let facultyChart = null;
@@ -1750,41 +1786,6 @@ function initCharts() {
   border-radius: var(--card-radius);
 }
 
-.faculty-hero-main {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.faculty-hero-avatar {
-  flex-shrink: 0;
-  width: 52px;
-  height: 52px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: #fff;
-  font-weight: 500;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  letter-spacing: 0.02em;
-}
-
-.faculty-hero-badge {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--primary);
-  background: rgba(25, 25, 112, 0.1);
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  margin-bottom: 0.35rem;
-}
-
 .faculty-hero-title {
   font-size: clamp(1.25rem, 4vw, 1.5rem);
   font-weight: 500;
@@ -1805,91 +1806,6 @@ function initCharts() {
   object-fit: contain;
   opacity: 0.85;
   flex-shrink: 0;
-}
-
-.faculty-actions {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-}
-
-@media (min-width: 576px) {
-  .faculty-actions {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.faculty-action-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--card-radius);
-  text-decoration: none;
-  color: inherit;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
-}
-
-.faculty-action-card:hover {
-  border-color: var(--primary);
-  box-shadow: var(--card-shadow-hover);
-  transform: translateY(-1px);
-  color: inherit;
-}
-
-.faculty-action-card--primary {
-  border-color: rgba(25, 25, 112, 0.25);
-  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(25, 25, 112, 0.04) 100%);
-}
-
-.faculty-action-icon {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-}
-
-.faculty-action-icon--muted {
-  background: var(--bg-light);
-  color: var(--primary);
-  border: 1px solid var(--border-color);
-}
-
-.faculty-action-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.faculty-action-title {
-  font-size: 0.95rem;
-  font-weight: 500;
-  margin: 0 0 0.15rem;
-  color: var(--text-main);
-}
-
-.faculty-action-desc {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin: 0;
-  line-height: 1.35;
-}
-
-.faculty-action-arrow {
-  flex-shrink: 0;
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  opacity: 0.6;
 }
 
 .faculty-feedback-section {
@@ -1916,10 +1832,69 @@ function initCharts() {
   }
 }
 
+@media (max-width: 767.98px) {
+  .student-feedback-toolbar .faculty-feedback-filters {
+    width: 100%;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .student-feedback-toolbar .faculty-feedback-filters {
+    flex-direction: column;
+  }
+}
+
 .faculty-feedback-heading {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
+}
+
+.student-feedback-toolbar {
+  gap: 0.85rem;
+}
+
+.student-feedback-toolbar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.student-feedback-toolbar-main .faculty-feedback-heading {
+  min-width: 0;
+}
+
+.faculty-feedback-filter-toggle {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.faculty-feedback-filter-toggle:hover,
+.faculty-feedback-filter-toggle.active {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--bg-light);
+}
+
+.faculty-feedback-filter-toggle:focus-visible {
+  outline: 3px solid rgba(25, 25, 112, 0.3);
+  outline-offset: 2px;
 }
 
 .faculty-feedback-heading > i {
@@ -2065,7 +2040,8 @@ function initCharts() {
 
 .faculty-rating-row:hover:not(:disabled) {
   border-color: var(--primary);
-  box-shadow: 0 1px 6px rgba(25, 25, 112, 0.08);
+  background: var(--bg-light);
+  box-shadow: none;
 }
 
 .faculty-rating-row:disabled {
@@ -2154,12 +2130,6 @@ function initCharts() {
 @media (max-width: 575.98px) {
   .faculty-hero {
     padding: 1rem;
-  }
-
-  .faculty-hero-avatar {
-    width: 44px;
-    height: 44px;
-    font-size: 0.85rem;
   }
 
   .faculty-feedback-list {
@@ -3104,6 +3074,241 @@ function initCharts() {
   margin: 0 -1rem -1rem;
 }
 
+/* ── Faculty dashboard refresh ── */
+.faculty-dashboard {
+  max-width: 1200px;
+  gap: 1.25rem;
+}
+
+.faculty-hero {
+  min-height: 0;
+  padding: 0.25rem 0 0.75rem;
+  color: var(--text-main);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.faculty-hero-title {
+  color: var(--text-main);
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.18;
+  margin: 0 0 0.4rem;
+}
+
+.faculty-hero-desc {
+  max-width: 560px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.faculty-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.faculty-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.55rem 0.85rem;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.faculty-tab::after {
+  position: absolute;
+  right: 0.5rem;
+  bottom: -1px;
+  left: 0.5rem;
+  height: 2px;
+  background: var(--primary);
+  content: "";
+  transform: scaleX(0);
+  transition: transform 0.18s ease;
+}
+
+.faculty-tab:hover {
+  color: var(--primary);
+}
+
+.faculty-tab.active {
+  color: var(--primary);
+}
+
+.faculty-tab.active::after {
+  transform: scaleX(1);
+}
+
+.faculty-feedback-section {
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.faculty-tab-panel > .faculty-feedback-section,
+.faculty-tab-panel > .set-report-embedded {
+  margin-inline: clamp(0.5rem, 2vw, 1rem);
+}
+
+.faculty-ratings-section {
+  border-radius: 12px;
+}
+
+.faculty-ratings-section .faculty-feedback-toolbar {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 1rem 1.1rem;
+  background: transparent;
+}
+
+.faculty-feedback-toolbar {
+  padding: 1.2rem 1.4rem;
+  background: var(--bg-card);
+}
+
+.faculty-ratings-section .faculty-feedback-heading {
+  min-width: 0;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.faculty-feedback-heading {
+  align-items: center;
+}
+
+.faculty-ratings-section .faculty-feedback-heading > i {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.faculty-feedback-heading > i {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  border-radius: 12px;
+  background: rgba(25, 25, 112, 0.08);
+}
+
+.faculty-feedback-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.faculty-ratings-section .faculty-feedback-title {
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.faculty-ratings-section .faculty-feedback-subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.faculty-ratings-section .faculty-feedback-subtitle a {
+  white-space: nowrap;
+}
+
+.faculty-ratings-section .faculty-rating-overall {
+  flex-shrink: 0;
+}
+
+.faculty-ratings-section .faculty-rating-overall .badge {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.faculty-feedback-list {
+  padding: 1.25rem 1.4rem;
+}
+
+.faculty-ratings-section .faculty-rating-list {
+  gap: 0;
+  padding: 0.35rem 1.1rem 0.7rem;
+}
+
+.faculty-rating-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.2fr) minmax(100px, 1fr) 48px auto 68px;
+  gap: 0.75rem;
+  padding: 0.85rem 0.25rem;
+  border-radius: 11px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+.faculty-ratings-section .faculty-rating-row:last-child {
+  border-bottom: 0;
+}
+
+.faculty-rating-info {
+  width: auto;
+}
+
+.faculty-rating-code {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.faculty-rating-bar {
+  min-width: 0;
+  height: 9px;
+}
+
+.faculty-rating-value {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.faculty-rating-row:focus-visible,
+.faculty-tab:focus-visible {
+  outline: 3px solid rgba(25, 25, 112, 0.4);
+  outline-offset: 3px;
+}
+
+.faculty-feedback-card {
+  padding: 1.1rem 1.2rem;
+  background: var(--bg-card);
+  border-radius: 11px;
+}
+
+.faculty-feedback-quote {
+  font-size: 0.95rem;
+}
+
 @media (max-width: 767.98px) {
   .access-summary {
     grid-template-columns: repeat(2, 1fr);
@@ -3125,6 +3330,740 @@ function initCharts() {
 
   .access-row .access-time {
     grid-column: 2;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .faculty-rating-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "info value"
+      "bar bar"
+      "badge count";
+    gap: 0.65rem 0.85rem;
+  }
+
+  .faculty-rating-info {
+    grid-area: info;
+  }
+
+  .faculty-rating-bar {
+    grid-area: bar;
+  }
+
+  .faculty-rating-value {
+    grid-area: value;
+  }
+
+  .faculty-rating-row > .badge {
+    grid-area: badge;
+    justify-self: start;
+  }
+
+  .faculty-rating-count {
+    grid-area: count;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .faculty-dashboard {
+    gap: 1rem;
+  }
+
+  .faculty-hero {
+    padding: 0 0.75rem;
+    margin-top: 0.75rem;
+    border-radius: 0;
+  }
+
+  .faculty-hero-title {
+    font-size: clamp(1.25rem, 5vw, 1.45rem);
+  }
+
+  .faculty-hero-desc {
+    font-size: 0.84rem;
+    line-height: 1.5;
+  }
+
+  .faculty-tabs {
+    gap: 0.25rem;
+    overflow-x: auto;
+    padding: 0;
+  }
+
+  .faculty-tab {
+    flex: 0 0 auto;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.45rem;
+    font-size: 0.75rem;
+  }
+
+  .faculty-tab::after {
+    right: 0.35rem;
+    left: 0.35rem;
+  }
+
+  .faculty-feedback-toolbar {
+    padding: 1rem;
+  }
+
+  .faculty-ratings-section .faculty-feedback-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .faculty-feedback-heading {
+    align-items: flex-start;
+  }
+
+  .faculty-ratings-section .faculty-feedback-heading {
+    align-items: flex-start;
+  }
+
+  .faculty-ratings-section .faculty-rating-overall {
+    margin-left: 44px;
+  }
+
+  .faculty-feedback-heading > i {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 1rem;
+  }
+
+  .faculty-feedback-list {
+    padding: 0.85rem;
+  }
+
+  .faculty-rating-row {
+    padding: 0.8rem;
+  }
+
+  .faculty-ratings-section .faculty-rating-list {
+    padding: 0.25rem 1rem 0.55rem;
+  }
+
+  .faculty-ratings-section .faculty-rating-row {
+    padding: 0.8rem 0;
+  }
+}
+
+/* ── Faculty dashboard redesign ── */
+.faculty-dashboard {
+  width: 100%;
+  max-width: 1240px;
+  gap: clamp(1rem, 2.2vw, 1.6rem);
+  padding: 0.25rem 0.25rem 1.5rem;
+}
+
+.faculty-hero {
+  padding: 0.75rem 0 0.2rem;
+}
+
+.faculty-hero-title {
+  font-size: clamp(1.55rem, 3.2vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+  margin-bottom: 0.45rem;
+}
+
+.faculty-hero-desc {
+  max-width: 600px;
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+.faculty-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  overflow-x: auto;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 0;
+  background: transparent;
+  scrollbar-width: thin;
+}
+
+.faculty-tab {
+  position: relative;
+  min-height: 44px;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.faculty-tab::after {
+  position: absolute;
+  right: 0.5rem;
+  bottom: -1px;
+  left: 0.5rem;
+  display: block;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--primary);
+  content: "";
+  transform: scaleX(0);
+  transition: transform 0.16s ease;
+}
+
+.faculty-tab:hover {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--bg-card) 65%, transparent);
+}
+
+.faculty-tab.active {
+  color: var(--primary);
+  background: transparent;
+  box-shadow: none;
+}
+
+.faculty-tab.active::after {
+  transform: scaleX(1);
+}
+
+.faculty-tab-panel {
+  min-width: 0;
+  container-name: faculty-panel;
+  container-type: inline-size;
+  animation: faculty-panel-enter 0.2s ease-out;
+}
+
+@keyframes faculty-panel-enter {
+  from {
+    opacity: 0.65;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.faculty-tab-panel > .faculty-feedback-section,
+.faculty-tab-panel > .set-report-embedded {
+  margin-inline: 0;
+}
+
+.faculty-feedback-section {
+  border-radius: 14px;
+  border-color: var(--border-color);
+  background: var(--bg-card);
+}
+
+.faculty-ratings-section .faculty-feedback-toolbar,
+.student-feedback-toolbar {
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  background: transparent;
+}
+
+.faculty-feedback-heading {
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.faculty-feedback-heading > i {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  margin: 0;
+  border-radius: 11px;
+  background: var(--bg-light);
+  color: var(--primary);
+  font-size: 0.95rem;
+}
+
+.faculty-feedback-title {
+  margin-bottom: 0.2rem;
+  color: var(--text-main);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+.faculty-feedback-subtitle {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.faculty-feedback-subtitle a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.faculty-feedback-subtitle a:hover {
+  text-decoration: underline;
+}
+
+.faculty-ratings-section .faculty-rating-overall {
+  align-self: center;
+}
+
+.faculty-ratings-section .faculty-rating-overall .badge {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.faculty-ratings-section .faculty-rating-list {
+  padding: 0.35rem 1.25rem 0.65rem;
+}
+
+.faculty-rating-row {
+  grid-template-columns: minmax(150px, 1.25fr) minmax(90px, 1fr) 52px auto 70px;
+  gap: 0.9rem;
+  padding: 0.95rem 0.35rem;
+  border-radius: 8px;
+  border-bottom-color: var(--border-light);
+  transition: background-color 0.15s ease;
+}
+
+.faculty-rating-row:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--bg-light);
+}
+
+.faculty-rating-code {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.faculty-rating-name {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+}
+
+.faculty-rating-bar {
+  height: 7px;
+  background: var(--bg-light);
+}
+
+.faculty-rating-value {
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.faculty-rating-count {
+  font-size: 0.72rem;
+}
+
+.faculty-feedback-list {
+  gap: 0.75rem;
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+
+.faculty-feedback-card {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--border-color);
+  border-radius: 11px;
+  background: var(--bg-card);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.faculty-feedback-card--excellent {
+  border-left-color: var(--success);
+}
+
+.faculty-feedback-card--very-good {
+  border-left-color: var(--primary);
+}
+
+.faculty-feedback-card--good {
+  border-left-color: var(--warning);
+}
+
+.faculty-feedback-card--fair {
+  border-left-color: #f97316;
+}
+
+.faculty-feedback-card--poor {
+  border-left-color: var(--danger);
+}
+
+.faculty-feedback-card-top {
+  margin-bottom: 0.65rem;
+}
+
+.faculty-feedback-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.faculty-feedback-quote {
+  margin-bottom: 0.85rem;
+  font-size: 0.93rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.faculty-feedback-meta {
+  gap: 0.55rem 1rem;
+  font-size: 0.72rem;
+}
+
+.faculty-feedback-state {
+  min-height: 190px;
+  padding: 2rem 1.25rem;
+  color: var(--text-muted);
+}
+
+.faculty-feedback-filter-toggle {
+  border-radius: 9px;
+  background: var(--bg-card);
+}
+
+.faculty-feedback-filter-toggle:hover,
+.faculty-feedback-filter-toggle.active {
+  background: var(--bg-light);
+}
+
+.faculty-dashboard :deep(.set-report-embedded .content-area) {
+  padding: 0;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .set-report-header) {
+  margin-bottom: 1rem !important;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 0;
+  background: transparent !important;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .set-report-header .card-body) {
+  padding: 0.4rem 0 1rem;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .set-report-header h5) {
+  color: var(--text-main);
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .set-report-stats) {
+  margin-bottom: 1.25rem !important;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+
+.faculty-dashboard :deep(.set-report-embedded .set-report-stats > .col) {
+  width: 100% !important;
+  max-width: none;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .set-report-stat) {
+  width: 100%;
+  min-width: 0;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .exec-charts-section) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .exec-charts-section h6) {
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .exec-chart-box) {
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--bg-card);
+}
+
+.faculty-dashboard :deep(.set-report-embedded .exec-chart-title) {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .report-table-card) {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+
+.faculty-dashboard :deep(.set-report-embedded .report-table-card .card-header) {
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card) !important;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .report-table-card .card-header h6) {
+  color: var(--text-main);
+  font-size: 0.92rem;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .set-report-mobile-card),
+.faculty-dashboard :deep(.set-report-embedded .set-report-mobile-total),
+.faculty-dashboard :deep(.set-report-embedded .set-report-mobile-overall) {
+  border-radius: 10px;
+}
+
+.faculty-dashboard :deep(.set-report-embedded .set-report-mobile-card) {
+  border-color: var(--border-color);
+  background: var(--bg-card);
+}
+
+.faculty-dashboard :deep(.set-report-embedded .set-report-mobile-total),
+.faculty-dashboard :deep(.set-report-embedded .set-report-mobile-overall) {
+  border-color: var(--border-color);
+}
+
+.faculty-dashboard :deep(.modal-content) {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-card);
+}
+
+@media (max-width: 767.98px) {
+  .faculty-rating-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem 0.85rem;
+  }
+
+  .faculty-feedback-meta {
+    gap: 0.5rem 0.85rem;
+  }
+}
+
+@container faculty-panel (max-width: 700px) {
+  .faculty-rating-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "info value"
+      "bar bar"
+      "badge count";
+    gap: 0.65rem 0.85rem;
+  }
+
+  .faculty-rating-info {
+    grid-area: info;
+  }
+
+  .faculty-rating-bar {
+    grid-area: bar;
+  }
+
+  .faculty-rating-value {
+    grid-area: value;
+  }
+
+  .faculty-rating-row > .badge {
+    grid-area: badge;
+    justify-self: start;
+  }
+
+  .faculty-rating-count {
+    grid-area: count;
+  }
+
+  .faculty-dashboard :deep(.set-report-embedded .exec-charts) {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .faculty-dashboard {
+    gap: 0.9rem;
+    padding: 0.25rem 0.65rem 1rem;
+  }
+
+  .faculty-hero {
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.15rem 0.15rem;
+  }
+
+  .faculty-hero-title {
+    font-size: clamp(1.4rem, 6vw, 1.65rem);
+    margin-bottom: 0.35rem;
+  }
+
+  .faculty-hero-desc {
+    max-width: 34rem;
+    font-size: 0.84rem;
+  }
+
+  .faculty-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.15rem;
+    width: 100%;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .faculty-tab {
+    min-width: 0;
+    max-width: none;
+    min-height: 56px;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.45rem 0.2rem 0.6rem;
+    border-radius: 0;
+    font-size: 0.68rem;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .faculty-tab i {
+    font-size: 0.85rem;
+  }
+
+  .faculty-tab.active {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .faculty-tab-panel > .faculty-feedback-section,
+  .faculty-tab-panel > .set-report-embedded {
+    margin-inline: 0;
+  }
+
+  .faculty-feedback-section {
+    border-radius: 12px;
+  }
+
+  .faculty-ratings-section .faculty-feedback-toolbar,
+  .student-feedback-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: 0.9rem;
+  }
+
+  .faculty-feedback-heading {
+    gap: 0.65rem;
+  }
+
+  .faculty-feedback-heading > i {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+  }
+
+  .faculty-feedback-title {
+    font-size: 0.98rem;
+  }
+
+  .faculty-feedback-subtitle {
+    font-size: 0.73rem;
+  }
+
+  .student-feedback-toolbar-main {
+    gap: 0.5rem;
+  }
+
+  .faculty-feedback-filter-toggle {
+    flex-basis: 36px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .faculty-feedback-filters {
+    gap: 0.55rem;
+  }
+
+  .faculty-ratings-section .faculty-rating-overall {
+    align-self: flex-start;
+    margin-left: 42px;
+  }
+
+  .faculty-ratings-section .faculty-rating-list {
+    padding: 0.2rem 0.9rem 0.55rem;
+  }
+
+  .faculty-rating-row {
+    grid-template-areas:
+      "info value"
+      "bar bar"
+      "badge count";
+    padding: 0.8rem 0;
+    border-radius: 6px;
+  }
+
+  .faculty-rating-info {
+    grid-area: info;
+  }
+
+  .faculty-rating-bar {
+    grid-area: bar;
+  }
+
+  .faculty-rating-value {
+    grid-area: value;
+  }
+
+  .faculty-rating-row > .badge {
+    grid-area: badge;
+    justify-self: start;
+  }
+
+  .faculty-rating-count {
+    grid-area: count;
+  }
+
+  .faculty-feedback-list {
+    max-height: none;
+    gap: 0.65rem;
+    padding: 0.85rem;
+  }
+
+  .faculty-feedback-card {
+    padding: 0.9rem;
+    border-radius: 10px;
+  }
+
+  .faculty-feedback-quote {
+    font-size: 0.88rem;
+  }
+
+  .faculty-feedback-meta {
+    font-size: 0.68rem;
+  }
+
+  .faculty-dashboard :deep(.set-report-embedded .set-report-stats) {
+    grid-template-columns: 1fr;
+  }
+
+  .faculty-dashboard :deep(.set-report-embedded .exec-chart-box) {
+    padding: 0.65rem;
   }
 }
 

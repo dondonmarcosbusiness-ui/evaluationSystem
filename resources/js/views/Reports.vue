@@ -4,7 +4,7 @@
     <div class="main-wrapper w-100">
       <Navbar class="no-print"><template #title>Evaluation Ratings Overview</template></Navbar>
 
-      <div class="content-area">
+      <div class="content-area reports-content-area">
         <!-- Admin Faculty Selector -->
         <div
           class="card shadow-none mb-4 no-print mx-3 mx-md-0 reports-filter-card"
@@ -109,10 +109,6 @@
             >
               <h6 class="mb-0 fw-bold">
                 <i class="fas fa-book-open me-2 text-primary"></i>Performance by Subject
-                <span v-if="subjectRatings.overall?.average != null" class="fw-normal text-muted ms-2 small">
-                  Overall {{ Number(subjectRatings.overall.average).toFixed(2) }}/5 ·
-                  {{ subjectRatings.overall.evaluations }} evaluations
-                </span>
               </h6>
               <div class="subject-select-slot">
                 <CustomSelect
@@ -122,49 +118,16 @@
                 />
               </div>
             </div>
-            <div class="card-body py-2">
-              <div v-if="subjectLoading" class="py-2">
-                <SkeletonLoader variant="list" :rows="3" />
-              </div>
-              <div v-else-if="subjectRatings.subjects.length" class="subject-rating-list">
-                <button
-                  v-for="s in subjectRatings.subjects"
-                  :key="s.subject_code"
-                  type="button"
-                  class="subject-rating-row"
-                  :class="{
-                    'subject-rating-row--active': selectedSubject === s.subject_code,
-                    'subject-rating-row--disabled': s.evaluations <= 0,
-                  }"
-                  :disabled="s.evaluations <= 0"
-                  :title="s.evaluations > 0 ? 'View this subject’s breakdown' : 'No evaluations yet'"
-                  @click="selectSubjectRow(s)"
-                >
-                  <span class="subject-rating-code">{{ s.subject_code }}</span>
-                  <span v-if="s.subject_name" class="subject-rating-name">{{ s.subject_name }}</span>
-                  <span class="subject-rating-bar">
-                    <span
-                      class="subject-rating-bar-fill"
-                      :class="s.average != null ? getRatingBadge(s.average) : ''"
-                      :style="{ width: s.average != null ? (Number(s.average) / 5) * 100 + '%' : '0%' }"
-                    ></span>
-                  </span>
-                  <span class="subject-rating-value">
-                    {{ s.average != null ? Number(s.average).toFixed(2) : "—" }}
-                  </span>
-                  <span
-                    class="badge rounded-pill"
-                    :class="s.average != null ? getRatingBadge(s.average) : 'bg-secondary text-white'"
-                  >
-                    {{ s.average != null ? getRatingStatus(s.average) : "No data" }}
-                  </span>
-                  <span class="subject-rating-count">{{ s.evaluations }} eval</span>
-                </button>
-              </div>
-              <p v-else class="text-muted small mb-0 py-2">
-                No subjects assigned or evaluated for the selected period.
-              </p>
-            </div>
+          </div>
+
+          <div class="reports-question-filter">
+            <label for="question-rating-filter" class="form-label mb-0">Show questions with rating</label>
+            <select id="question-rating-filter" v-model="selectedQuestionRating" class="form-select">
+              <option value="">All ratings</option>
+              <option v-for="rating in [5, 4, 3, 2, 1]" :key="rating" :value="String(rating)">
+                Rating {{ rating }}
+              </option>
+            </select>
           </div>
 
           <!-- Frequency Grid — mobile cards -->
@@ -178,6 +141,34 @@
                 <div>
                   <div class="fw-bold">{{ cat.category_name }}</div>
                   <div class="small text-muted">Weight: {{ (cat.weight * 100).toFixed(0) }}%</div>
+                  <ol v-if="visibleQuestions(cat.questions).length" class="reports-question-list">
+                    <li
+                      v-for="question in visibleQuestions(cat.questions)"
+                      :key="question.question_text"
+                      class="reports-question-item"
+                    >
+                      <span>{{ question.question_text }}</span>
+                      <span v-if="question.average_rating != null" class="reports-question-results">
+                        <span class="reports-question-rating">
+                          {{ Number(question.average_rating).toFixed(2) }}/5 avg ·
+                          {{ question.evaluations }}
+                          {{ question.evaluations === 1 ? "response" : "responses" }}
+                        </span>
+                        <span class="reports-question-rating-counts" aria-label="Rating distribution">
+                          <span v-for="rating in [5, 4, 3, 2, 1]" :key="rating">
+                            {{ rating }}: {{ question["count_" + rating] }}
+                          </span>
+                        </span>
+                      </span>
+                      <span v-else class="reports-question-rating text-muted">No ratings</span>
+                    </li>
+                  </ol>
+                  <p
+                    v-else-if="selectedQuestionRating"
+                    class="reports-question-empty"
+                  >
+                    No questions received rating {{ selectedQuestionRating }}.
+                  </p>
                 </div>
                 <div class="text-end">
                   <div class="fw-bold text-primary">{{ Number(cat.average_rating).toFixed(2) }}</div>
@@ -247,6 +238,34 @@
                           Weight:
                           {{ (cat.weight * 100).toFixed(0) }}%
                         </div>
+                        <ol v-if="visibleQuestions(cat.questions).length" class="reports-question-list">
+                          <li
+                            v-for="question in visibleQuestions(cat.questions)"
+                            :key="question.question_text"
+                            class="reports-question-item"
+                          >
+                            <span>{{ question.question_text }}</span>
+                            <span v-if="question.average_rating != null" class="reports-question-results">
+                              <span class="reports-question-rating">
+                                {{ Number(question.average_rating).toFixed(2) }}/5 avg ·
+                                {{ question.evaluations }}
+                                {{ question.evaluations === 1 ? "response" : "responses" }}
+                              </span>
+                              <span class="reports-question-rating-counts" aria-label="Rating distribution">
+                                <span v-for="rating in [5, 4, 3, 2, 1]" :key="rating">
+                                  {{ rating }}: {{ question["count_" + rating] }}
+                                </span>
+                              </span>
+                            </span>
+                            <span v-else class="reports-question-rating text-muted">No ratings</span>
+                          </li>
+                        </ol>
+                        <p
+                          v-else-if="selectedQuestionRating"
+                          class="reports-question-empty"
+                        >
+                          No questions received rating {{ selectedQuestionRating }}.
+                        </p>
                       </td>
                       <td class="fw-bold text-success">
                         {{ cat.count_5 }}
@@ -306,29 +325,28 @@
               class="modal-dialog modal-dialog-centered modal-dialog-scrollable"
               :class="isAiFullScreen ? 'modal-fullscreen' : 'modal-xl'"
             >
-              <div class="modal-content">
-                <div class="modal-header">
+              <div class="modal-content ai-modal">
+                <div class="modal-header ai-modal-header">
                   <div class="d-flex align-items-center gap-3">
-                    <div
-                      class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                      style="width: 42px; height: 42px"
-                    >
-                      <AiSparkleIcon :size="22" />
+                    <div class="ai-orb">
+                      <AiSparkleIcon :size="22" variant="white" />
                     </div>
-                    <h5 class="modal-title fw-800">AI Feedback Analysis & Suggestions</h5>
+                    <div>
+                      <h5 class="modal-title ai-modal-title">AI Feedback Analysis & Suggestions</h5>
+                      <p class="ai-modal-sub">Gemini-powered insights from qualitative evaluations</p>
+                    </div>
                   </div>
                   <div class="d-flex align-items-center gap-2 ms-auto">
                     <button
                       v-if="aiInsights && !loadingAi"
-                      class="btn btn-sm btn-light py-1 px-3 rounded-pill fw-bold text-primary"
+                      class="btn btn-sm ai-btn-grad"
                       @click="loadAiInsights(true)"
                     >
                       <i class="fas fa-sync-alt me-1"></i>
                       Refresh
                     </button>
                     <button
-                      class="btn btn-sm btn-light rounded-circle p-0 fw-bold d-flex align-items-center justify-content-center"
-                      style="width: 32px; height: 32px"
+                      class="btn btn-sm ai-btn-ghost"
                       @click="toggleAiFullScreen"
                       :title="isAiFullScreen ? 'Exit fullscreen' : 'Fullscreen'"
                     >
@@ -339,22 +357,27 @@
                 </div>
 
                 <div class="modal-body ai-modal-body">
-                    <div v-if="loadingAi" class="py-4">
-                      <h4 class="fw-bold text-center">Generating Analytics...</h4>
-                      <p class="text-muted text-center">Analyzing metrics and qualitative feedback for your smart dashboard.</p>
+                    <div v-if="loadingAi" class="ai-state">
+                      <div class="ai-orb ai-orb--lg ai-orb--pulse">
+                        <AiSparkleIcon :size="30" variant="white" />
+                      </div>
+                      <h5 class="ai-state__title">Generating Analytics...</h5>
+                      <p class="ai-state__text">
+                        Analyzing metrics and qualitative feedback for your smart dashboard.
+                      </p>
                       <SkeletonLoader variant="list" :rows="4" />
                     </div>
 
-                    <div v-else-if="aiError" class="text-center py-5">
-                      <div class="mb-3 text-warning">
-                        <i class="fas fa-exclamation-triangle fa-3x"></i>
+                    <div v-else-if="aiError" class="ai-state">
+                      <div class="ai-state__icon ai-state__icon--danger">
+                        <i class="fas fa-exclamation-triangle"></i>
                       </div>
-                      <h5 class="fw-bold text-dark mb-2">{{ aiError }}</h5>
-                      <p class="text-muted mx-auto" style="max-width: 400px">
+                      <h5 class="ai-state__title">{{ aiError }}</h5>
+                      <p class="ai-state__text">
                         The AI service is currently unavailable or has reached its request limit. Please try again in a
                         few minutes.
                       </p>
-                      <button class="btn btn-primary rounded-pill px-4 mt-3 shadow-sm" @click="loadAiInsights">
+                      <button class="btn ai-btn-grad ai-btn-grad--lg" @click="loadAiInsights">
                         <i class="fas fa-sync-alt me-2"></i>
                         Try Again
                       </button>
@@ -364,74 +387,44 @@
                       <!-- 1. Top Summary Cards -->
                       <div class="row g-3 mb-4">
                         <div class="col-md-3">
-                          <div class="metric-card p-3 rounded-4 shadow-none h-100">
-                            <div class="d-flex align-items-center gap-3">
-                              <div class="metric-icon bg-primary bg-opacity-10 text-primary">
-                                <i class="fas fa-star"></i>
-                              </div>
-                              <div>
-                                <div class="small text-muted fw-bold text-uppercase ls-1">Avg Rating</div>
-                                <div class="h4 mb-0 fw-800">{{ aiInsights.metrics?.average_rating || "0.00" }}</div>
-                              </div>
+                          <div class="ai-kpi ai-kpi--violet h-100">
+                            <div class="ai-kpi__icon"><i class="fas fa-star"></i></div>
+                            <div class="ai-kpi__body">
+                              <div class="ai-kpi__label">Avg Rating</div>
+                              <div class="ai-kpi__value">{{ aiInsights.metrics?.average_rating || "0.00" }}</div>
+                              <div class="ai-kpi__hint">out of 5.00 overall</div>
                             </div>
                           </div>
                         </div>
                         <div class="col-md-3">
-                          <div class="metric-card p-3 rounded-4 shadow-none h-100">
-                            <div class="d-flex align-items-center gap-3">
-                              <div class="metric-icon bg-info bg-opacity-10 text-info">
-                                <i class="fas fa-users"></i>
-                              </div>
-                              <div>
-                                <div class="small text-muted fw-bold text-uppercase ls-1">Responses</div>
-                                <div class="h4 mb-0 fw-800">{{ aiInsights.metrics?.response_count || 0 }}</div>
-                              </div>
+                          <div class="ai-kpi ai-kpi--blue h-100">
+                            <div class="ai-kpi__icon"><i class="fas fa-users"></i></div>
+                            <div class="ai-kpi__body">
+                              <div class="ai-kpi__label">Responses</div>
+                              <div class="ai-kpi__value">{{ aiInsights.metrics?.response_count || 0 }}</div>
+                              <div class="ai-kpi__hint">evaluations analyzed</div>
                             </div>
                           </div>
                         </div>
                         <div class="col-md-3">
-                          <div class="metric-card p-3 rounded-4 shadow-none h-100">
-                            <div class="d-flex align-items-center gap-3">
-                              <div class="metric-icon bg-success bg-opacity-10 text-success">
-                                <i class="fas fa-smile"></i>
+                          <div class="ai-kpi ai-kpi--emerald h-100">
+                            <div class="ai-kpi__icon"><i class="fas fa-smile"></i></div>
+                            <div class="ai-kpi__body">
+                              <div class="ai-kpi__label">Positive</div>
+                              <div class="ai-kpi__value ai-kpi__value--emerald">
+                                {{ aiInsights.sentiment?.positive }}%
                               </div>
-                              <div>
-                                <div class="small text-muted fw-bold text-uppercase ls-1">Positive</div>
-                                <div class="h4 mb-0 fw-800 text-success">{{ aiInsights.sentiment?.positive }}%</div>
-                              </div>
+                              <div class="ai-kpi__hint">of sentiment mentions</div>
                             </div>
                           </div>
                         </div>
                         <div class="col-md-3">
-                          <div class="metric-card p-3 rounded-4 shadow-none h-100">
-                            <div class="d-flex align-items-center gap-3">
-                              <div class="metric-icon bg-warning bg-opacity-10 text-warning">
-                                <i class="fas fa-chart-line"></i>
-                              </div>
-                              <div>
-                                <div class="small text-muted fw-bold text-uppercase ls-1">Trend</div>
-                                <div
-                                  class="h4 mb-0 fw-800"
-                                  :class="
-                                    aiInsights.metrics?.previous_rating
-                                      ? aiInsights.metrics.average_rating >= aiInsights.metrics.previous_rating
-                                        ? 'text-success'
-                                        : 'text-danger'
-                                      : 'text-muted'
-                                  "
-                                >
-                                  {{
-                                    aiInsights.metrics?.previous_rating
-                                      ? (aiInsights.metrics.average_rating > aiInsights.metrics.previous_rating
-                                          ? "+"
-                                          : "") +
-                                        (
-                                          aiInsights.metrics.average_rating - aiInsights.metrics.previous_rating
-                                        ).toFixed(2)
-                                      : "N/A"
-                                  }}
-                                </div>
-                              </div>
+                          <div class="ai-kpi ai-kpi--amber h-100">
+                            <div class="ai-kpi__icon"><i class="fas fa-chart-line"></i></div>
+                            <div class="ai-kpi__body">
+                              <div class="ai-kpi__label">Trend</div>
+                              <div class="ai-kpi__value" :class="trendClass">{{ trendValue }}</div>
+                              <div class="ai-kpi__hint">vs previous rating</div>
                             </div>
                           </div>
                         </div>
@@ -440,25 +433,38 @@
                       <!-- 2. Charts Section -->
                       <div class="row g-4 mb-4">
                         <div class="col-md-8">
-                          <div class="card shadow-none rounded-4 h-100 overflow-hidden bg-card">
-                            <div class="card-header border-0 bg-transparent py-3">
-                              <h6 class="mb-0 fw-800 text-uppercase small ls-1">Criteria Breakdown (Quantitative)</h6>
+                          <div class="ai-surface h-100">
+                            <div class="ai-surface__head">
+                              <span class="ai-surface__icon ai-chip--violet"><i class="fas fa-chart-bar"></i></span>
+                              <div>
+                                <h6 class="ai-surface__title">Criteria Breakdown</h6>
+                                <p class="ai-surface__sub">Average rating per criteria · scale of 0–5</p>
+                              </div>
                             </div>
-                            <div class="card-body pt-0" style="height: 250px">
-                              <canvas id="dashboardBarChart"></canvas>
+                            <div class="ai-surface__body">
+                              <div class="ai-chart-box">
+                                <canvas id="dashboardBarChart"></canvas>
+                              </div>
                             </div>
                           </div>
                         </div>
                         <div class="col-md-4">
-                          <div class="card shadow-none rounded-4 h-100 overflow-hidden bg-card">
-                            <div class="card-header border-0 bg-transparent py-3">
-                              <h6 class="mb-0 fw-800 text-uppercase small ls-1">Sentiment Mix</h6>
+                          <div class="ai-surface h-100">
+                            <div class="ai-surface__head">
+                              <span class="ai-surface__icon ai-chip--emerald"><i class="fas fa-smile"></i></span>
+                              <div>
+                                <h6 class="ai-surface__title">Sentiment Mix</h6>
+                                <p class="ai-surface__sub">Tone of qualitative comments</p>
+                              </div>
                             </div>
-                            <div
-                              class="card-body pt-0 d-flex align-items-center justify-content-center"
-                              style="height: 250px"
-                            >
-                              <canvas id="dashboardPieChart"></canvas>
+                            <div class="ai-surface__body ai-surface__body--center">
+                              <div v-if="sentimentTotal > 0" class="ai-chart-box">
+                                <canvas id="dashboardPieChart"></canvas>
+                              </div>
+                              <div v-else class="ai-viz-empty">
+                                <i class="fas fa-chart-pie"></i>
+                                <span>No sentiment data yet</span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -467,15 +473,19 @@
                       <!-- 3. Tables Section -->
                       <div class="row g-4 mb-4">
                         <div class="col-md-6">
-                          <div class="card shadow-none rounded-4 h-100 overflow-hidden bg-card">
-                            <div class="card-header border-0 bg-transparent py-3">
-                              <h6 class="mb-0 fw-800 text-uppercase small ls-1">Criteria Performance Table</h6>
+                          <div class="ai-surface h-100">
+                            <div class="ai-surface__head">
+                              <span class="ai-surface__icon ai-chip--blue"><i class="fas fa-table"></i></span>
+                              <div>
+                                <h6 class="ai-surface__title">Criteria Performance</h6>
+                                <p class="ai-surface__sub">Rating and status per criteria</p>
+                              </div>
                             </div>
-                            <div class="card-body p-0">
+                            <div class="ai-surface__body ai-surface__body--flush">
                               <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                  <thead class="bg-light">
-                                    <tr class="x-small text-uppercase text-muted">
+                                <table class="table table-hover align-middle mb-0 ai-table">
+                                  <thead>
+                                    <tr>
                                       <th class="ps-4">Criteria</th>
                                       <th>Rating</th>
                                       <th class="pe-4 text-end">Status</th>
@@ -485,19 +495,19 @@
                                     <tr v-for="cat in results?.category_results" :key="cat.category_name">
                                       <td class="ps-4 fw-600 small">{{ cat.category_name }}</td>
                                       <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                          <span class="fw-bold">{{ Number(cat.average_rating).toFixed(2) }}</span>
-                                          <div class="progress" style="width: 40px; height: 4px">
-                                            <div
-                                              class="progress-bar"
-                                              :class="getRatingColor(cat.average_rating)"
+                                        <div class="ai-rating">
+                                          <span class="ai-rating__val">{{ Number(cat.average_rating).toFixed(2) }}</span>
+                                          <span class="ai-rating__track">
+                                            <span
+                                              class="ai-rating__fill"
+                                              :class="getAiBarClass(cat.average_rating)"
                                               :style="{ width: (cat.average_rating / 5) * 100 + '%' }"
-                                            ></div>
-                                          </div>
+                                            ></span>
+                                          </span>
                                         </div>
                                       </td>
                                       <td class="pe-4 text-end">
-                                        <span class="badge rounded-pill" :class="getRatingBadge(cat.average_rating)">
+                                        <span class="ai-tag" :class="getAiTagClass(cat.average_rating)">
                                           {{ getRatingStatus(cat.average_rating) }}
                                         </span>
                                       </td>
@@ -509,15 +519,19 @@
                           </div>
                         </div>
                         <div class="col-md-6">
-                          <div class="card shadow-none rounded-4 h-100 overflow-hidden bg-card">
-                            <div class="card-header border-0 bg-transparent py-3">
-                              <h6 class="mb-0 fw-800 text-uppercase small ls-1">AI Metric Insights</h6>
+                          <div class="ai-surface h-100">
+                            <div class="ai-surface__head">
+                              <span class="ai-surface__icon ai-chip--violet"><i class="fas fa-brain"></i></span>
+                              <div>
+                                <h6 class="ai-surface__title">AI Metric Insights</h6>
+                                <p class="ai-surface__sub">What the model observed per metric</p>
+                              </div>
                             </div>
-                            <div class="card-body p-0">
+                            <div class="ai-surface__body ai-surface__body--flush">
                               <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                  <thead class="bg-light">
-                                    <tr class="x-small text-uppercase text-muted">
+                                <table class="table align-middle mb-0 ai-table">
+                                  <thead>
+                                    <tr>
                                       <th class="ps-4">Metric</th>
                                       <th>Value</th>
                                       <th class="pe-4">AI Insight</th>
@@ -525,8 +539,15 @@
                                   </thead>
                                   <tbody>
                                     <tr v-for="mi in aiInsights.metric_insights" :key="mi.metric">
-                                      <td class="ps-4 fw-600 small text-primary">{{ mi.metric }}</td>
-                                      <td class="fw-bold small text-muted">Analyzed</td>
+                                      <td class="ps-4 small">
+                                        <span class="ai-metric-name">
+                                          <span class="ai-metric-name__dot"></span>
+                                          {{ mi.metric }}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        <span class="ai-chip-plain"><i class="fas fa-check me-1"></i>Analyzed</span>
+                                      </td>
                                       <td class="pe-4 x-small text-muted">{{ mi.insight }}</td>
                                     </tr>
                                   </tbody>
@@ -540,66 +561,64 @@
                       <!-- 4. AI Insights Panel -->
                       <div class="row g-4">
                         <div class="col-md-4">
-                          <div class="p-4 rounded-4 shadow-sm h-100 bg-card">
-                            <div class="d-flex align-items-center gap-2 mb-3">
-                              <i class="fas fa-check-circle text-success fs-5"></i>
-                              <h6 class="fw-800 text-success small text-uppercase ls-1 mb-0">Key Strengths</h6>
+                          <div class="ai-note ai-note--emerald h-100">
+                            <div class="ai-note__head">
+                              <span class="ai-note__icon"><i class="fas fa-check"></i></span>
+                              <h6 class="ai-note__title">Key Strengths</h6>
                             </div>
-                            <ul class="list-unstyled mb-0 small fw-600 text-dark">
-                              <li v-for="s in aiInsights.strengths" :key="s" class="mb-2 d-flex gap-2">
-                                <span class="text-success opacity-50">•</span>
-                                {{ s }}
+                            <ul v-if="aiInsights.strengths?.length" class="ai-note__list">
+                              <li v-for="s in aiInsights.strengths" :key="s">
+                                <span class="ai-note__bullet"></span>
+                                <span>{{ s }}</span>
                               </li>
                             </ul>
+                            <p v-else class="ai-note__empty">No standout strengths in this period.</p>
                           </div>
                         </div>
                         <div class="col-md-4">
-                          <div class="p-4 rounded-4 shadow-sm h-100 bg-card">
-                            <div class="d-flex align-items-center gap-2 mb-3">
-                              <i class="fas fa-exclamation-circle text-danger fs-5"></i>
-                              <h6 class="fw-800 text-danger small text-uppercase ls-1 mb-0">Areas for Improvement</h6>
+                          <div class="ai-note ai-note--rose h-100">
+                            <div class="ai-note__head">
+                              <span class="ai-note__icon"><i class="fas fa-exclamation"></i></span>
+                              <h6 class="ai-note__title">Areas for Improvement</h6>
                             </div>
-                            <ul class="list-unstyled mb-0 small fw-600 text-dark">
-                              <li v-for="i in aiInsights.issues" :key="i" class="mb-2 d-flex gap-2">
-                                <span class="text-danger opacity-50">•</span>
-                                {{ i }}
+                            <ul v-if="aiInsights.issues?.length" class="ai-note__list">
+                              <li v-for="i in aiInsights.issues" :key="i">
+                                <span class="ai-note__bullet"></span>
+                                <span>{{ i }}</span>
                               </li>
                             </ul>
+                            <p v-else class="ai-note__empty">No recurring issues flagged by the model.</p>
                           </div>
                         </div>
                         <div class="col-md-4">
-                          <div class="p-4 rounded-4 shadow-sm h-100 bg-card">
-                            <div class="d-flex align-items-center gap-2 mb-3">
-                              <i class="fas fa-lightbulb text-warning fs-5"></i>
-                              <h6 class="fw-800 text-warning small text-uppercase ls-1 mb-0">AI Recommendations</h6>
+                          <div class="ai-note ai-note--violet h-100">
+                            <div class="ai-note__head">
+                              <span class="ai-note__icon"><i class="fas fa-lightbulb"></i></span>
+                              <h6 class="ai-note__title">AI Recommendations</h6>
                             </div>
-                            <ul class="list-unstyled mb-0 small fw-600 text-dark">
-                              <li v-for="r in aiInsights.recommendations" :key="r" class="mb-2 d-flex gap-2">
-                                <span class="text-warning opacity-50">•</span>
-                                {{ r }}
+                            <ul v-if="aiInsights.recommendations?.length" class="ai-note__list">
+                              <li v-for="r in aiInsights.recommendations" :key="r">
+                                <span class="ai-note__bullet"></span>
+                                <span>{{ r }}</span>
                               </li>
                             </ul>
+                            <p v-else class="ai-note__empty">No recommendations generated yet.</p>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div v-else class="text-center py-5">
-                      <div class="mb-4">
-                        <div
-                          class="bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
-                          style="width: 100px; height: 100px"
-                        >
-                          <AiSparkleIcon :size="52" />
-                        </div>
-                        <h3 class="fw-800">Analyze Feedback with AI</h3>
-                        <p class="text-muted mx-auto mb-4" style="max-width: 550px">
-                          Let our AI process all qualitative comments to identify performance patterns and professional
-                          growth opportunities. This takes only a few seconds.
-                        </p>
+                    <div v-else class="ai-state">
+                      <div class="ai-orb ai-orb--xl">
+                        <AiSparkleIcon :size="44" variant="white" />
                       </div>
-                      <button class="btn btn-primary px-5 py-3 rounded-pill fw-bold shadow-lg d-inline-flex align-items-center gap-2" @click="loadAiInsights">
-                        <AiSparkleIcon :size="20" variant="white" />
+                      <h3 class="ai-state__title ai-state__title--lg">Analyze Feedback with AI</h3>
+                      <p class="ai-state__text ai-state__text--wide">
+                        Let our AI process all qualitative comments to identify performance patterns and professional
+                        growth opportunities. This takes only a few seconds.
+                      </p>
+                      <button class="btn ai-btn-grad ai-btn-grad--lg" @click="loadAiInsights">
+                        <AiSparkleIcon :size="18" variant="white" />
                         Start Analyzing
                       </button>
                     </div>
@@ -665,18 +684,33 @@ const searchQuery = ref("");
 const selectedDepartment = ref("all");
 // Small screens: collapse the filter row behind a toggle button
 const showFilters = ref(false);
+const selectedQuestionRating = ref("");
+
+function visibleQuestions(questions = []) {
+  if (!selectedQuestionRating.value) return questions || [];
+  const countKey = `count_${selectedQuestionRating.value}`;
+  return (questions || []).filter((question) => Number(question[countKey]) > 0);
+}
 
 // Per-subject ratings overview ("" = overall, no subject filter)
 const subjectRatings = ref(null);
 const selectedSubject = ref("");
-const subjectLoading = ref(false);
+
+const formatSubjectSummary = (average, evaluations) => {
+  if (average == null) return "";
+  const count = Number(evaluations) || 0;
+  return ` · ${Number(average).toFixed(2)}/5 · ${count} ${count === 1 ? "evaluation" : "evaluations"}`;
+};
 
 const subjectSelectOptions = computed(() => [
-  { label: "All subjects (Overall)", value: "" },
+  {
+    label: `All subjects (Overall)${formatSubjectSummary(subjectRatings.value?.overall?.average, subjectRatings.value?.overall?.evaluations)}`,
+    value: "",
+  },
   ...(subjectRatings.value?.subjects || [])
     .filter((s) => s.evaluations > 0)
     .map((s) => ({
-      label: s.subject_name ? `${s.subject_code} — ${s.subject_name}` : s.subject_code,
+      label: `${s.subject_name ? `${s.subject_code} — ${s.subject_name}` : s.subject_code}${formatSubjectSummary(s.average, s.evaluations)}`,
       value: s.subject_code,
     })),
 ]);
@@ -737,6 +771,27 @@ const filteredFacultyList = computed(() => {
 const canUseAiInsights = computed(
   () => user.value.role !== "faculty",
 );
+
+const sentimentTotal = computed(() => {
+  const s = aiInsights.value?.sentiment;
+  if (!s) return 0;
+  return (Number(s.positive) || 0) + (Number(s.neutral) || 0) + (Number(s.negative) || 0);
+});
+
+const trendValue = computed(() => {
+  const m = aiInsights.value?.metrics;
+  if (!m?.previous_rating) return "N/A";
+  const delta = Number(m.average_rating) - Number(m.previous_rating);
+  return (delta > 0 ? "+" : "") + delta.toFixed(2);
+});
+
+const trendClass = computed(() => {
+  const m = aiInsights.value?.metrics;
+  if (!m?.previous_rating) return "ai-kpi__value--muted";
+  return Number(m.average_rating) >= Number(m.previous_rating)
+    ? "ai-kpi__value--emerald"
+    : "ai-kpi__value--rose";
+});
 
 const facultyOptions = computed(() => {
   const allLabel = "All Faculty";
@@ -866,7 +921,6 @@ async function loadSubjectRatings() {
     subjectRatings.value = null;
     return;
   }
-  subjectLoading.value = true;
   try {
     const params = {};
     if (user.value.role !== "faculty") {
@@ -877,15 +931,7 @@ async function loadSubjectRatings() {
   } catch (e) {
     console.error("Error fetching subject ratings:", e);
     subjectRatings.value = null;
-  } finally {
-    subjectLoading.value = false;
   }
-}
-
-function selectSubjectRow(subject) {
-  if (!subject || subject.evaluations <= 0) return;
-  selectedSubject.value = subject.subject_code;
-  loadResults();
 }
 
 async function loadAiInsights(force = false) {
@@ -915,15 +961,32 @@ function renderDashboardCharts() {
   import("chart.js").then(({ Chart, registerables }) => {
     Chart.register(...registerables);
 
-    // Destroy existing charts to prevent overlap
     const existingBar = Chart.getChart("dashboardBarChart");
     if (existingBar) existingBar.destroy();
     const existingPie = Chart.getChart("dashboardPieChart");
     if (existingPie) existingPie.destroy();
 
+    const css = getComputedStyle(document.documentElement);
+    const muted = css.getPropertyValue("--text-muted").trim() || "#59636e";
+    const grid = css.getPropertyValue("--border-light").trim() || "#e3e8ee";
+    const surface = css.getPropertyValue("--bg-card").trim() || "#ffffff";
+    const ink = css.getPropertyValue("--text-main").trim() || "#1f2328";
+    const fontFamily = css.getPropertyValue("--font-sans").trim() || "Arial, sans-serif";
+
+    const tooltipStyle = {
+      backgroundColor: ink,
+      titleColor: surface,
+      bodyColor: surface,
+      padding: 10,
+      cornerRadius: 8,
+      displayColors: false,
+      titleFont: { family: fontFamily, size: 11, weight: 600 },
+      bodyFont: { family: fontFamily, size: 12, weight: 700 },
+    };
+
     // 1. Criteria Bar Chart
     const ctxBar = document.getElementById("dashboardBarChart");
-    if (ctxBar && results.value) {
+    if (ctxBar && results.value?.category_results?.length) {
       new Chart(ctxBar, {
         type: "bar",
         data: {
@@ -932,9 +995,17 @@ function renderDashboardCharts() {
             {
               label: "Average Rating",
               data: results.value.category_results.map((c) => Number(c.average_rating).toFixed(2)),
-              backgroundColor: "#191970",
-              borderRadius: 8,
-              barThickness: 30,
+              backgroundColor: (context) => {
+                const { ctx, chartArea } = context.chart;
+                if (!chartArea) return "#4f46e5";
+                const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+                gradient.addColorStop(0, "#4f46e5");
+                gradient.addColorStop(1, "#a855f7");
+                return gradient;
+              },
+              borderRadius: 6,
+              borderSkipped: false,
+              barThickness: 26,
             },
           ],
         },
@@ -942,38 +1013,88 @@ function renderDashboardCharts() {
           indexAxis: "y",
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { x: { max: 5, beginAtZero: true } },
+          layout: { padding: { right: 16 } },
+          plugins: {
+            legend: { display: false },
+            tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` Rating: ${c.parsed.x}` } },
+          },
+          scales: {
+            x: {
+              max: 5,
+              beginAtZero: true,
+              grid: { color: grid, drawTicks: false },
+              border: { display: false },
+              ticks: { color: muted, font: { family: fontFamily, size: 11 }, stepSize: 1, padding: 6 },
+            },
+            y: {
+              grid: { display: false },
+              border: { display: false },
+              ticks: { color: muted, font: { family: fontFamily, size: 11 }, padding: 8 },
+            },
+          },
         },
       });
     }
 
     // 2. Sentiment Pie Chart
     const ctxPie = document.getElementById("dashboardPieChart");
-    if (ctxPie && aiInsights.value) {
+    if (ctxPie && aiInsights.value && sentimentTotal.value > 0) {
+      const sentiment = aiInsights.value.sentiment;
+      const positivePct = Math.round(Number(sentiment.positive) || 0);
       new Chart(ctxPie, {
         type: "doughnut",
         data: {
           labels: ["Positive", "Neutral", "Negative"],
           datasets: [
             {
-              data: [
-                aiInsights.value.sentiment.positive,
-                aiInsights.value.sentiment.neutral,
-                aiInsights.value.sentiment.negative,
-              ],
-              backgroundColor: ["#0e9f6e", "#ffc107", "#f05252"],
-              borderWidth: 0,
-              hoverOffset: 10,
+              data: [sentiment.positive, sentiment.neutral, sentiment.negative],
+              backgroundColor: ["#0e9f6e", "#f59e0b", "#f05252"],
+              borderColor: surface,
+              borderWidth: 3,
+              hoverOffset: 8,
             },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          cutout: "70%",
-          plugins: { legend: { position: "bottom", labels: { usePointStyle: true, padding: 20 } } },
+          cutout: "72%",
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                usePointStyle: true,
+                pointStyle: "circle",
+                boxWidth: 8,
+                padding: 16,
+                color: muted,
+                font: { family: fontFamily, size: 11 },
+              },
+            },
+            tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${c.label}: ${c.parsed}%` } },
+          },
         },
+        plugins: [
+          {
+            id: "aiCenterLabel",
+            afterDraw(chart) {
+              const { ctx, chartArea } = chart;
+              if (!chartArea) return;
+              const x = (chartArea.left + chartArea.right) / 2;
+              const y = (chartArea.top + chartArea.bottom) / 2;
+              ctx.save();
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillStyle = ink;
+              ctx.font = `700 24px ${fontFamily}`;
+              ctx.fillText(`${positivePct}%`, x, y - 7);
+              ctx.fillStyle = muted;
+              ctx.font = `600 10px ${fontFamily}`;
+              ctx.fillText("POSITIVE", x, y + 14);
+              ctx.restore();
+            },
+          },
+        ],
       });
     }
   });
@@ -993,10 +1114,18 @@ function getRatingBadge(rating) {
   return "bg-danger text-white shadow-sm";
 }
 
-function getRatingColor(rating) {
-  if (rating >= 3.5) return "bg-success";
-  if (rating >= 2.5) return "bg-warning";
-  return "bg-danger";
+function getAiTagClass(rating) {
+  if (rating >= 4.5) return "ai-tag--excellent";
+  if (rating >= 3.5) return "ai-tag--strong";
+  if (rating >= 2.5) return "ai-tag--average";
+  return "ai-tag--weak";
+}
+
+function getAiBarClass(rating) {
+  if (rating >= 4.5) return "ai-rating__fill--excellent";
+  if (rating >= 3.5) return "ai-rating__fill--strong";
+  if (rating >= 2.5) return "ai-rating__fill--average";
+  return "ai-rating__fill--weak";
 }
 
 function drawChart() {
@@ -1012,48 +1141,56 @@ function drawChart() {
     const gridColor = "rgba(0, 0, 0, 0.1)";
 
     new Chart(ctx, {
-      type: "line",
+      type: "bar",
       data: {
         labels: results.value.category_results.map((c) => c.category_name),
         datasets: [
           {
             label: "Average Rating",
-            data: results.value.category_results.map((c) => Number(c.average_rating).toFixed(2)),
-            borderColor: "#191970",
-            backgroundColor: (context) => {
-              const chart = context.chart;
-              const { ctx, chartArea } = chart;
-              if (!chartArea) return null;
-              const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-              gradient.addColorStop(0, "rgba(25, 25, 112, 0.2)");
-              gradient.addColorStop(1, "rgba(25, 25, 112, 0)");
-              return gradient;
-            },
-            borderWidth: 3,
-            pointRadius: 5,
-            pointHoverRadius: 7,
-            pointBackgroundColor: "#191970",
-            tension: 0.4,
-            fill: true,
+            data: results.value.category_results.map((c) => Number(c.average_rating)),
+            backgroundColor: "rgba(25, 25, 112, 0.82)",
+            hoverBackgroundColor: "#191970",
+            borderRadius: 6,
+            borderSkipped: false,
+            maxBarThickness: 26,
           },
         ],
       },
       options: {
+        indexAxis: "y",
+        layout: {
+          padding: { top: 4, right: 12, bottom: 4, left: 4 },
+        },
         scales: {
-          y: {
+          x: {
             beginAtZero: true,
             max: 5,
             grid: { color: gridColor },
             ticks: { color: textColor, stepSize: 1 },
           },
-          x: {
+          y: {
             grid: { display: false },
             ticks: {
               color: textColor,
-              maxRotation: window.innerWidth < 768 ? 45 : 0,
-              minRotation: window.innerWidth < 768 ? 25 : 0,
-              autoSkip: window.innerWidth < 768,
-              maxTicksLimit: window.innerWidth < 768 ? 6 : undefined,
+              autoSkip: false,
+              padding: 8,
+              callback(value) {
+                const words = String(this.getLabelForValue(value)).split(/\s+/);
+                const lines = [];
+                let line = "";
+
+                words.forEach((word) => {
+                  if (line && `${line} ${word}`.length > 19) {
+                    lines.push(line);
+                    line = word;
+                  } else {
+                    line = line ? `${line} ${word}` : word;
+                  }
+                });
+
+                if (line) lines.push(line);
+                return lines;
+              },
             },
           },
         },
@@ -1349,9 +1486,661 @@ function badgeClass(interpretation) {
   border-color: #1f1f1f transparent transparent;
 }
 
-/* AI modal body keeps the soft tinted backdrop */
+/* ── Premium AI theme: modal frame ─────────────────────────── */
+.ai-modal {
+  overflow: hidden;
+  box-shadow: 0 24px 64px -28px rgba(17, 14, 46, 0.4) !important;
+}
+
+[data-theme="dark"] .ai-modal {
+  box-shadow: 0 24px 64px -28px rgba(0, 0, 0, 0.85) !important;
+}
+
+.ai-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed 40%, #a855f7 68%, #2563eb);
+  z-index: 4;
+  pointer-events: none;
+}
+
+.ai-modal-header {
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.07), rgba(124, 58, 237, 0));
+  border-bottom: 1px solid var(--border-light);
+}
+
+[data-theme="dark"] .ai-modal-header {
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.12), rgba(139, 92, 246, 0));
+}
+
+.ai-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+}
+
+.ai-modal-sub {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.ai-orb {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #a855f7);
+  box-shadow: 0 6px 16px -6px rgba(124, 58, 237, 0.75);
+}
+
+.ai-orb--lg {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+}
+
+.ai-orb--xl {
+  width: 92px;
+  height: 92px;
+  border-radius: 26px;
+  box-shadow: 0 12px 30px -10px rgba(124, 58, 237, 0.75);
+}
+
+.ai-orb--pulse {
+  animation: aiOrbPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes aiOrbPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 6px 16px -6px rgba(124, 58, 237, 0.7);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 12px 28px -8px rgba(124, 58, 237, 0.95);
+  }
+}
+
+.ai-btn-grad {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+  border: 1px solid transparent !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  padding: 0.35rem 0.95rem !important;
+  box-shadow: 0 4px 14px -5px rgba(79, 70, 229, 0.65) !important;
+  transition:
+    filter 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ai-btn-grad:hover,
+.ai-btn-grad:focus-visible {
+  color: #ffffff !important;
+  filter: brightness(1.1);
+  box-shadow: 0 6px 18px -5px rgba(124, 58, 237, 0.75) !important;
+}
+
+.ai-btn-grad--lg {
+  padding: 0.75rem 1.6rem !important;
+  font-size: 0.95rem !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.5rem;
+}
+
+.ai-btn-ghost {
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-muted);
+  border-radius: 8px !important;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.ai-btn-ghost:hover,
+.ai-btn-ghost:focus-visible {
+  color: #7c3aed;
+  border-color: #7c3aed;
+  background: var(--bg-card);
+}
+
+/* ── Premium AI theme: modal body canvas ───────────────────── */
 .ai-modal-body {
-  background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-card) 100%);
+  --ai-tint: rgba(124, 58, 237, 0.16);
+  background:
+    radial-gradient(900px 320px at 8% -10%, rgba(124, 58, 237, 0.1), transparent 60%),
+    radial-gradient(760px 300px at 105% 0%, rgba(37, 99, 235, 0.09), transparent 55%),
+    var(--bg-card);
+}
+
+[data-theme="dark"] .ai-modal-body {
+  --ai-tint: rgba(167, 139, 250, 0.22);
+  background:
+    radial-gradient(900px 320px at 8% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
+    radial-gradient(760px 300px at 105% 0%, rgba(59, 130, 246, 0.12), transparent 55%),
+    var(--bg-card);
+}
+
+.ai-modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+.ai-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ai-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.35);
+  border-radius: 10px;
+}
+.ai-modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.55);
+}
+
+/* ── Premium AI theme: loading / error / empty states ──────── */
+.ai-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem 1rem;
+}
+
+.ai-state__title {
+  margin: 1.1rem 0 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.ai-state__title--lg {
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+}
+
+.ai-state__text {
+  max-width: 430px;
+  margin: 0 auto 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.ai-state__text--wide {
+  max-width: 540px;
+  margin-bottom: 1.25rem;
+}
+
+.ai-state__icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+}
+
+.ai-state__icon--danger {
+  background: var(--badge-danger-bg);
+  color: var(--badge-danger-text);
+}
+
+/* ── Premium AI theme: KPI cards ───────────────────────────── */
+.ai-kpi {
+  --ai-c1: #4f46e5;
+  --ai-c2: #a855f7;
+  --ai-glow: rgba(124, 58, 237, 0.55);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1.1rem 1.15rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.ai-kpi::after {
+  content: "";
+  position: absolute;
+  top: -48px;
+  right: -48px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--ai-tint), transparent 70%);
+  pointer-events: none;
+}
+
+.ai-kpi:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+.ai-kpi--violet {
+  --ai-c1: #4f46e5;
+  --ai-c2: #a855f7;
+  --ai-glow: rgba(124, 58, 237, 0.55);
+}
+
+.ai-kpi--blue {
+  --ai-c1: #2563eb;
+  --ai-c2: #38bdf8;
+  --ai-glow: rgba(56, 189, 248, 0.5);
+}
+
+.ai-kpi--emerald {
+  --ai-c1: #059669;
+  --ai-c2: #34d399;
+  --ai-glow: rgba(52, 211, 153, 0.5);
+}
+
+.ai-kpi--amber {
+  --ai-c1: #d97706;
+  --ai-c2: #fbbf24;
+  --ai-glow: rgba(251, 191, 36, 0.55);
+}
+
+.ai-kpi__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--ai-c1), var(--ai-c2));
+  box-shadow: 0 6px 16px -6px var(--ai-glow);
+}
+
+.ai-kpi__body {
+  min-width: 0;
+}
+
+.ai-kpi__label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ai-kpi__value {
+  margin-top: 0.15rem;
+  font-size: 1.65rem;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-kpi__value--emerald {
+  color: var(--success);
+}
+
+.ai-kpi__value--rose {
+  color: var(--danger);
+}
+
+.ai-kpi__value--muted {
+  color: var(--text-muted);
+}
+
+.ai-kpi__hint {
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+/* ── Premium AI theme: surfaces (charts + tables) ──────────── */
+.ai-surface {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ai-surface__head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1.05rem 1.2rem;
+  border-bottom: 1px solid var(--border-light);
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.055), rgba(124, 58, 237, 0));
+}
+
+.ai-surface__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.ai-chip--violet {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.16), rgba(168, 85, 247, 0.16));
+  color: #7c3aed;
+}
+
+.ai-chip--blue {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.ai-chip--emerald {
+  background: rgba(14, 159, 110, 0.14);
+  color: var(--success);
+}
+
+[data-theme="dark"] .ai-chip--violet {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .ai-chip--blue {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .ai-chip--emerald {
+  color: #34d399;
+}
+
+.ai-surface__title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+}
+
+.ai-surface__sub {
+  margin: 0.1rem 0 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.ai-surface__body {
+  flex: 1;
+  padding: 1.1rem 1.2rem;
+}
+
+.ai-surface__body--flush {
+  padding: 0;
+}
+
+.ai-surface__body--center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-chart-box {
+  position: relative;
+  height: 240px;
+}
+
+.ai-viz-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2.5rem 1rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.ai-viz-empty i {
+  font-size: 1.75rem;
+  opacity: 0.35;
+}
+
+/* ── Premium AI theme: tables ──────────────────────────────── */
+.ai-modal .ai-table thead th {
+  background: transparent !important;
+  background-color: transparent !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.07em;
+  color: var(--text-muted) !important;
+  padding-top: 0.8rem !important;
+  padding-bottom: 0.8rem !important;
+}
+
+.ai-modal .ai-table tbody td {
+  padding-top: 0.85rem !important;
+  padding-bottom: 0.85rem !important;
+}
+
+.ai-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ai-rating__val {
+  min-width: 2.4rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-main);
+}
+
+.ai-rating__track {
+  flex: 1;
+  min-width: 64px;
+  max-width: 140px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-light);
+  overflow: hidden;
+}
+
+.ai-rating__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.ai-rating__fill--excellent {
+  background: linear-gradient(90deg, #059669, #34d399);
+}
+
+.ai-rating__fill--strong {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+.ai-rating__fill--average {
+  background: linear-gradient(90deg, #d97706, #fbbf24);
+}
+
+.ai-rating__fill--weak {
+  background: linear-gradient(90deg, #dc2626, #fb7185);
+}
+
+.ai-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.ai-tag--excellent {
+  background: var(--badge-success-bg);
+  color: var(--badge-success-text);
+}
+
+.ai-tag--strong {
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
+}
+
+.ai-tag--average {
+  background: var(--badge-warning-bg);
+  color: var(--badge-warning-text);
+}
+
+.ai-tag--weak {
+  background: var(--badge-danger-bg);
+  color: var(--badge-danger-text);
+}
+
+.ai-metric-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.ai-metric-name__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #4f46e5, #a855f7);
+}
+
+.ai-chip-plain {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.6rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.1);
+  color: #4f46e5;
+}
+
+[data-theme="dark"] .ai-chip-plain {
+  background: rgba(129, 140, 248, 0.16);
+  color: #a5b4fc;
+}
+
+/* ── Premium AI theme: narrative panels ────────────────────── */
+.ai-note {
+  --ai-note-grad: linear-gradient(135deg, #4f46e5, #a855f7);
+  --ai-note: #7c3aed;
+  position: relative;
+  padding: 1.35rem 1.35rem 1.4rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ai-note::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--ai-note-grad);
+}
+
+.ai-note--emerald {
+  --ai-note-grad: linear-gradient(90deg, #059669, #34d399);
+  --ai-note: #0e9f6e;
+}
+
+.ai-note--rose {
+  --ai-note-grad: linear-gradient(90deg, #e11d48, #fb7185);
+  --ai-note: #f05252;
+}
+
+.ai-note--violet {
+  --ai-note-grad: linear-gradient(90deg, #4f46e5, #a855f7);
+  --ai-note: #7c3aed;
+}
+
+.ai-note__head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.95rem;
+}
+
+.ai-note__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  color: #ffffff;
+  background: var(--ai-note-grad);
+  box-shadow: 0 4px 12px -5px var(--ai-note);
+}
+
+.ai-note__title {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--ai-note);
+}
+
+.ai-note__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ai-note__list li {
+  display: flex;
+  gap: 0.65rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.ai-note__bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0.5rem;
+  background: var(--ai-note);
+  opacity: 0.75;
+}
+
+.ai-note__empty {
+  margin: 0;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-muted);
 }
 
 .suggestion-scroll::-webkit-scrollbar {
@@ -1379,16 +2168,6 @@ function badgeClass(interpretation) {
 
 .fw-800 {
   font-weight: 500;
-}
-
-.metric-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
 }
 
 .dashboard-grid {
@@ -1486,6 +2265,68 @@ function badgeClass(interpretation) {
   border-bottom: 1px solid var(--border-color);
 }
 
+.reports-question-list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.55rem 0 0;
+  padding-left: 1.15rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.reports-question-filter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.reports-question-filter .form-select {
+  width: auto;
+  min-width: 130px;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.reports-question-empty {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.reports-question-item {
+  padding-left: 0.15rem;
+}
+
+.reports-question-rating {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--text-main);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.reports-question-rating-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.reports-question-rating-counts span {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--bg-light);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  line-height: 1.4;
+}
+
 .reports-freq-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -1553,160 +2394,43 @@ thead th:last-child { border-right: none; }
   min-width: 260px;
 }
 
-.subject-rating-list {
-  display: flex;
-  flex-direction: column;
+.reports-content-area {
+  padding: 24px;
+}
+
+.subject-select-slot :deep(.custom-select-trigger) {
   gap: 0.5rem;
 }
 
-.subject-rating-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, auto) minmax(120px, 1fr) auto auto auto;
-  align-items: center;
-  gap: 0.5rem 0.85rem;
-  width: 100%;
-  padding: 0.65rem 0.85rem;
-  background: var(--bg-light, #f8fafc);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 10px;
-  cursor: pointer;
-  text-align: left;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-/* Explicit columns so a missing subject name doesn't shift the rest */
-.subject-rating-code {
-  grid-column: 1;
-}
-
-.subject-rating-name {
-  grid-column: 2;
-}
-
-.subject-rating-bar {
-  grid-column: 3;
-}
-
-.subject-rating-value {
-  grid-column: 4;
-}
-
-.subject-rating-row .badge {
-  grid-column: 5;
-}
-
-.subject-rating-count {
-  grid-column: 6;
-}
-
-.subject-rating-row:hover:not(:disabled) {
-  border-color: var(--primary, #191970);
-  box-shadow: 0 1px 6px rgba(25, 25, 112, 0.08);
-}
-
-.subject-rating-row--active {
-  border-color: var(--primary, #191970);
-  box-shadow: 0 0 0 2px rgba(25, 25, 112, 0.15);
-}
-
-.subject-rating-row--disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.subject-rating-code {
-  font-size: 0.78rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--text-main);
-}
-
-.subject-rating-name {
-  font-size: 0.78rem;
-  color: var(--text-muted);
+.subject-select-slot :deep(.selected-text) {
+  flex: 1;
   min-width: 0;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  line-height: 1.35;
 }
 
-.subject-rating-bar {
-  flex: 1 1 140px;
-  min-width: 100px;
-  height: 8px;
-  background: rgba(120, 120, 130, 0.18);
-  border-radius: 999px;
-  overflow: hidden;
+.subject-select-slot :deep(.arrow) {
+  flex-shrink: 0;
+  margin-left: 0;
 }
 
-.subject-rating-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.4s ease;
+.subject-select-slot :deep(.custom-select-options li) {
+  white-space: normal;
 }
 
-.subject-rating-value {
-  min-width: 40px;
-  text-align: right;
-  font-size: 0.9rem;
-  font-weight: 500;
+.subject-select-slot :deep(.custom-select-options .text-truncate) {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
 }
 
-.subject-rating-count {
-  min-width: 56px;
-  text-align: right;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
-
-/* Small screens: stack the row as code/name/rating → bar → badge/count */
 @media (max-width: 767.98px) {
   .subject-select-slot {
     min-width: 0;
     width: 100%;
-  }
-
-  .subject-rating-row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas:
-      "code name value"
-      "bar bar bar"
-      "badge badge count";
-    gap: 0.5rem 0.6rem;
-  }
-
-  .subject-rating-code {
-    grid-area: code;
-  }
-
-  .subject-rating-name {
-    grid-area: name;
-    max-width: none;
-  }
-
-  .subject-rating-value {
-    grid-area: value;
-  }
-
-  .subject-rating-bar {
-    grid-area: bar;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .subject-rating-row .badge {
-    grid-area: badge;
-    justify-self: start;
-  }
-
-  .subject-rating-count {
-    grid-area: count;
-    justify-self: end;
   }
 }
 
@@ -1730,6 +2454,166 @@ thead th:last-child { border-right: none; }
     width: 56px;
     height: 56px;
     font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .content-area.reports-content-area {
+    padding: 16px 14px 24px !important;
+  }
+
+  .reports-question-filter {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .reports-question-filter .form-select {
+    width: 100%;
+  }
+
+  .reports-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .reports-summary-row {
+    gap: 0.75rem;
+    margin-bottom: 0 !important;
+  }
+
+  .reports-summary-row > [class*="col-"] {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .reports-summary-row .stat-card,
+  .reports-summary-row > div > .card,
+  .subject-overview-card,
+  .reports-category-card {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-card);
+    box-shadow: none;
+  }
+
+  .reports-summary-row .stat-card {
+    min-height: 148px;
+    justify-content: center;
+    padding: 1rem !important;
+  }
+
+  .reports-summary-row .stat-label {
+    margin-bottom: 0.4rem !important;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .report-final-score {
+    margin-bottom: 0.5rem !important;
+    color: var(--success) !important;
+    font-size: 2.65rem;
+    font-weight: 700;
+    letter-spacing: -0.055em;
+    line-height: 1.05;
+  }
+
+  .reports-summary-row .badge {
+    align-self: center;
+    padding: 0.38rem 0.8rem !important;
+    font-size: 0.76rem;
+    font-weight: 600;
+  }
+
+  .reports-summary-row > div > .card {
+    overflow: hidden;
+    border-radius: 12px;
+  }
+
+  .reports-summary-row .card-header {
+    padding: 0.8rem 1rem !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    background: transparent;
+  }
+
+  .reports-summary-row .card-header h6 {
+    font-size: 0.92rem;
+    font-weight: 600 !important;
+  }
+
+  .report-chart-body {
+    min-height: 248px;
+    height: 248px;
+    padding: 0.85rem 0.9rem 0.65rem !important;
+  }
+
+  .subject-overview-card {
+    position: relative;
+    z-index: 5;
+    overflow: visible;
+    margin-bottom: 0 !important;
+  }
+
+  .subject-overview-card > .card-header {
+    align-items: stretch !important;
+    flex-direction: column;
+    padding: 0.9rem !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    background: transparent;
+  }
+
+  .subject-overview-card > .card-header h6 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.2rem 0.4rem;
+    font-size: 0.92rem;
+    line-height: 1.4;
+  }
+
+  .reports-mobile-categories {
+    gap: 0.75rem;
+    margin-bottom: 0 !important;
+  }
+
+  .reports-category-card {
+    padding: 1rem;
+  }
+
+  .reports-category-card-head {
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.8rem;
+  }
+
+  .reports-category-card-head .fw-bold {
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .reports-freq-grid {
+    gap: 0.4rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .reports-freq-cell {
+    min-height: 54px;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.4rem 0.2rem;
+    border-radius: 8px;
+  }
+
+  .reports-freq-val {
+    font-size: 0.9rem;
+  }
+
+  .reports-category-card-foot {
+    padding-top: 0.7rem;
+    border-top-style: solid;
   }
 }
 </style>

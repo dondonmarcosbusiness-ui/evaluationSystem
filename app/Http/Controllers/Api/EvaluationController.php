@@ -392,6 +392,7 @@ class EvaluationController extends Controller
             $query->where('evaluation_categories.evaluatee_type', $evaluateeType);
 
             $results = $query->select(
+                    'evaluation_categories.id as category_id',
                     'evaluation_categories.category_name',
                     'evaluation_categories.weight',
                     DB::raw('AVG(evaluation_answers.rating) as average_rating'),
@@ -419,6 +420,7 @@ class EvaluationController extends Controller
 
                 if ($repairedCount > 0) {
                     $results = (clone $query)->select(
+                        'evaluation_categories.id as category_id',
                         'evaluation_categories.category_name',
                         'evaluation_categories.weight',
                         DB::raw('AVG(evaluation_answers.rating) as average_rating'),
@@ -432,6 +434,26 @@ class EvaluationController extends Controller
                         ->get();
                 }
             }
+
+            $questionResults = (clone $query)->select(
+                'evaluation_categories.id as category_id',
+                'evaluation_questions.id as question_id',
+                'evaluation_questions.question_text',
+                DB::raw('AVG(evaluation_answers.rating) as average_rating'),
+                DB::raw('COUNT(evaluation_answers.id) as evaluations'),
+                DB::raw('COUNT(CASE WHEN evaluation_answers.rating = 5 THEN 1 END) as count_5'),
+                DB::raw('COUNT(CASE WHEN evaluation_answers.rating = 4 THEN 1 END) as count_4'),
+                DB::raw('COUNT(CASE WHEN evaluation_answers.rating = 3 THEN 1 END) as count_3'),
+                DB::raw('COUNT(CASE WHEN evaluation_answers.rating = 2 THEN 1 END) as count_2'),
+                DB::raw('COUNT(CASE WHEN evaluation_answers.rating = 1 THEN 1 END) as count_1')
+            )
+                ->groupBy(
+                    'evaluation_categories.id',
+                    'evaluation_questions.id',
+                    'evaluation_questions.question_text'
+                )
+                ->get()
+                ->groupBy('category_id');
 
             if ($results->isEmpty()) {
                 $fallback = DB::table('evaluation_answers')
@@ -493,8 +515,36 @@ class EvaluationController extends Controller
                 }
             }
 
+            $categoryIds = $results->pluck('category_id')->filter()->unique();
+            $questionsByCategory = $categoryIds->isEmpty()
+                ? collect()
+                : DB::table('evaluation_questions')
+                    ->whereIn('category_id', $categoryIds)
+                    ->orderBy('id')
+                    ->get(['id', 'category_id', 'question_text'])
+                    ->groupBy('category_id')
+                    ->map(function ($questions) use ($questionResults) {
+                        return $questions->map(function ($question) use ($questionResults) {
+                            $rating = $questionResults
+                                ->get($question->category_id, collect())
+                                ->firstWhere('question_id', $question->id);
+
+                            return [
+                                'question_text' => $question->question_text,
+                                'average_rating' => $rating?->average_rating,
+                                'evaluations' => (int) ($rating->evaluations ?? 0),
+                                'count_5' => (int) ($rating->count_5 ?? 0),
+                                'count_4' => (int) ($rating->count_4 ?? 0),
+                                'count_3' => (int) ($rating->count_3 ?? 0),
+                                'count_2' => (int) ($rating->count_2 ?? 0),
+                                'count_1' => (int) ($rating->count_1 ?? 0),
+                            ];
+                        })->values();
+                    });
+
             $totalScore = 0;
             foreach ($results as $result) {
+                $result->questions = $questionsByCategory->get($result->category_id ?? null, collect());
                 $totalScore += $result->average_rating * $result->weight;
             }
 

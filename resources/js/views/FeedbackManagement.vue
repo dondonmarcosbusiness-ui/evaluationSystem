@@ -83,16 +83,15 @@
                       Rating <i class="fas sort-arrow" :class="sortIcon('rating')"></i>
                     </th>
                     <th>Feedback Snippet</th>
-                    <th class="th-sortable" @click="toggleSort('created_at')">
+                    <th class="th-sortable pe-4" @click="toggleSort('created_at')">
                       Date Submitted <i class="fas sort-arrow" :class="sortIcon('created_at')"></i>
                     </th>
-                    <th class="text-end pe-4">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   <template v-if="loading">
                     <tr v-for="r in 6" :key="r">
-                      <td colspan="7" class="ps-4 py-3">
+                      <td colspan="6" class="ps-4 py-3">
                         <div class="d-flex align-items-center gap-4">
                           <div class="sk-shimmer" style="width: 22%; height: 14px"></div>
                           <div class="sk-shimmer" style="width: 14%; height: 14px"></div>
@@ -107,34 +106,34 @@
                     <tr v-for="feedback in feedbacks" :key="feedback.id" class="feedback-row" @click="viewDetails(feedback)">
                       <td class="ps-4 py-3">
                         <div class="fw-bold">{{ feedback.faculty_name }}</div>
-                        <div class="text-muted smallest">{{ feedback.department }}</div>
                       </td>
                       <td v-if="evaluateeType === 'faculty'">
                         <span class="badge bg-light text-dark border">{{ feedback.subject_code || 'General' }}</span>
                       </td>
                       <td v-if="evaluateeType === 'faculty'" class="small">{{ feedback.department }}</td>
                       <td>
-                        <span class="badge rounded-pill shadow-none" :class="getRatingBadgeClass(feedback.rating)">
-                          {{ getRatingLabel(feedback.rating) }} ({{ feedback.rating }})
-                        </span>
-                      </td>
-                      <td class="text-secondary small">
-                        <div class="line-clamp-2" style="max-width: 300px">
-                          "{{ feedback.text }}"
+                        <div class="rating-chip" :class="ratingTone(feedback.rating)">
+                          <i class="fas fa-star"></i>
+                          <span class="rating-score">{{ ratingValue(feedback.rating) }}</span>
+                          <span class="rating-label">{{ getRatingLabel(feedback.rating) }}</span>
+                        </div>
+                        <div class="rating-bar">
+                          <span :style="{ width: ratingPercent(feedback.rating) }"></span>
                         </div>
                       </td>
-                      <td class="small text-muted">
-                        {{ new Date(feedback.created_at).toLocaleDateString() }}
-                      </td>
-                      <td class="text-end pe-4">
-                        <button class="btn btn-light-custom btn-sm rounded-circle" @click.stop="viewDetails(feedback)">
-                          <i class="fas fa-eye"></i>
+                      <td class="small">
+                        <button class="btn btn-view-feedback btn-sm" @click.stop="viewDetails(feedback)">
+                          <i class="fas fa-comment-dots"></i>
+                          <span>View Feedback</span>
                         </button>
+                      </td>
+                      <td class="small text-muted pe-4">
+                        {{ new Date(feedback.created_at).toLocaleDateString() }}
                       </td>
                     </tr>
                   </template>
                   <tr v-else>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="6" class="text-center py-5">
                       <div class="mb-3 opacity-25">
                         <i class="fas fa-comments fa-4x"></i>
                       </div>
@@ -667,6 +666,25 @@ function getRatingLabel(rating) {
   return "Poor";
 }
 
+function ratingTone(rating) {
+  if (rating >= 4.5) return "is-excellent";
+  if (rating >= 3.5) return "is-very-good";
+  if (rating >= 2.5) return "is-good";
+  if (rating >= 1.5) return "is-fair";
+  return "is-poor";
+}
+
+function ratingValue(rating) {
+  const n = parseFloat(rating);
+  return isNaN(n) ? rating : n.toFixed(2);
+}
+
+function ratingPercent(rating) {
+  const n = parseFloat(rating);
+  if (isNaN(n)) return "0%";
+  return `${Math.max(0, Math.min(100, (n / 5) * 100))}%`;
+}
+
 function exportToCSV() {
   if (feedbacks.value.length === 0) return;
   
@@ -922,6 +940,162 @@ function formatDate(dateStr) {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Rating column chip + score bar */
+.rating-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rating-chip:hover {
+  transform: translateY(-1px);
+}
+
+.rating-chip i {
+  font-size: 0.68rem;
+}
+
+.rating-chip .rating-score {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.rating-chip .rating-label {
+  font-weight: 600;
+  opacity: 0.85;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rating-chip.is-excellent {
+  color: #0f7b3f;
+  background: rgba(25, 135, 84, 0.12);
+  border-color: rgba(25, 135, 84, 0.3);
+}
+.rating-chip.is-very-good {
+  color: #1f5fd6;
+  background: rgba(31, 95, 214, 0.12);
+  border-color: rgba(31, 95, 214, 0.3);
+}
+.rating-chip.is-good {
+  color: #9a6b00;
+  background: rgba(255, 193, 7, 0.16);
+  border-color: rgba(255, 193, 7, 0.4);
+}
+.rating-chip.is-fair {
+  color: #c2410c;
+  background: rgba(249, 115, 22, 0.12);
+  border-color: rgba(249, 115, 22, 0.32);
+}
+.rating-chip.is-poor {
+  color: #b3261e;
+  background: rgba(220, 53, 69, 0.12);
+  border-color: rgba(220, 53, 69, 0.32);
+}
+
+.rating-bar {
+  width: 130px;
+  height: 4px;
+  margin-top: 0.4rem;
+  border-radius: 999px;
+  background: var(--border-light, rgba(0, 0, 0, 0.08));
+  overflow: hidden;
+}
+
+.rating-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.rating-chip.is-excellent + .rating-bar span { background: #198754; }
+.rating-chip.is-very-good + .rating-bar span { background: #1f5fd6; }
+.rating-chip.is-good + .rating-bar span { background: #f0ad4e; }
+.rating-chip.is-fair + .rating-bar span { background: #f97316; }
+.rating-chip.is-poor + .rating-bar span { background: #dc3545; }
+
+[data-theme="dark"] .rating-chip.is-excellent { color: #7ee2a8; }
+[data-theme="dark"] .rating-chip.is-very-good { color: #8ab4ff; }
+[data-theme="dark"] .rating-chip.is-good { color: #ffd666; }
+[data-theme="dark"] .rating-chip.is-fair { color: #ffb38a; }
+[data-theme="dark"] .rating-chip.is-poor { color: #ff9b94; }
+
+/* View Feedback button — animated so it reads as clickable */
+.btn-view-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--primary, #191970);
+  background: rgba(25, 25, 112, 0.08);
+  border: 1px dashed var(--primary, #191970);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  animation: feedback-btn-pulse 2.4s ease-in-out infinite;
+}
+
+.btn-view-feedback i {
+  animation: feedback-btn-nudge 2.4s ease-in-out infinite;
+}
+
+.btn-view-feedback:hover,
+.btn-view-feedback:focus-visible {
+  background: var(--primary, #191970);
+  color: #fff;
+  border-style: solid;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(25, 25, 112, 0.25);
+  animation: none;
+}
+
+.btn-view-feedback:hover i,
+.btn-view-feedback:focus-visible i {
+  animation: none;
+  transform: scale(1.15);
+}
+
+@keyframes feedback-btn-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(25, 25, 112, 0.28);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(25, 25, 112, 0);
+  }
+}
+
+@keyframes feedback-btn-nudge {
+  0%, 70%, 100% {
+    transform: translateX(0);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+  90% {
+    transform: translateX(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-view-feedback,
+  .btn-view-feedback i {
+    animation: none;
+  }
 }
 
 @media print {

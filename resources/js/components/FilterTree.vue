@@ -8,7 +8,16 @@
       </button>
 
       <div v-if="isOpen(group.key)" class="tree-children">
-        <template v-for="opt in group.options" :key="String(opt.value)">
+        <div v-if="group.options.length > SEARCH_THRESHOLD" class="tree-search">
+          <i class="fas fa-search"></i>
+          <input
+            v-model="searchByGroup[group.key]"
+            type="text"
+            :placeholder="`Filter ${group.label.toLowerCase()}...`"
+            @click.stop
+          />
+        </div>
+        <template v-for="opt in filteredOptions(group)" :key="String(opt.value)">
           <div class="tree-option" :class="{ 'is-selected': group.value === opt.value }">
             <button type="button" class="tree-option-main" @click="choose(group, opt)">
               <span class="tree-radio" :class="{ 'is-on': group.value === opt.value }"></span>
@@ -52,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, reactive } from "vue";
 
 const props = defineProps({
   groups: {
@@ -67,8 +76,10 @@ const props = defineProps({
 
 const emit = defineEmits(["select"]);
 
+const SEARCH_THRESHOLD = 8;
 const openGroups = ref(new Set(props.defaultOpen));
 const openNestedKeys = ref(new Set());
+const searchByGroup = reactive({});
 
 function isOpen(key) {
   return openGroups.value.has(key);
@@ -78,10 +89,21 @@ function toggleGroup(key) {
   const next = new Set(openGroups.value);
   if (next.has(key)) {
     next.delete(key);
+    searchByGroup[key] = "";
   } else {
     next.add(key);
   }
   openGroups.value = next;
+}
+
+function filteredOptions(group) {
+  const query = (searchByGroup[group.key] || "").trim().toLowerCase();
+  if (!query) return group.options;
+
+  return group.options.filter((opt) => {
+    if (String(opt.label || "").toLowerCase().includes(query)) return true;
+    return (opt.children || []).some((child) => String(child.label || "").toLowerCase().includes(query));
+  });
 }
 
 function nestedKey(groupKey, value) {
@@ -178,6 +200,36 @@ function choose(group, option) {
   flex-direction: column;
   gap: 1px;
   padding: 0 0 8px 18px;
+}
+
+.tree-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--bg-card);
+}
+
+.tree-search i {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.tree-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  font-size: 0.78rem;
+  color: var(--text-dark);
+}
+
+.tree-search input::placeholder {
+  color: var(--text-muted);
 }
 
 .tree-children.nested {
@@ -288,5 +340,18 @@ function choose(group, option) {
 
 [data-theme="dark"] .tree-parent-value {
   color: #79c0ff;
+}
+
+[data-theme="dark"] .tree-search {
+  background: rgba(13, 17, 23, 0.55);
+  border-color: rgba(240, 246, 252, 0.12);
+}
+
+[data-theme="dark"] .tree-search input {
+  color: #e6edf3;
+}
+
+[data-theme="dark"] .tree-search input::placeholder {
+  color: rgba(240, 246, 252, 0.4);
 }
 </style>

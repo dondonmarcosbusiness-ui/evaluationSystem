@@ -67,7 +67,7 @@
             <Transition name="panel">
               <div v-show="showFilters" class="filters-panel">
                 <div class="filter-toolbar">
-                  <div class="premium-filter-group" style="width: 220px">
+                  <div class="premium-filter-group" style="width: 200px">
                     <span class="input-group-text">
                       <i class="fas fa-search"></i>
                     </span>
@@ -80,7 +80,7 @@
                     />
                   </div>
 
-                  <div class="premium-filter-group" style="width: 160px">
+                  <div class="premium-filter-group" style="width: 140px">
                     <span class="input-group-text">
                       <i class="fas fa-id-card"></i>
                     </span>
@@ -1132,6 +1132,8 @@ async function uploadCsv() {
   padding: 0 12px;
   height: 40px;
   min-height: 40px;
+  min-width: 0;
+  flex-shrink: 1;
   transition: all 0.2s;
 }
 
@@ -1155,6 +1157,8 @@ async function uploadCsv() {
   font-size: 14px;
   font-weight: 500;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .premium-filter-group .form-control:focus {

@@ -1,8 +1,8 @@
 <template>
-  <div class="d-flex" :class="{ 'report-previewing': showPreview }">
-    <Sidebar class="no-print" />
+  <div class="d-flex" :class="{ 'report-previewing': showPreview, 'set-report-embedded': embedded }">
+    <Sidebar v-if="!embedded" class="no-print" />
     <div class="main-wrapper w-100">
-      <Navbar class="no-print"><template #title>Detailed SET Report</template></Navbar>
+      <Navbar v-if="!embedded" class="no-print"><template #title>Detailed SET Report</template></Navbar>
 
       <div class="content-area">
         <!-- Print Only Header -->
@@ -128,14 +128,6 @@
               <h5 class="mb-0 fw-bold">My Detailed SET Report</h5>
               <p class="mb-0 text-muted small text-truncate">Performance summary for {{ user.name }}</p>
             </div>
-            <button
-              class="btn btn-primary btn-sm fw-bold flex-shrink-0 align-self-stretch align-self-sm-auto"
-              @click="openPrintPreview"
-              :disabled="!detailedResults || loading"
-            >
-              <i class="fas fa-print me-2"></i>
-              Print
-            </button>
           </div>
         </div>
 
@@ -146,14 +138,14 @@
 
         <div v-else-if="detailedResults">
           <!-- Stat Cards -->
-          <div class="row g-3 mb-4 no-print set-report-stats">
-            <div class="col-12 col-md-4">
-              <div class="stat-card p-3 h-100 shadow-none">
-                <div class="d-flex align-items-center gap-3">
+          <div class="row row-cols-3 g-2 mb-4 no-print set-report-stats">
+            <div class="col">
+              <div class="stat-card set-report-stat p-3 h-100 shadow-none">
+                <div class="set-report-stat-content">
                   <div class="stat-icon">
                     <i class="fas fa-star"></i>
                   </div>
-                  <div>
+                  <div class="set-report-stat-copy">
                     <div class="stat-label">Overall SET Rating</div>
                     <div class="stat-value">
                       {{ detailedResults.overall_set_rating.toFixed(2) }}
@@ -162,13 +154,13 @@
                 </div>
               </div>
             </div>
-            <div class="col-12 col-md-4">
-              <div class="stat-card p-3 h-100 shadow-none">
-                <div class="d-flex align-items-center gap-3">
+            <div class="col">
+              <div class="stat-card set-report-stat p-3 h-100 shadow-none">
+                <div class="set-report-stat-content">
                   <div class="stat-icon">
                     <i class="fas fa-users"></i>
                   </div>
-                  <div>
+                  <div class="set-report-stat-copy">
                     <div class="stat-label">Total Respondents</div>
                     <div class="stat-value">
                       {{ detailedResults.total_students }}
@@ -177,13 +169,13 @@
                 </div>
               </div>
             </div>
-            <div class="col-12 col-md-4">
-              <div class="stat-card p-3 h-100 shadow-none">
-                <div class="d-flex align-items-center gap-3">
+            <div class="col">
+              <div class="stat-card set-report-stat p-3 h-100 shadow-none">
+                <div class="set-report-stat-content">
                   <div class="stat-icon">
                     <i class="fas fa-calculator"></i>
                   </div>
-                  <div>
+                  <div class="set-report-stat-copy">
                     <div class="stat-label">Weighted Score</div>
                     <div class="stat-value">
                       {{ Number(detailedResults.total_weighted_score).toLocaleString() }}
@@ -496,6 +488,13 @@ import CustomSelect from "../components/CustomSelect.vue";
 import SkeletonLoader from "../components/SkeletonLoader.vue";
 import api from "../services/api.js";
 import { courseDepartments } from "../helpers/academic.js";
+
+defineProps({
+  embedded: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 const can = inject("can");
 const route = useRoute();
@@ -2089,9 +2088,138 @@ function getRatingBadge(rating) {
   border: 1px solid var(--border-color);
 }
 
+.set-report-embedded .main-wrapper {
+  margin-left: 0;
+  min-height: 0;
+  background: transparent;
+}
+
+.set-report-embedded .content-area {
+  padding: 0;
+  overflow: visible;
+}
+
+.set-report-embedded .set-report-stats {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 !important;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.set-report-embedded .set-report-stats > .col {
+  min-width: 0;
+  padding: 0 0.85rem;
+}
+
+.set-report-embedded .set-report-stats > .col + .col {
+  border-left: 1px solid var(--border-color);
+}
+
+.set-report-embedded .set-report-stat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  padding: 0.35rem 0 !important;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none !important;
+}
+
+.set-report-embedded .set-report-stat-content {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.set-report-embedded .set-report-stat .stat-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  margin: 0;
+  color: var(--primary);
+  background: var(--bg-light);
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.set-report-embedded .set-report-stat-copy {
+  min-width: 0;
+}
+
+.set-report-embedded .set-report-stat .stat-label {
+  margin-bottom: 0.15rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.set-report-embedded .set-report-stat .stat-value {
+  color: var(--text-main);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
 .set-report-stats {
   margin-left: 0;
   margin-right: 0;
+}
+
+@media (max-width: 575.98px) {
+  .set-report-embedded .set-report-stats {
+    grid-template-columns: 1fr;
+    padding: 0.35rem 0;
+  }
+
+  .set-report-embedded .set-report-stats > .col {
+    padding: 0 0.25rem;
+  }
+
+  .set-report-embedded .set-report-stats > .col + .col {
+    border-top: 1px solid var(--border-color);
+    border-left: 0;
+  }
+
+  .set-report-embedded .set-report-stat {
+    min-height: 48px;
+    padding: 0.35rem 0.75rem !important;
+  }
+
+  .set-report-embedded .set-report-stat-content {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .set-report-embedded .set-report-stat .stat-icon {
+    display: none;
+  }
+
+  .set-report-embedded .set-report-stat-copy {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .set-report-embedded .set-report-stat .stat-label {
+    margin-bottom: 0;
+    font-size: 0.76rem;
+    line-height: 1.4;
+  }
+
+  .set-report-embedded .set-report-stat .stat-value {
+    flex-shrink: 0;
+    font-size: 1.05rem;
+  }
 }
 
 /* Sticky Table Header with Glassmorphism */

@@ -2641,6 +2641,7 @@ select,
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   height: 40px;
   min-height: 40px;
+  min-width: 0;
   position: relative;
 }
 
@@ -4366,8 +4367,9 @@ button:hover {
 .accounts-head .filters-panel {
   position: absolute;
   top: calc(100% - 2px);
-  left: 16px;
+  left: auto;
   right: 16px;
+  width: min(480px, calc(100% - 32px));
   z-index: 40;
   display: block;
   max-height: min(360px, calc(100vh - 260px));
@@ -4428,9 +4430,15 @@ button:hover {
 .accounts-head .filter-toolbar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.accounts-head .filter-toolbar .premium-filter-group {
+  flex: 1 1 0;
+  width: auto !important;
+  min-width: 80px;
 }
 
 /* ── Toolbar buttons ─────────────────────── */

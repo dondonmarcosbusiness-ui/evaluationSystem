@@ -395,7 +395,7 @@ const isOfficeActive = computed(() => {
 
 const canSeeFacultyReports = computed(() => {
   const can = instance?.appContext.config.globalProperties.$can;
-  return can?.("report.view") || user.value.role === "faculty";
+  return user.value.role !== "faculty" && can?.("report.view");
 });
 
 const canSeeFacultySection = computed(() => {

@@ -194,11 +194,56 @@ class SubjectRatingsTest extends TestCase
 
         $overall = $this->actingAs($facultyUser, 'sanctum')->getJson($base)->assertOk();
         $this->assertSame(3.0, round((float) $overall->json('category_results.0.average_rating'), 1));
+        $this->assertSame('Rates clearly?', $overall->json('category_results.0.questions.0.question_text'));
+        $this->assertSame(3.0, (float) $overall->json('category_results.0.questions.0.average_rating'));
+        $this->assertSame(2, $overall->json('category_results.0.questions.0.evaluations'));
 
         $subject = $this->actingAs($facultyUser, 'sanctum')
             ->getJson($base . '&subject_code=IT-SIA01')
             ->assertOk();
         $this->assertSame(5.0, (float) $subject->json('category_results.0.average_rating'));
+        $this->assertSame('Rates clearly?', $subject->json('category_results.0.questions.0.question_text'));
+        $this->assertSame(5.0, (float) $subject->json('category_results.0.questions.0.average_rating'));
+        $this->assertSame(1, $subject->json('category_results.0.questions.0.evaluations'));
         $this->assertSame(5.0, (float) $subject->json('final_score'));
+    }
+
+    public function test_results_include_rating_summary_for_each_question()
+    {
+        [$facultyUser, $faculty] = $this->makeFaculty();
+        $firstEvaluation = $this->makeEvaluationWithRating($faculty, 'IT-SIA01', 5);
+        $secondEvaluation = $this->makeEvaluationWithRating($faculty, 'IT-SIA01', 3);
+        $secondQuestion = Question::create([
+            'category_id' => $this->sharedQuestion()->category_id,
+            'question_text' => 'Encourages participation?',
+        ]);
+
+        Answer::create([
+            'evaluation_id' => $firstEvaluation->id,
+            'question_id' => $secondQuestion->id,
+            'rating' => 4,
+        ]);
+        Answer::create([
+            'evaluation_id' => $secondEvaluation->id,
+            'question_id' => $secondQuestion->id,
+            'rating' => 2,
+        ]);
+
+        $response = $this->actingAs($facultyUser, 'sanctum')
+            ->getJson('/api/evaluations/results/' . $faculty->id
+                . '?evaluatee_type=faculty&semester=all&academic_year=all&subject_code=IT-SIA01')
+            ->assertOk();
+
+        $questions = collect($response->json('category_results.0.questions'))
+            ->keyBy('question_text');
+
+        $this->assertSame(4.0, (float) $questions['Rates clearly?']['average_rating']);
+        $this->assertSame(2, $questions['Rates clearly?']['evaluations']);
+        $this->assertSame(1, $questions['Rates clearly?']['count_5']);
+        $this->assertSame(1, $questions['Rates clearly?']['count_3']);
+        $this->assertSame(3.0, (float) $questions['Encourages participation?']['average_rating']);
+        $this->assertSame(2, $questions['Encourages participation?']['evaluations']);
+        $this->assertSame(1, $questions['Encourages participation?']['count_4']);
+        $this->assertSame(1, $questions['Encourages participation?']['count_2']);
     }
 }
